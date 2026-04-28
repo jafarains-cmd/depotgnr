@@ -228,7 +228,17 @@ function registerHandlers(bot: Bot) {
     return ctx.reply(`*Order Aktif Anda*\n\n${lines.join("\n")}`, { parse_mode: "Markdown" });
   });
 
-  bot.on("message", (ctx: Context) => ctx.reply("Ketik /help untuk daftar perintah."));
+  bot.on("message", (ctx: Context) => {
+    // Hanya reply di DM (private chat). Skip di group/supergroup biar tidak spam.
+    if (ctx.chat?.type !== "private") return;
+    return ctx.reply("Ketik /help untuk daftar perintah.");
+  });
+
+  // Catch-all error handler supaya error API Telegram (mis. group migrated, chat not found)
+  // tidak crash service, hanya log warning.
+  bot.catch((err) => {
+    console.warn("[telegram] bot error:", err.error instanceof Error ? err.error.message : err.error);
+  });
 }
 
 export async function renderTemplate(
