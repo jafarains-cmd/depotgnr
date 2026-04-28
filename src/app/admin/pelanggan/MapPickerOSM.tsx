@@ -1,0 +1,58 @@
+"use client";
+
+import { useState } from "react";
+import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
+const icon = new L.Icon({
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
+
+function ClickHandler({ onClick }: { onClick: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click: (e) => onClick(e.latlng.lat, e.latlng.lng),
+  });
+  return null;
+}
+
+export function MapPickerOSM({
+  lat,
+  lng,
+  onPick,
+}: {
+  lat: number | null;
+  lng: number | null;
+  onPick: (lat: number, lng: number) => void;
+}) {
+  const [marker, setMarker] = useState<[number, number] | null>(
+    lat !== null && lng !== null ? [lat, lng] : null,
+  );
+
+  const center: [number, number] = marker ?? [-6.2, 106.816]; // Jakarta default
+
+  function handleClick(la: number, ln: number) {
+    setMarker([la, ln]);
+    onPick(la, ln);
+  }
+
+  return (
+    <MapContainer
+      center={center}
+      zoom={marker ? 16 : 11}
+      style={{ height: "100%", width: "100%" }}
+      scrollWheelZoom
+    >
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+      <ClickHandler onClick={handleClick} />
+      {marker && <Marker position={marker} icon={icon} />}
+    </MapContainer>
+  );
+}
