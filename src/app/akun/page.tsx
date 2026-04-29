@@ -1,0 +1,68 @@
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { and, eq } from "drizzle-orm";
+import { db } from "@/db";
+import { user as userTable, account as accountTable } from "@/db/schema/auth";
+import { requireSession } from "@/lib/permissions";
+import { AkunClient } from "./AkunClient";
+import { LogoutButton } from "./LogoutButton";
+
+export const dynamic = "force-dynamic";
+
+export default async function AkunPage() {
+  const session = await requireSession();
+  const u = await db.query.user.findFirst({ where: eq(userTable.id, session.user.id) });
+
+  const cred = await db.query.account.findFirst({
+    where: and(
+      eq(accountTable.userId, session.user.id),
+      eq(accountTable.providerId, "credential"),
+    ),
+  });
+  const hasPassword = !!cred?.password;
+
+  const role = (session.user as { role?: string }).role ?? "pelanggan";
+  const homeHref =
+    role === "admin" ? "/admin/dashboard" : role === "kasir" ? "/kasir/pos" : "/pelanggan/beranda";
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
+        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
+          <Link
+            href={homeHref}
+            className="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900"
+          >
+            <ArrowLeft size={16} /> Kembali
+          </Link>
+          <div className="font-semibold">Akun Saya</div>
+          <LogoutButton />
+        </div>
+      </header>
+
+      <main className="max-w-2xl mx-auto p-4 space-y-4">
+        <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2 text-sm">
+          <Row label="Nama" value={u?.name ?? "-"} />
+          <Row label="Email" value={u?.email ?? "-"} />
+          <Row label="Username" value={u?.displayUsername ?? u?.username ?? "-"} />
+          <Row label="Nomor WA" value={u?.phoneNumber ?? "-"} />
+          <Row label="Role" value={role} />
+        </div>
+
+        <AkunClient
+          currentUsername={u?.displayUsername ?? u?.username ?? null}
+          hasPassword={hasPassword}
+        />
+      </main>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between gap-3">
+      <span className="text-slate-500">{label}</span>
+      <span className="text-right">{value}</span>
+    </div>
+  );
+}

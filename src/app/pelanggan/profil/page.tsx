@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Settings } from "lucide-react";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { user as userTable } from "@/db/schema/auth";
@@ -19,9 +21,20 @@ export default async function ProfilPage() {
       <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2 text-sm">
         <Row label="Nama" value={pel.nama} />
         <Row label="Email" value={u?.email ?? "-"} />
+        <Row label="Username" value={u?.displayUsername ?? u?.username ?? "-"} />
         <Row label="Telp/WA" value={pel.telp ?? "-"} />
         <Row label="Alamat" value={pel.alamat ?? "-"} />
       </div>
+
+      <Link
+        href="/akun"
+        className="flex items-center justify-between bg-white border border-slate-200 rounded-xl p-4 hover:bg-slate-50"
+      >
+        <span className="inline-flex items-center gap-2 text-sm font-medium">
+          <Settings size={16} /> Pengaturan Akun (username & password)
+        </span>
+        <span className="text-slate-400">›</span>
+      </Link>
 
       <ProfilClient
         telegramLinked={!!u?.telegramChatId}

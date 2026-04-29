@@ -1,4 +1,4 @@
-import { LayoutDashboard, Package, Users, Boxes, Receipt, Truck, BarChart3, Settings, UserCog, HelpCircle, Map } from "lucide-react";
+import { LayoutDashboard, Package, Users, Boxes, Receipt, Truck, BarChart3, Settings, UserCog, HelpCircle, Map, KeyRound } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { requireRole } from "@/lib/permissions";
 
@@ -14,6 +14,7 @@ const NAV = [
   { href: "/admin/users", label: "User", icon: <UserCog size={16} /> },
   { href: "/admin/pengaturan", label: "Pengaturan", icon: <Settings size={16} /> },
   { href: "/admin/bantuan", label: "Bantuan", icon: <HelpCircle size={16} /> },
+  { href: "/akun", label: "Akun Saya", icon: <KeyRound size={16} /> },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {

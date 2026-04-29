@@ -1,11 +1,19 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
 
-type Mode = "email" | "username" | "phone";
+type DetectedMode = "email" | "phone" | "username";
+
+function detectMode(input: string): DetectedMode {
+  const v = input.trim();
+  if (!v) return "username";
+  if (v.includes("@")) return "email";
+  if (/^(\+?\d{8,})$/.test(v) || /^08\d{6,}$/.test(v)) return "phone";
+  return "username";
+}
 
 export default function LoginPage() {
   return (
@@ -20,13 +28,22 @@ function LoginInner() {
   const params = useSearchParams();
   const next = params.get("next") ?? "/";
 
-  const [mode, setMode] = useState<Mode>("email");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const mode = useMemo(() => detectMode(identifier), [identifier]);
+  const hint =
+    !identifier
+      ? "Email, username, atau nomor WhatsApp"
+      : mode === "email"
+        ? "Login via Email"
+        : mode === "phone"
+          ? "Login via Nomor WhatsApp (OTP)"
+          : "Login via Username";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -35,7 +52,7 @@ function LoginInner() {
     try {
       if (mode === "email") {
         const { error } = await authClient.signIn.email({
-          email: identifier,
+          email: identifier.trim(),
           password,
           callbackURL: next,
         });
@@ -44,7 +61,7 @@ function LoginInner() {
         router.refresh();
       } else if (mode === "username") {
         const { error } = await authClient.signIn.username({
-          username: identifier,
+          username: identifier.trim(),
           password,
         });
         if (error) throw new Error(error.message ?? "Gagal masuk");
@@ -52,12 +69,14 @@ function LoginInner() {
         router.refresh();
       } else {
         if (!otpSent) {
-          const { error } = await authClient.phoneNumber.sendOtp({ phoneNumber: identifier });
+          const { error } = await authClient.phoneNumber.sendOtp({
+            phoneNumber: identifier.trim(),
+          });
           if (error) throw new Error(error.message ?? "Gagal kirim OTP");
           setOtpSent(true);
         } else {
           const { error } = await authClient.phoneNumber.verify({
-            phoneNumber: identifier,
+            phoneNumber: identifier.trim(),
             code: otp,
           });
           if (error) throw new Error(error.message ?? "OTP salah / kedaluwarsa");
@@ -79,38 +98,23 @@ function LoginInner() {
         <p className="text-sm text-slate-500">Selamat datang kembali di Depot Air.</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-lg text-sm">
-        {(["email", "username", "phone"] as Mode[]).map((m) => (
-          <button
-            key={m}
-            type="button"
-            onClick={() => {
-              setMode(m);
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <div>
+          <label className="text-sm font-medium block mb-1">User</label>
+          <input
+            type="text"
+            required
+            autoComplete="username"
+            value={identifier}
+            onChange={(e) => {
+              setIdentifier(e.target.value);
               setOtpSent(false);
               setError(null);
             }}
-            className={`py-1.5 rounded-md transition ${
-              mode === m ? "bg-white shadow-sm font-medium" : "text-slate-600"
-            }`}
-          >
-            {m === "email" ? "Email" : m === "username" ? "Username" : "Nomor WA"}
-          </button>
-        ))}
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <div>
-          <label className="text-sm font-medium block mb-1">
-            {mode === "email" ? "Email" : mode === "username" ? "Username" : "Nomor WhatsApp"}
-          </label>
-          <input
-            type={mode === "email" ? "email" : "text"}
-            required
-            value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
-            placeholder={mode === "phone" ? "08xxxxxxxxxx" : ""}
+            placeholder="email / username / 08xxxxxxxxxx"
             className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
           />
+          <p className="text-xs text-slate-500 mt-1">{hint}</p>
         </div>
 
         {mode !== "phone" && (
@@ -119,6 +123,7 @@ function LoginInner() {
             <input
               type="password"
               required
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -139,10 +144,13 @@ function LoginInner() {
             />
             <button
               type="button"
-              onClick={() => setOtpSent(false)}
+              onClick={() => {
+                setOtpSent(false);
+                setOtp("");
+              }}
               className="text-xs text-slate-500 mt-1 hover:underline"
             >
-              Ganti nomor
+              Kirim ulang / ganti nomor
             </button>
           </div>
         )}
