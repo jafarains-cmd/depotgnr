@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { pengaturan } from "@/db/schema/pengaturan";
 import { requireRole } from "@/lib/permissions";
+import { uploadAsset } from "@/lib/drive";
 
 export async function setupTelegramWebhook(): Promise<{ ok: boolean; description?: string }> {
   await requireRole(["admin"]);
@@ -44,4 +46,28 @@ export async function savePengaturan(formData: FormData) {
       });
   }
   revalidatePath("/admin/pengaturan");
+}
+
+export async function uploadQrisFoto(args: {
+  base64: string;
+  mimeType: string;
+}): Promise<{ ok: true; url: string } | { error: string }> {
+  await requireRole(["admin"]);
+  const up = await uploadAsset({
+    prefix: "qris",
+    base64: args.base64,
+    mimeType: args.mimeType,
+  });
+  if (!up.ok || !up.url) return { error: up.error ?? "Gagal upload" };
+
+  await db
+    .insert(pengaturan)
+    .values({ key: "qrisFotoUrl", value: up.url, updatedAt: new Date() })
+    .onConflictDoUpdate({
+      target: pengaturan.key,
+      set: { value: up.url, updatedAt: new Date() },
+    });
+
+  revalidatePath("/admin/pengaturan");
+  return { ok: true, url: up.url };
 }

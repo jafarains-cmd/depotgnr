@@ -1,7 +1,8 @@
 import { eq, desc } from "drizzle-orm";
-import { Gift, Share2 } from "lucide-react";
+import { Gift, Share2, Droplet } from "lucide-react";
 import { db } from "@/db";
 import { mutasiLoyalti } from "@/db/schema/pelanggan";
+import { pengaturan } from "@/db/schema/pengaturan";
 import { requireSession } from "@/lib/permissions";
 import { getOrCreatePelanggan } from "@/lib/pelanggan";
 import { formatRupiah } from "@/lib/utils";
@@ -14,6 +15,7 @@ const TIPE_LABEL: Record<string, string> = {
   redeem: "Redeem",
   referral_in: "Bonus Referral",
   referral_bonus: "Bonus Mengajak",
+  stamp_reward: "Bonus Galon Gratis",
   adjust: "Penyesuaian",
 };
 
@@ -28,6 +30,14 @@ export default async function LoyaltyPage() {
     .orderBy(desc(mutasiLoyalti.createdAt))
     .limit(50);
 
+  const cfg = await db.query.pengaturan.findMany();
+  const cfgMap = Object.fromEntries(cfg.map((r) => [r.key, r.value ?? ""]));
+  const stampAktif = (cfgMap.aktifkanStampGalon ?? "1") !== "0";
+  const threshold = Math.max(1, Number(cfgMap.stampThresholdGalon) || 10);
+  const nilai = Math.max(0, Number(cfgMap.nilaiGalonGratis) || 5_000);
+  const stampNow = me.stampGalon % threshold;
+  const stampToNext = threshold - stampNow;
+
   return (
     <div className="space-y-4">
       <div className="bg-gradient-to-br from-brand-600 to-brand-700 text-white rounded-2xl p-5">
@@ -39,6 +49,41 @@ export default async function LoyaltyPage() {
           Dapat Rp 250/galon (antar) · Rp 500/galon (datang ke depot). Pakai saat checkout.
         </div>
       </div>
+
+      {stampAktif && (
+        <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+          <div className="text-sm font-semibold inline-flex items-center gap-1.5">
+            <Droplet size={16} /> Stamp Galon Gratis
+          </div>
+          <div className="text-xs text-slate-600">
+            Setiap <b>{threshold} galon</b> Anda dapat <b>{formatRupiah(nilai)}</b> saldo loyalty (= 1 galon gratis).
+          </div>
+          <div>
+            <div className="flex justify-between text-xs text-slate-500 mb-1">
+              <span>
+                {stampNow}/{threshold} galon
+              </span>
+              <span>{stampToNext} lagi untuk reward berikutnya</span>
+            </div>
+            <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-cyan-400 to-brand-600 transition-all"
+                style={{ width: `${(stampNow / threshold) * 100}%` }}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-center">
+            <div className="bg-slate-50 rounded p-2">
+              <div className="text-[10px] text-slate-500">Total Galon</div>
+              <div className="font-bold text-lg">{me.stampGalon}</div>
+            </div>
+            <div className="bg-slate-50 rounded p-2">
+              <div className="text-[10px] text-slate-500">Reward Diraih</div>
+              <div className="font-bold text-lg">{me.stampClaimedCount}×</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
         <div className="text-sm font-semibold inline-flex items-center gap-1.5">

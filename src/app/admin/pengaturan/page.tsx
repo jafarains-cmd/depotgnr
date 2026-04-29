@@ -4,6 +4,7 @@ import { savePengaturan } from "./actions";
 import { PengaturanForm } from "./PengaturanForm";
 import { TelegramWebhook } from "./TelegramWebhook";
 import { SheetsSync } from "./SheetsSync";
+import { QrisUploader } from "./QrisUploader";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +80,21 @@ const FIELDS: { key: string; label: string; type?: "text" | "textarea"; help?: s
     type: "textarea",
     help: "Satu rekening per baris. Format: BANK | NOMOR | ATAS NAMA. Contoh: BCA | 1234567890 | Depot Air",
   },
+  {
+    key: "aktifkanStampGalon",
+    label: "Aktifkan Bonus Stamp Galon",
+    help: "Isi 1 untuk aktif, 0 untuk nonaktif. Setiap kelipatan stamp threshold, pelanggan dapat saldo loyalty.",
+  },
+  {
+    key: "stampThresholdGalon",
+    label: "Threshold Stamp Galon",
+    help: "Berapa galon untuk dapat 1 reward (default: 10).",
+  },
+  {
+    key: "nilaiGalonGratis",
+    label: "Nilai 1 Galon Gratis (Rp)",
+    help: "Saldo loyalty yang ditambahkan saat pelanggan capai threshold (default: 5000).",
+  },
 ];
 
 export default async function PengaturanPage() {
@@ -86,8 +102,9 @@ export default async function PengaturanPage() {
   const map = Object.fromEntries(all.map((r) => [r.key, r.value ?? ""]));
 
   return (
-    <div className="p-6 max-w-3xl">
+    <div className="p-6 max-w-3xl space-y-4">
       <PageHeader title="Pengaturan" description="Konfigurasi depot, template pesan, dan integrasi." />
+      <QrisUploader currentUrl={map.qrisFotoUrl ?? null} />
       <PengaturanForm fields={FIELDS} values={map} action={savePengaturan} />
       <TelegramWebhook />
       <SheetsSync />

@@ -43,6 +43,22 @@ export async function uploadBuktiBayar(args: {
   });
 }
 
+export async function uploadAsset(args: {
+  prefix: string;
+  base64: string;
+  mimeType: string;
+}): Promise<UploadResp> {
+  // Reuse folder bukti bayar (atau bukti kurir sebagai fallback) untuk simpan asset depot (QRIS, dll)
+  return await uploadToDrive({
+    folderKey: "driveFolderBuktiBayar",
+    fallbackFolderKey: "driveFolderBuktiKurir",
+    prefix: args.prefix,
+    refId: "asset",
+    base64: args.base64,
+    mimeType: args.mimeType,
+  });
+}
+
 async function uploadToDrive(args: {
   folderKey: string;
   fallbackFolderKey?: string;

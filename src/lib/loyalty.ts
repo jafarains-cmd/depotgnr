@@ -2,6 +2,10 @@ import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { pelanggan, mutasiLoyalti } from "@/db/schema/pelanggan";
 import { orderHeader, orderItem } from "@/db/schema/order";
+import { user as userTable } from "@/db/schema/auth";
+import { pengaturan } from "@/db/schema/pengaturan";
+import { sendWhatsApp } from "./whatsapp";
+import { sendTelegram } from "./telegram";
 
 export const RATE_ANTAR_PER_GALON = 250;
 export const RATE_DEPOT_PER_GALON = 500;
@@ -78,11 +82,90 @@ export async function earnLoyalty(args: EarnArgs): Promise<number> {
       })
       .run();
     tx.update(pelanggan)
-      .set({ saldoLoyalti: sql`${pelanggan.saldoLoyalti} + ${total}` })
+      .set({
+        saldoLoyalti: sql`${pelanggan.saldoLoyalti} + ${total}`,
+        stampGalon: sql`${pelanggan.stampGalon} + ${args.jumlahGalon}`,
+      })
       .where(eq(pelanggan.id, args.pelangganId))
       .run();
   });
+
+  // Cek apakah ada reward stamp baru
+  await checkAndClaimStampReward(args.pelangganId, args.refOrderId, args.refTransaksiId).catch(() => {});
+
   return total;
+}
+
+async function getCfg(key: string): Promise<string> {
+  const row = await db.query.pengaturan.findFirst({ where: eq(pengaturan.key, key) });
+  return row?.value ?? "";
+}
+
+async function checkAndClaimStampReward(
+  pelangganId: number,
+  refOrderId?: number,
+  refTransaksiId?: number,
+): Promise<void> {
+  const aktifRaw = await getCfg("aktifkanStampGalon");
+  if (aktifRaw && aktifRaw !== "1" && aktifRaw.toLowerCase() !== "true") return;
+  // Default aktif kalau belum diset
+
+  const thresholdRaw = await getCfg("stampThresholdGalon");
+  const threshold = Math.max(1, Number(thresholdRaw) || 10);
+
+  const nilaiRaw = await getCfg("nilaiGalonGratis");
+  const nilai = Math.max(0, Number(nilaiRaw) || 5_000);
+  if (nilai === 0) return;
+
+  const p = await db.query.pelanggan.findFirst({ where: eq(pelanggan.id, pelangganId) });
+  if (!p) return;
+
+  const earnedTotal = Math.floor(p.stampGalon / threshold);
+  const newRewards = earnedTotal - p.stampClaimedCount;
+  if (newRewards <= 0) return;
+
+  const totalReward = newRewards * nilai;
+
+  await db.transaction((tx) => {
+    tx.insert(mutasiLoyalti)
+      .values({
+        pelangganId,
+        jumlah: totalReward,
+        tipe: "stamp_reward",
+        refOrderId,
+        refTransaksiId,
+        deskripsi: `Bonus ${newRewards} galon gratis (sudah ${p.stampGalon} galon)`,
+      })
+      .run();
+    tx.update(pelanggan)
+      .set({
+        saldoLoyalti: sql`${pelanggan.saldoLoyalti} + ${totalReward}`,
+        stampClaimedCount: earnedTotal,
+      })
+      .where(eq(pelanggan.id, pelangganId))
+      .run();
+  });
+
+  // Notif pelanggan
+  notifStampReward(pelangganId, newRewards, totalReward, p.stampGalon).catch(() => {});
+}
+
+async function notifStampReward(
+  pelangganId: number,
+  newRewards: number,
+  totalReward: number,
+  stampTotal: number,
+): Promise<void> {
+  const p = await db.query.pelanggan.findFirst({ where: eq(pelanggan.id, pelangganId) });
+  if (!p) return;
+  const text =
+    `🎉 Selamat! Anda dapat *${newRewards} galon gratis* (Rp ${totalReward.toLocaleString("id-ID")} saldo loyalty).\n` +
+    `Total galon Anda sudah ${stampTotal}. Saldo bisa dipakai di order/transaksi berikutnya.`;
+  if (p.telp) await sendWhatsApp(p.telp, text).catch(() => {});
+  if (p.userId) {
+    const u = await db.query.user.findFirst({ where: eq(userTable.id, p.userId) });
+    if (u?.telegramChatId) await sendTelegram(u.telegramChatId, text).catch(() => {});
+  }
 }
 
 /**

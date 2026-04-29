@@ -43,6 +43,13 @@
       "when": 1777491556201,
       "tag": "0005_lovely_iron_monger",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1777492345525,
+      "tag": "0006_lean_jubilee",
+      "breakpoints": true
     }
   ]
 }

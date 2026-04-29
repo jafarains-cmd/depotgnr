@@ -18,6 +18,9 @@ export const pelanggan = sqliteTable("pelanggan", {
   firstOrderRewardClaimed: integer("first_order_reward_claimed", { mode: "boolean" })
     .notNull()
     .default(false),
+  // Stamp galon: counter total galon yang sudah dibeli; setiap N (default 10) → reward
+  stampGalon: integer("stamp_galon").notNull().default(0),
+  stampClaimedCount: integer("stamp_claimed_count").notNull().default(0),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
@@ -29,7 +32,7 @@ export const mutasiLoyalti = sqliteTable("mutasi_loyalti", {
     .references(() => pelanggan.id, { onDelete: "cascade" }),
   jumlah: integer("jumlah").notNull(), // positif=earn/bonus, negatif=redeem
   tipe: text("tipe", {
-    enum: ["earn", "redeem", "referral_in", "referral_bonus", "adjust"],
+    enum: ["earn", "redeem", "referral_in", "referral_bonus", "stamp_reward", "adjust"],
   }).notNull(),
   refOrderId: integer("ref_order_id"),
   refTransaksiId: integer("ref_transaksi_id"),
