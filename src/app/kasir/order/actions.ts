@@ -12,6 +12,7 @@ import { sendTelegram, renderTemplate, notifGrupOrder } from "@/lib/telegram";
 import { sendWhatsApp } from "@/lib/whatsapp";
 import { formatRupiah } from "@/lib/utils";
 import { earnFromOrderIfEligible } from "@/lib/loyalty";
+import { sendPushToUser } from "@/lib/push";
 
 type Status =
   | "pending"
@@ -146,6 +147,14 @@ export async function notifPelangganStatus(orderId: number, status: Status) {
   if (pel.userId) {
     const u = await db.query.user.findFirst({ where: eq(userTable.id, pel.userId) });
     if (u?.telegramChatId) await sendTelegram(u.telegramChatId, text).catch(() => {});
+    // Push notif (browser/PWA)
+    sendPushToUser(pel.userId, {
+      title: `Order ${order.nomorOrder}`,
+      body: text.replace(/\*/g, "").split("\n")[0],
+      url: `/pelanggan/riwayat`,
+      tag: `order-${order.nomorOrder}`,
+      renotify: true,
+    }).catch(() => {});
   }
   if (pel.telp) await sendWhatsApp(pel.telp, text).catch(() => {});
 }

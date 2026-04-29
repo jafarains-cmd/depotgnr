@@ -6,6 +6,7 @@ import { user as userTable } from "@/db/schema/auth";
 import { pengaturan } from "@/db/schema/pengaturan";
 import { sendWhatsApp } from "./whatsapp";
 import { sendTelegram } from "./telegram";
+import { sendPushToUser } from "./push";
 
 export const RATE_ANTAR_PER_GALON = 250;
 export const RATE_DEPOT_PER_GALON = 500;
@@ -165,6 +166,12 @@ async function notifStampReward(
   if (p.userId) {
     const u = await db.query.user.findFirst({ where: eq(userTable.id, p.userId) });
     if (u?.telegramChatId) await sendTelegram(u.telegramChatId, text).catch(() => {});
+    sendPushToUser(p.userId, {
+      title: "🎉 Galon Gratis!",
+      body: `Anda dapat ${newRewards} galon gratis (Rp ${totalReward.toLocaleString("id-ID")} saldo).`,
+      url: "/pelanggan/loyalty",
+      tag: "stamp-reward",
+    }).catch(() => {});
   }
 }
 

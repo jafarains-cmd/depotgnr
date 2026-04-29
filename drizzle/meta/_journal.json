@@ -50,6 +50,13 @@
       "when": 1777492345525,
       "tag": "0006_lean_jubilee",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1777499103896,
+      "tag": "0007_stormy_the_hunter",
+      "breakpoints": true
     }
   ]
 }

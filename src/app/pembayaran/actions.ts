@@ -12,6 +12,7 @@ import { sendWhatsApp } from "@/lib/whatsapp";
 import { sendTelegram } from "@/lib/telegram";
 import { formatRupiah } from "@/lib/utils";
 import { earnFromOrderIfEligible } from "@/lib/loyalty";
+import { sendPushToUser } from "@/lib/push";
 
 export async function konfirmasiBayar(
   orderId: number,
@@ -89,6 +90,12 @@ async function notifLunas(orderId: number) {
   if (pel.userId) {
     const u = await db.query.user.findFirst({ where: eq(userTable.id, pel.userId) });
     if (u?.telegramChatId) await sendTelegram(u.telegramChatId, text).catch(() => {});
+    sendPushToUser(pel.userId, {
+      title: "✅ Pembayaran Dikonfirmasi",
+      body: `${o.nomorOrder} sudah lunas. Order akan segera diproses.`,
+      url: "/pelanggan/riwayat",
+      tag: `pay-${o.nomorOrder}`,
+    }).catch(() => {});
   }
 }
 

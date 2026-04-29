@@ -8,6 +8,7 @@ import { getOrCreatePelanggan } from "@/lib/pelanggan";
 import { formatRupiah } from "@/lib/utils";
 import { Plus, Truck, History } from "lucide-react";
 import { CancelOrderButton } from "../order-baru/CancelOrderButton";
+import { NotifSubscribe } from "@/components/NotifSubscribe";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,8 @@ export default async function BerandaPage() {
 
   return (
     <div className="space-y-5">
+      <NotifSubscribe />
+
       <div className="bg-gradient-to-br from-brand-600 to-brand-700 text-white rounded-2xl p-5">
         <div className="text-sm opacity-80">Selamat datang</div>
         <div className="text-xl font-bold">{me.nama}</div>
