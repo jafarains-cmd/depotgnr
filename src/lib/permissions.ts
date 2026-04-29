@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth, type Session } from "./auth";
 
-export type Role = "admin" | "kasir" | "pelanggan";
+export type Role = "admin" | "kasir" | "kurir" | "pelanggan";
 
 export async function getSession(): Promise<Session | null> {
   return await auth.api.getSession({ headers: await headers() });

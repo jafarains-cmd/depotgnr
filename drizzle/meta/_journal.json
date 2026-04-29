@@ -8,6 +8,13 @@
       "when": 1777301763115,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1777482226590,
+      "tag": "0001_thick_crusher_hogan",
+      "breakpoints": true
     }
   ]
 }

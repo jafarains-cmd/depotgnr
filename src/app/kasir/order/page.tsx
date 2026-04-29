@@ -1,13 +1,16 @@
 import { db } from "@/db";
-import { eq, desc, ne } from "drizzle-orm";
+import { eq, desc, gte, or, ne, and, inArray } from "drizzle-orm";
 import { orderHeader } from "@/db/schema/order";
 import { pelanggan } from "@/db/schema/pelanggan";
+import { user as userTable } from "@/db/schema/auth";
 import { PageHeader } from "@/components/AppShell";
 import { OrderClient, type OrderRow } from "./OrderClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function OrderKasirPage() {
+  // Tampilkan: semua order belum-selesai + order selesai 48 jam terakhir (untuk lihat bukti antar)
+  const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
   const aktif = await db
     .select({
       id: orderHeader.id,
@@ -19,12 +22,20 @@ export default async function OrderKasirPage() {
       totalEstimasi: orderHeader.totalEstimasi,
       catatan: orderHeader.catatan,
       createdAt: orderHeader.createdAt,
+      buktiFotoUrl: orderHeader.buktiFotoUrl,
+      diantarAt: orderHeader.diantarAt,
+      kurirUserId: orderHeader.kurirUserId,
       pelangganNama: pelanggan.nama,
       pelangganTelp: pelanggan.telp,
     })
     .from(orderHeader)
     .leftJoin(pelanggan, eq(orderHeader.pelangganId, pelanggan.id))
-    .where(ne(orderHeader.status, "selesai"))
+    .where(
+      or(
+        ne(orderHeader.status, "selesai"),
+        and(eq(orderHeader.status, "selesai"), gte(orderHeader.diantarAt, cutoff)),
+      ),
+    )
     .orderBy(desc(orderHeader.createdAt));
 
   const rows: OrderRow[] = await Promise.all(
@@ -49,15 +60,21 @@ export default async function OrderKasirPage() {
         ...o,
         jadwalAntar: o.jadwalAntar?.toISOString() ?? null,
         createdAt: o.createdAt.toISOString(),
+        diantarAt: o.diantarAt?.toISOString() ?? null,
         items: itemDetail,
       };
     }),
   );
 
+  const kurirList = await db
+    .select({ id: userTable.id, name: userTable.name })
+    .from(userTable)
+    .where(inArray(userTable.role, ["kurir", "admin", "kasir"]));
+
   return (
     <div className="p-6">
       <PageHeader title="Order Antar" description="Kelola order pengantaran yang masuk." />
-      <OrderClient rows={rows} />
+      <OrderClient rows={rows} kurirList={kurirList} />
     </div>
   );
 }

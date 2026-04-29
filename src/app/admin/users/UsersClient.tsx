@@ -10,7 +10,7 @@ type Row = {
   email: string;
   username: string | null;
   phoneNumber: string | null;
-  role: "admin" | "kasir" | "pelanggan";
+  role: "admin" | "kasir" | "kurir" | "pelanggan";
   banned: boolean;
 };
 
@@ -72,6 +72,7 @@ export function UsersClient({ users }: { users: Row[] }) {
                     className="px-2 py-1 border border-slate-300 rounded-md text-xs"
                   >
                     <option value="pelanggan">pelanggan</option>
+                    <option value="kurir">kurir</option>
                     <option value="kasir">kasir</option>
                     <option value="admin">admin</option>
                   </select>
@@ -136,6 +137,7 @@ function CreateStaffForm({ onDone }: { onDone: () => void }) {
         <label className="block text-xs font-medium text-slate-600 mb-0.5">Role</label>
         <select name="role" defaultValue="kasir" className="w-full px-2.5 py-1.5 border border-slate-300 rounded-md">
           <option value="kasir">Kasir</option>
+          <option value="kurir">Kurir</option>
           <option value="admin">Admin</option>
         </select>
       </div>

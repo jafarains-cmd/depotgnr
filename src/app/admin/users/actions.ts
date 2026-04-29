@@ -10,7 +10,7 @@ import { auth } from "@/lib/auth";
 export async function createStaff(formData: FormData) {
   await requireRole(["admin"]);
 
-  const role = String(formData.get("role") ?? "kasir") as "admin" | "kasir";
+  const role = String(formData.get("role") ?? "kasir") as "admin" | "kasir" | "kurir";
   const nama = String(formData.get("nama") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const username = String(formData.get("username") ?? "").trim();
@@ -19,7 +19,7 @@ export async function createStaff(formData: FormData) {
   if (!nama || !password) throw new Error("Nama & password wajib");
   if (!email && !username) throw new Error("Email atau username wajib");
 
-  const finalEmail = email || `${username}@kasir.depot.local`;
+  const finalEmail = email || `${username}@${role}.depot.local`;
 
   const result = await auth.api.signUpEmail({
     body: {
@@ -37,7 +37,7 @@ export async function createStaff(formData: FormData) {
   revalidatePath("/admin/users");
 }
 
-export async function updateUserRole(id: string, role: "admin" | "kasir" | "pelanggan") {
+export async function updateUserRole(id: string, role: "admin" | "kasir" | "kurir" | "pelanggan") {
   await requireRole(["admin"]);
   await db.update(userTable).set({ role, updatedAt: new Date() }).where(eq(userTable.id, id));
   revalidatePath("/admin/users");

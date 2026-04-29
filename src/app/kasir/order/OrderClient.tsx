@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { formatRupiah } from "@/lib/utils";
-import { updateOrderStatus } from "./actions";
+import { updateOrderStatus, assignKurir } from "./actions";
 
 export type OrderRow = {
   id: number;
@@ -15,6 +15,9 @@ export type OrderRow = {
   totalEstimasi: number;
   catatan: string | null;
   createdAt: string;
+  buktiFotoUrl: string | null;
+  diantarAt: string | null;
+  kurirUserId: string | null;
   pelangganNama: string | null;
   pelangganTelp: string | null;
   items: { qty: number; jenis: string; namaProduk: string }[];
@@ -36,7 +39,13 @@ const STATUS_COLOR: Record<OrderRow["status"], string> = {
   batal: "bg-slate-200 text-slate-600",
 };
 
-export function OrderClient({ rows }: { rows: OrderRow[] }) {
+export function OrderClient({
+  rows,
+  kurirList,
+}: {
+  rows: OrderRow[];
+  kurirList: { id: string; name: string }[];
+}) {
   const [pending, startTransition] = useTransition();
   const [filter, setFilter] = useState<OrderRow["status"] | "all">("all");
 
@@ -44,8 +53,8 @@ export function OrderClient({ rows }: { rows: OrderRow[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-1 text-sm">
-        {(["all", "pending", "diproses", "diantar"] as const).map((f) => (
+      <div className="flex gap-1 text-sm flex-wrap">
+        {(["all", "pending", "diproses", "diantar", "selesai"] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -97,6 +106,50 @@ export function OrderClient({ rows }: { rows: OrderRow[] }) {
               <div className="text-sm font-medium">
                 Estimasi: {formatRupiah(o.totalEstimasi)}
               </div>
+
+              {(o.status === "pending" || o.status === "diproses" || o.status === "diantar") && (
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-slate-500">Kurir:</span>
+                  <select
+                    value={o.kurirUserId ?? ""}
+                    onChange={(e) =>
+                      startTransition(() => assignKurir(o.id, e.target.value || null))
+                    }
+                    className="flex-1 px-2 py-1 border border-slate-300 rounded text-xs"
+                    disabled={pending}
+                  >
+                    <option value="">— belum di-assign —</option>
+                    {kurirList.map((k) => (
+                      <option key={k.id} value={k.id}>
+                        {k.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {o.buktiFotoUrl && (
+                <div className="pt-1">
+                  <div className="text-xs text-slate-500 mb-1">Bukti pengantaran:</div>
+                  <a href={o.buktiFotoUrl} target="_blank" rel="noreferrer">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={o.buktiFotoUrl}
+                      alt="Bukti"
+                      className="w-24 h-24 object-cover rounded-md border border-slate-200 hover:opacity-80"
+                    />
+                  </a>
+                  {o.diantarAt && (
+                    <div className="text-xs text-slate-400 mt-1">
+                      Diantar:{" "}
+                      {new Date(o.diantarAt).toLocaleString("id-ID", {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="flex gap-2 pt-2 border-t border-slate-100">
                 {next && (

@@ -21,8 +21,14 @@ export async function updateOrderStatus(orderId: number, status: Status) {
     status,
     updatedAt: new Date(),
   };
+  // Auto-assign kurir hanya jika belum ada — preserves manual assignment
   if (status === "diproses" || status === "diantar") {
-    update.kurirUserId = session.user.id;
+    const current = await db.query.orderHeader.findFirst({
+      where: eq(orderHeader.id, orderId),
+    });
+    if (current && !current.kurirUserId) {
+      update.kurirUserId = session.user.id;
+    }
   }
 
   await db.update(orderHeader).set(update).where(eq(orderHeader.id, orderId));
@@ -112,8 +118,8 @@ async function notifPelangganOrderSelesai(orderId: number) {
   }
 }
 
-export async function assignKurir(orderId: number, kurirUserId: string) {
-  await requireRole(["admin"]);
+export async function assignKurir(orderId: number, kurirUserId: string | null) {
+  await requireRole(["admin", "kasir"]);
   await db
     .update(orderHeader)
     .set({ kurirUserId, updatedAt: new Date() })

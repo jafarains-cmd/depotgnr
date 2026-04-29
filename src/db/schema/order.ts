@@ -20,6 +20,8 @@ export const orderHeader = sqliteTable("order", {
   totalEstimasi: integer("total_estimasi").notNull().default(0),
   transaksiId: integer("transaksi_id").references(() => transaksi.id, { onDelete: "set null" }),
   catatan: text("catatan"),
+  buktiFotoUrl: text("bukti_foto_url"),
+  diantarAt: integer("diantar_at", { mode: "timestamp" }),
   sheetRowId: text("sheet_row_id"),
   lastSyncedAt: integer("last_synced_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),

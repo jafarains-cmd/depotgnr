@@ -10,7 +10,7 @@ export const user = sqliteTable("user", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 
   // additionalFields
-  role: text("role", { enum: ["admin", "kasir", "pelanggan"] }).notNull().default("pelanggan"),
+  role: text("role", { enum: ["admin", "kasir", "kurir", "pelanggan"] }).notNull().default("pelanggan"),
   alamat: text("alamat"),
   telegramChatId: text("telegram_chat_id"),
 
