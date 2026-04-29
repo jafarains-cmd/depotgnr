@@ -19,13 +19,48 @@ export async function uploadBuktiKurir(args: {
   base64: string;
   mimeType: string;
 }): Promise<UploadResp> {
+  return await uploadToDrive({
+    folderKey: "driveFolderBuktiKurir",
+    prefix: "bukti-antar",
+    refId: args.orderNomor,
+    base64: args.base64,
+    mimeType: args.mimeType,
+  });
+}
+
+export async function uploadBuktiBayar(args: {
+  orderNomor: string;
+  base64: string;
+  mimeType: string;
+}): Promise<UploadResp> {
+  return await uploadToDrive({
+    folderKey: "driveFolderBuktiBayar",
+    fallbackFolderKey: "driveFolderBuktiKurir",
+    prefix: "bukti-bayar",
+    refId: args.orderNomor,
+    base64: args.base64,
+    mimeType: args.mimeType,
+  });
+}
+
+async function uploadToDrive(args: {
+  folderKey: string;
+  fallbackFolderKey?: string;
+  prefix: string;
+  refId: string;
+  base64: string;
+  mimeType: string;
+}): Promise<UploadResp> {
   const url = await getCfg("appsScriptUrl");
   const token = await getCfg("appsScriptToken");
-  const folderId = await getCfg("driveFolderBuktiKurir");
+  let folderId = await getCfg(args.folderKey);
+  if (!folderId && args.fallbackFolderKey) {
+    folderId = await getCfg(args.fallbackFolderKey);
+  }
   if (!url || !token) return { ok: false, error: "Apps Script belum diset di Pengaturan" };
-  if (!folderId) return { ok: false, error: "driveFolderBuktiKurir belum diset di Pengaturan" };
+  if (!folderId) return { ok: false, error: `${args.folderKey} belum diset di Pengaturan` };
 
-  const filename = `bukti-${args.orderNomor}-${Date.now()}.${guessExt(args.mimeType)}`;
+  const filename = `${args.prefix}-${args.refId}-${Date.now()}.${guessExt(args.mimeType)}`;
 
   try {
     const res = await fetch(url, {
@@ -38,7 +73,7 @@ export async function uploadBuktiKurir(args: {
         filename,
         mimeType: args.mimeType,
         base64: args.base64,
-      }),
+      }) ,
       redirect: "follow",
     });
     if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };

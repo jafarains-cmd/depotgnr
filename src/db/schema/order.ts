@@ -22,6 +22,17 @@ export const orderHeader = sqliteTable("order", {
   catatan: text("catatan"),
   buktiFotoUrl: text("bukti_foto_url"),
   diantarAt: integer("diantar_at", { mode: "timestamp" }),
+  // Pembayaran online (Fase 2)
+  metodeBayar: text("metode_bayar", {
+    enum: ["cash", "transfer", "qris", "dana", "cod"],
+  }),
+  statusBayar: text("status_bayar", {
+    enum: ["belum", "menunggu", "lunas"],
+  })
+    .notNull()
+    .default("belum"),
+  buktiBayarUrl: text("bukti_bayar_url"),
+  bayarAt: integer("bayar_at", { mode: "timestamp" }),
   sheetRowId: text("sheet_row_id"),
   lastSyncedAt: integer("last_synced_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),

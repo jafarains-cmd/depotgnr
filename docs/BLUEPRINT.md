@@ -113,7 +113,7 @@ Track stok galon per status. Mutasi otomatis dari transaksi/order + manual entry
 
 Eksekusi serial, urutan disepakati 2026-04-29.
 
-### Fase 1 · Dashboard Kurir _(in progress)_
+### Fase 1 · Dashboard Kurir _(✅ done)_
 **Tujuan:** kurir punya halaman sendiri untuk tracking order yang dia antar.
 
 **Schema:**
@@ -130,7 +130,7 @@ Eksekusi serial, urutan disepakati 2026-04-29.
 
 ---
 
-### Fase 2 · QRIS Statis + Multi-Channel Payment
+### Fase 2 · QRIS Statis + Multi-Channel Payment _(✅ done)_
 **Tujuan:** pelanggan bisa bayar via QRIS, DANA, atau transfer bank dari halaman web — kasir konfirmasi manual.
 
 **Schema:**
@@ -254,3 +254,5 @@ Eksekusi serial, urutan disepakati 2026-04-29.
 | 2026-04-29 | QRIS statis + DANA + transfer bank; bukti upload; kasir konfirmasi manual |
 | 2026-04-29 | Foto bukti kurir disimpan di Google Drive via Apps Script |
 | 2026-04-29 | Order langganan: bayar per antar (no prepaid) |
+| 2026-04-29 | Fase 2: pembayaran online QRIS+DANA+Transfer di orderHeader (bukan transaksi); halaman /pembayaran universal admin+kasir |
+| 2026-04-29 | Kasir bisa akses /kurir + Mode Kurir di nav |

@@ -53,6 +53,32 @@ const FIELDS: { key: string; label: string; type?: "text" | "textarea"; help?: s
     label: "Drive Folder ID — Bukti Pengantaran Kurir",
     help: "ID folder Google Drive untuk simpan foto bukti antar. Buka folder di Drive → ID = bagian terakhir URL (drive.google.com/drive/folders/<ID>).",
   },
+  {
+    key: "driveFolderBuktiBayar",
+    label: "Drive Folder ID — Bukti Pembayaran",
+    help: "Folder Drive terpisah untuk bukti pembayaran (boleh sama dengan bukti antar). Format ID sama.",
+  },
+  {
+    key: "qrisFotoUrl",
+    label: "URL Gambar QRIS Statis",
+    help: "Upload gambar QRIS depot ke Drive (set sharing 'anyone with link'), lalu paste URL view-nya. Atau pakai format https://drive.google.com/uc?id=<FILE_ID>.",
+  },
+  {
+    key: "nomorDana",
+    label: "Nomor DANA",
+    help: "Nomor HP yang terdaftar di akun DANA depot. Akan ditampilkan ke pelanggan saat pilih bayar via DANA.",
+  },
+  {
+    key: "atasNamaDana",
+    label: "Atas Nama DANA",
+    help: "Nama pemilik akun DANA (untuk verifikasi pelanggan).",
+  },
+  {
+    key: "daftarRekening",
+    label: "Daftar Rekening Bank",
+    type: "textarea",
+    help: "Satu rekening per baris. Format: BANK | NOMOR | ATAS NAMA. Contoh: BCA | 1234567890 | Depot Air",
+  },
 ];
 
 export default async function PengaturanPage() {

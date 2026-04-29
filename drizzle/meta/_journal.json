@@ -15,6 +15,13 @@
       "when": 1777482226590,
       "tag": "0001_thick_crusher_hogan",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1777487332852,
+      "tag": "0002_awesome_blade",
+      "breakpoints": true
     }
   ]
 }

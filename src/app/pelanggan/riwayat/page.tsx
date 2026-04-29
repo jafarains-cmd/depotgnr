@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { eq, desc, inArray } from "drizzle-orm";
+import { CreditCard } from "lucide-react";
 import { db } from "@/db";
 import { orderHeader, orderItem } from "@/db/schema/order";
 import { transaksi } from "@/db/schema/transaksi";
@@ -105,6 +107,21 @@ export default async function RiwayatPage() {
                     <CancelOrderButton orderId={o.id} nomorOrder={o.nomorOrder} />
                   )}
                 </div>
+
+                {o.status !== "batal" && (
+                  <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                    <PayBadge status={o.statusBayar} metode={o.metodeBayar} />
+                    {(o.statusBayar === "belum" || o.statusBayar === "menunggu") && (
+                      <Link
+                        href={`/pelanggan/order/${o.id}/bayar`}
+                        className="text-xs px-3 py-1.5 bg-brand-600 text-white rounded inline-flex items-center gap-1"
+                      >
+                        <CreditCard size={12} />
+                        {o.statusBayar === "menunggu" ? "Lihat Status" : "Bayar Sekarang"}
+                      </Link>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -138,3 +155,33 @@ export default async function RiwayatPage() {
     </div>
   );
 }
+
+function PayBadge({ status, metode }: { status: string; metode: string | null }) {
+  if (status === "lunas") {
+    return (
+      <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded">
+        Lunas{metode ? ` · ${metode.toUpperCase()}` : ""}
+      </span>
+    );
+  }
+  if (status === "menunggu") {
+    return (
+      <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-800 rounded">
+        Menunggu verifikasi
+      </span>
+    );
+  }
+  if (metode === "cod") {
+    return (
+      <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded">
+        Bayar saat antar
+      </span>
+    );
+  }
+  return (
+    <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded">
+      Belum dibayar
+    </span>
+  );
+}
+
