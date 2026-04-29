@@ -4,7 +4,7 @@ import { LogoutButton } from "../akun/LogoutButton";
 import { requireRole } from "@/lib/permissions";
 
 export default async function KurirLayout({ children }: { children: React.ReactNode }) {
-  const session = await requireRole(["admin", "kurir"]);
+  const session = await requireRole(["admin", "kasir", "kurir"]);
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">

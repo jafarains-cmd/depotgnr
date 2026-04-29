@@ -1,4 +1,4 @@
-import { ShoppingCart, Truck, Receipt, KeyRound } from "lucide-react";
+import { ShoppingCart, Truck, Receipt, KeyRound, Bike } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { requireRole } from "@/lib/permissions";
 
@@ -6,6 +6,7 @@ const NAV = [
   { href: "/kasir/pos", label: "POS Kasir", icon: <ShoppingCart size={16} /> },
   { href: "/kasir/order", label: "Order Antar", icon: <Truck size={16} /> },
   { href: "/kasir/transaksi", label: "Riwayat Transaksi", icon: <Receipt size={16} /> },
+  { href: "/kurir", label: "Mode Kurir", icon: <Bike size={16} /> },
   { href: "/akun", label: "Akun Saya", icon: <KeyRound size={16} /> },
 ];
 

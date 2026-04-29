@@ -20,12 +20,12 @@ export default async function KurirOrderDetail({
   const orderId = Number(id);
   if (!Number.isFinite(orderId)) notFound();
 
-  const session = await requireRole(["admin", "kurir"]);
+  const session = await requireRole(["admin", "kasir", "kurir"]);
   const role = (session.user as { role?: string }).role;
 
   const o = await db.query.orderHeader.findFirst({ where: eq(orderHeader.id, orderId) });
   if (!o) notFound();
-  if (role !== "admin" && o.kurirUserId !== session.user.id) {
+  if (role !== "admin" && role !== "kasir" && o.kurirUserId !== session.user.id) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
         Order ini bukan tugas Anda.

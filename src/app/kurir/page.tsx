@@ -9,7 +9,7 @@ import { MapPin, Phone, Clock, ChevronRight, Truck, Check } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function KurirHomePage() {
-  const session = await requireRole(["admin", "kurir"]);
+  const session = await requireRole(["admin", "kasir", "kurir"]);
 
   const orders = await db
     .select({
