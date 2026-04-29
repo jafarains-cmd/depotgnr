@@ -48,6 +48,11 @@ const FIELDS: { key: string; label: string; type?: "text" | "textarea"; help?: s
     label: "Apps Script Token",
     help: "Token rahasia yang sama persis dengan TOKEN di Apps Script kamu.",
   },
+  {
+    key: "driveFolderBuktiKurir",
+    label: "Drive Folder ID — Bukti Pengantaran Kurir",
+    help: "ID folder Google Drive untuk simpan foto bukti antar. Buka folder di Drive → ID = bagian terakhir URL (drive.google.com/drive/folders/<ID>).",
+  },
 ];
 
 export default async function PengaturanPage() {
