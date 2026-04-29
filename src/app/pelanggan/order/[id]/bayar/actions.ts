@@ -7,6 +7,8 @@ import { orderHeader } from "@/db/schema/order";
 import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
 import { requireSession } from "@/lib/permissions";
 import { uploadBuktiBayar } from "@/lib/drive";
+import { redeemLoyalty } from "@/lib/loyalty";
+import { pelanggan as pelangganTable2 } from "@/db/schema/pelanggan";
 
 type Metode = "cash" | "transfer" | "qris" | "dana" | "cod";
 
@@ -91,4 +93,44 @@ export async function submitBuktiBayar(args: {
   revalidatePath("/pelanggan/riwayat");
   revalidatePath("/pembayaran");
   return { ok: true, url: up.url };
+}
+
+export async function pakaiLoyalty(
+  orderId: number,
+  jumlah: number,
+): Promise<{ ok: true } | { error: string }> {
+  const session = await requireSession();
+  const o = await db.query.orderHeader.findFirst({ where: eq(orderHeader.id, orderId) });
+  if (!o) return { error: "Order tidak ditemukan" };
+  if (!o.pelangganId) return { error: "Order tidak terhubung pelanggan" };
+
+  const pel = await db.query.pelanggan.findFirst({
+    where: eq(pelangganTable2.id, o.pelangganId),
+  });
+  if (pel?.userId !== session.user.id) return { error: "Order ini bukan milik Anda" };
+  if (o.statusBayar === "lunas" || o.statusBayar === "menunggu") {
+    return { error: "Tidak bisa ubah saat sudah submit/lunas" };
+  }
+  if (o.loyaltiDipakai > 0) {
+    return { error: "Saldo sudah dipakai. Hubungi admin kalau salah." };
+  }
+  const max = Math.max(0, o.totalEstimasi - 1);
+  const used = Math.min(jumlah, max);
+  if (used <= 0) return { error: "Jumlah tidak valid" };
+
+  const r = await redeemLoyalty({
+    pelangganId: o.pelangganId,
+    jumlah: used,
+    refOrderId: orderId,
+    deskripsi: `Redeem di order ${o.nomorOrder}`,
+  });
+  if (!r.ok) return { error: r.error };
+
+  await db
+    .update(orderHeader)
+    .set({ loyaltiDipakai: used, updatedAt: new Date() })
+    .where(eq(orderHeader.id, orderId));
+
+  revalidatePath(`/pelanggan/order/${orderId}/bayar`);
+  return { ok: true };
 }

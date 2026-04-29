@@ -41,6 +41,7 @@ export const orderHeader = sqliteTable("order", {
     .default("belum"),
   buktiBayarUrl: text("bukti_bayar_url"),
   bayarAt: integer("bayar_at", { mode: "timestamp" }),
+  loyaltiDipakai: integer("loyalti_dipakai").notNull().default(0),
   sheetRowId: text("sheet_row_id"),
   lastSyncedAt: integer("last_synced_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),

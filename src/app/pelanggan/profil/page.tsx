@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { Settings } from "lucide-react";
+import { Settings, Gift } from "lucide-react";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { user as userTable } from "@/db/schema/auth";
 import { requireSession } from "@/lib/permissions";
 import { getOrCreatePelanggan } from "@/lib/pelanggan";
+import { formatRupiah } from "@/lib/utils";
 import { ProfilClient } from "./ProfilClient";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +25,22 @@ export default async function ProfilPage() {
         <Row label="Username" value={u?.displayUsername ?? u?.username ?? "-"} />
         <Row label="Telp/WA" value={pel.telp ?? "-"} />
         <Row label="Alamat" value={pel.alamat ?? "-"} />
+        <Row label="Kode Referral" value={pel.kodeReferral ?? "-"} />
       </div>
+
+      <Link
+        href="/pelanggan/loyalty"
+        className="flex items-center justify-between bg-gradient-to-br from-brand-50 to-brand-100 border border-brand-200 rounded-xl p-4 hover:from-brand-100"
+      >
+        <div className="flex items-center gap-3">
+          <Gift size={20} className="text-brand-700" />
+          <div>
+            <div className="text-xs text-brand-700">Saldo Loyalty</div>
+            <div className="text-lg font-bold">{formatRupiah(pel.saldoLoyalti)}</div>
+          </div>
+        </div>
+        <span className="text-brand-700 text-sm">Lihat detail ›</span>
+      </Link>
 
       <Link
         href="/akun"

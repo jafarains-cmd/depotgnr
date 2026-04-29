@@ -7,6 +7,7 @@ import { orderHeader } from "@/db/schema/order";
 import { requireRole } from "@/lib/permissions";
 import { uploadBuktiKurir } from "@/lib/drive";
 import { notifPelangganStatus } from "../kasir/order/actions";
+import { earnFromOrderIfEligible } from "@/lib/loyalty";
 
 export async function mulaiAntar(
   orderId: number,
@@ -158,6 +159,7 @@ export async function konfirmasiDiantar(args: {
     .where(eq(orderHeader.id, args.orderId));
 
   notifPelangganStatus(args.orderId, "selesai").catch(() => {});
+  earnFromOrderIfEligible(args.orderId).catch(() => {});
   revalidatePath(`/kurir/${args.orderId}`);
   revalidatePath("/kurir");
   return { ok: true, url: up.url };

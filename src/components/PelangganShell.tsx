@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, Plus, History, User, LogOut } from "lucide-react";
+import { Home, Plus, History, User, LogOut, Gift } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 
 const NAV = [
   { href: "/pelanggan/beranda", label: "Beranda", icon: <Home size={20} /> },
   { href: "/pelanggan/order-baru", label: "Order", icon: <Plus size={20} /> },
   { href: "/pelanggan/riwayat", label: "Riwayat", icon: <History size={20} /> },
+  { href: "/pelanggan/loyalty", label: "Loyalty", icon: <Gift size={20} /> },
   { href: "/pelanggan/profil", label: "Profil", icon: <User size={20} /> },
 ];
 
@@ -65,7 +66,7 @@ export function PelangganShell({
       </header>
       <main className="max-w-3xl mx-auto p-4">{children}</main>
       {/* Mobile bottom nav */}
-      <nav className="sm:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 grid grid-cols-4 z-10">
+      <nav className="sm:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 grid grid-cols-5 z-10">
         {NAV.map((item) => {
           const active = pathname === item.href || pathname.startsWith(item.href + "/");
           return (

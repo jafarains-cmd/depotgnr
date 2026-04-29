@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { orderHeader } from "@/db/schema/order";
 import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
 import { pengaturan } from "@/db/schema/pengaturan";
+// Loyalty info loaded from pelanggan record
 import { requireSession } from "@/lib/permissions";
 import { formatRupiah } from "@/lib/utils";
 import { BayarClient } from "./BayarClient";
@@ -60,7 +61,12 @@ export default async function BayarPage({
 
       <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-1">
         <div className="text-xs text-slate-500">{o.nomorOrder}</div>
-        <div className="text-2xl font-bold">{formatRupiah(o.totalEstimasi)}</div>
+        <div className="text-2xl font-bold">{formatRupiah(o.totalEstimasi - o.loyaltiDipakai)}</div>
+        {o.loyaltiDipakai > 0 && (
+          <div className="text-xs text-slate-500">
+            Total {formatRupiah(o.totalEstimasi)} − saldo {formatRupiah(o.loyaltiDipakai)}
+          </div>
+        )}
         <PaymentStatusBadge status={o.statusBayar} />
       </div>
 
@@ -107,7 +113,10 @@ export default async function BayarPage({
         <BayarClient
           orderId={o.id}
           nomorOrder={o.nomorOrder}
-          total={o.totalEstimasi}
+          total={o.totalEstimasi - o.loyaltiDipakai}
+          totalAsli={o.totalEstimasi}
+          loyaltiDipakai={o.loyaltiDipakai}
+          saldoLoyalti={pel.saldoLoyalti}
           metodeBayar={o.metodeBayar}
           buktiUrl={o.buktiBayarUrl}
           qrisFotoUrl={cfgMap.qrisFotoUrl ?? null}

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useTransition as useT2 } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Check, Copy, Loader2, QrCode, Wallet, Building2, HandCoins } from "lucide-react";
-import { pilihMetodeBayar, submitBuktiBayar } from "./actions";
+import { Camera, Check, Copy, Loader2, QrCode, Wallet, Building2, HandCoins, Gift } from "lucide-react";
+import { pilihMetodeBayar, submitBuktiBayar, pakaiLoyalty } from "./actions";
 import { formatRupiah } from "@/lib/utils";
 
 type Metode = "cash" | "transfer" | "qris" | "dana" | "cod";
@@ -12,6 +12,9 @@ export function BayarClient({
   orderId,
   nomorOrder,
   total,
+  totalAsli,
+  loyaltiDipakai,
+  saldoLoyalti,
   metodeBayar,
   buktiUrl,
   qrisFotoUrl,
@@ -22,6 +25,9 @@ export function BayarClient({
   orderId: number;
   nomorOrder: string;
   total: number;
+  totalAsli: number;
+  loyaltiDipakai: number;
+  saldoLoyalti: number;
   metodeBayar: Metode | null;
   buktiUrl: string | null;
   qrisFotoUrl: string | null;
@@ -77,6 +83,13 @@ export function BayarClient({
 
   return (
     <div className="space-y-4">
+      <LoyaltyBlock
+        orderId={orderId}
+        saldo={saldoLoyalti}
+        dipakai={loyaltiDipakai}
+        totalAsli={totalAsli}
+      />
+
       <div className="bg-white border border-slate-200 rounded-xl p-4">
         <div className="text-sm font-semibold mb-2">Pilih metode pembayaran</div>
         <div className="grid grid-cols-2 gap-2">
@@ -229,6 +242,86 @@ export function BayarClient({
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+function LoyaltyBlock({
+  orderId,
+  saldo,
+  dipakai,
+  totalAsli,
+}: {
+  orderId: number;
+  saldo: number;
+  dipakai: number;
+  totalAsli: number;
+}) {
+  const [pending, startTransition] = useT2();
+  const [pakai, setPakai] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+
+  if (dipakai > 0) {
+    return (
+      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-sm inline-flex items-center gap-2">
+        <Gift size={16} className="text-emerald-600" />
+        <span>
+          Saldo loyalty dipakai: <b>{formatRupiah(dipakai)}</b>
+        </span>
+      </div>
+    );
+  }
+  if (saldo <= 0) return null;
+
+  const max = Math.max(0, totalAsli - 1);
+  const useAble = Math.min(saldo, max);
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2">
+      <div className="text-sm font-semibold inline-flex items-center gap-1.5">
+        <Gift size={16} /> Saldo Loyalty
+      </div>
+      <div className="text-xs text-slate-600">
+        Saldo Anda: <b>{formatRupiah(saldo)}</b>. Maksimal pakai{" "}
+        <b>{formatRupiah(useAble)}</b> di order ini.
+      </div>
+      <div className="flex gap-2">
+        <input
+          type="number"
+          min={0}
+          max={useAble}
+          placeholder="Jumlah saldo dipakai"
+          value={pakai}
+          onChange={(e) => setPakai(e.target.value)}
+          className="flex-1 px-3 py-2 border border-slate-300 rounded-md text-sm"
+        />
+        <button
+          onClick={() => setPakai(String(useAble))}
+          className="px-3 bg-slate-100 rounded-md text-xs"
+        >
+          Pakai semua
+        </button>
+      </div>
+      {msg && <p className="text-xs text-red-600">{msg}</p>}
+      <button
+        onClick={() => {
+          const n = Number(pakai);
+          if (!Number.isFinite(n) || n <= 0) {
+            setMsg("Masukkan angka > 0");
+            return;
+          }
+          setMsg(null);
+          startTransition(async () => {
+            const res = await pakaiLoyalty(orderId, n);
+            if ("error" in res) setMsg(res.error);
+            else window.location.reload();
+          });
+        }}
+        disabled={pending}
+        className="w-full py-2 bg-emerald-600 text-white rounded-md text-sm disabled:opacity-50"
+      >
+        {pending ? "Memproses..." : "Pakai Saldo"}
+      </button>
     </div>
   );
 }

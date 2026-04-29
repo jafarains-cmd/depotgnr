@@ -1,0 +1,1 @@
+ALTER TABLE `order` ADD `loyalti_dipakai` integer DEFAULT 0 NOT NULL;

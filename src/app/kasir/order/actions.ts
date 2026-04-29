@@ -11,6 +11,7 @@ import { requireRole } from "@/lib/permissions";
 import { sendTelegram, renderTemplate, notifGrupOrder } from "@/lib/telegram";
 import { sendWhatsApp } from "@/lib/whatsapp";
 import { formatRupiah } from "@/lib/utils";
+import { earnFromOrderIfEligible } from "@/lib/loyalty";
 
 type Status =
   | "pending"
@@ -52,6 +53,11 @@ export async function updateOrderStatus(orderId: number, status: Status) {
 
   // Notif pelanggan tiap status berubah
   notifPelangganStatus(orderId, status).catch(() => {});
+
+  // Earn loyalty kalau order selesai & sudah lunas
+  if (status === "selesai") {
+    earnFromOrderIfEligible(orderId).catch(() => {});
+  }
 
   revalidatePath("/kasir/order");
   revalidatePath("/admin/order");

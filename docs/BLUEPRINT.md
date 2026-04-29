@@ -177,7 +177,7 @@ Eksekusi serial, urutan disepakati 2026-04-29.
 
 ---
 
-### Fase 5 · Loyalty + Referral
+### Fase 5 · Loyalty + Referral _(✅ done)_
 **Tujuan:** retensi pelanggan via cashback per galon + program referral.
 
 **Aturan:**
@@ -256,3 +256,5 @@ Eksekusi serial, urutan disepakati 2026-04-29.
 | 2026-04-29 | Order langganan: bayar per antar (no prepaid) |
 | 2026-04-29 | Fase 2: pembayaran online QRIS+DANA+Transfer di orderHeader (bukan transaksi); halaman /pembayaran universal admin+kasir |
 | 2026-04-29 | Kasir bisa akses /kurir + Mode Kurir di nav |
+| 2026-04-29 | Tipe pengantaran jemput-antar (status dijemput, diisi) + walk-in order kasir + notif WA per status |
+| 2026-04-29 | Fase 5: Loyalty earn (Rp 250 antar / Rp 500 depot) + referral Rp 5.000 dua arah + redeem di checkout |

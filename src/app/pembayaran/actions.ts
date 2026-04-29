@@ -11,6 +11,7 @@ import { requireRole } from "@/lib/permissions";
 import { sendWhatsApp } from "@/lib/whatsapp";
 import { sendTelegram } from "@/lib/telegram";
 import { formatRupiah } from "@/lib/utils";
+import { earnFromOrderIfEligible } from "@/lib/loyalty";
 
 export async function konfirmasiBayar(
   orderId: number,
@@ -28,6 +29,9 @@ export async function konfirmasiBayar(
 
   // Notif pelanggan
   notifLunas(orderId).catch(() => {});
+
+  // Earn loyalty (kalau order sudah selesai, idempoten)
+  earnFromOrderIfEligible(orderId).catch(() => {});
 
   revalidatePath("/pembayaran");
   revalidatePath(`/pelanggan/order/${orderId}/bayar`);

@@ -1,17 +1,32 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
 
 export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="text-sm text-slate-500">Memuat...</div>}>
+      <RegisterInner />
+    </Suspense>
+  );
+}
+
+function RegisterInner() {
   const router = useRouter();
+  const params = useSearchParams();
   const [nama, setNama] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [telp, setTelp] = useState("");
   const [alamat, setAlamat] = useState("");
+  const [kodeReferral, setKodeReferral] = useState("");
+
+  useEffect(() => {
+    const ref = params.get("ref");
+    if (ref) setKodeReferral(ref.toUpperCase());
+  }, [params]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,11 +42,11 @@ export default function RegisterPage() {
       });
       if (error) throw new Error(error.message ?? "Gagal daftar");
 
-      // Simpan profil pelanggan tambahan (telp, alamat) via API kustom
+      // Simpan profil pelanggan tambahan (telp, alamat, kodeReferral) via API kustom
       await fetch("/api/pelanggan/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nama, telp, alamat }),
+        body: JSON.stringify({ nama, telp, alamat, kodeReferral }),
       });
 
       router.push("/pelanggan/beranda");
@@ -55,6 +70,12 @@ export default function RegisterPage() {
         <Field label="Email" type="email" value={email} onChange={setEmail} required />
         <Field label="Password" type="password" value={password} onChange={setPassword} required minLength={6} />
         <Field label="Nomor WhatsApp" value={telp} onChange={setTelp} placeholder="08xxxxxxxxxx" />
+        <Field
+          label="Kode Referral (opsional)"
+          value={kodeReferral}
+          onChange={(v) => setKodeReferral(v.toUpperCase())}
+          placeholder="dari teman yang ajak"
+        />
         <div>
           <label className="text-sm font-medium block mb-1">Alamat Pengantaran</label>
           <textarea
