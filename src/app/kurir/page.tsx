@@ -16,6 +16,7 @@ export default async function KurirHomePage() {
       id: orderHeader.id,
       nomorOrder: orderHeader.nomorOrder,
       status: orderHeader.status,
+      tipePengantaran: orderHeader.tipePengantaran,
       alamatAntar: orderHeader.alamatAntar,
       jadwalAntar: orderHeader.jadwalAntar,
       totalEstimasi: orderHeader.totalEstimasi,
@@ -29,7 +30,7 @@ export default async function KurirHomePage() {
     .where(
       and(
         eq(orderHeader.kurirUserId, session.user.id),
-        inArray(orderHeader.status, ["diproses", "diantar"]),
+        inArray(orderHeader.status, ["diproses", "dijemput", "diisi", "diantar"]),
       ),
     )
     .orderBy(orderHeader.jadwalAntar);
@@ -68,9 +69,14 @@ export default async function KurirHomePage() {
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className="font-semibold text-sm">{o.nomorOrder}</span>
                     <StatusBadge status={o.status} />
+                    {o.tipePengantaran === "jemput-antar" && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700">
+                        🔄 jemput-isi-antar
+                      </span>
+                    )}
                   </div>
                   <div className="text-sm font-medium">{o.pelangganNama ?? "Pelanggan"}</div>
                   {o.alamatAntar && (
@@ -135,6 +141,8 @@ function StatCard({
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
     diproses: "bg-amber-100 text-amber-800",
+    dijemput: "bg-indigo-100 text-indigo-800",
+    diisi: "bg-cyan-100 text-cyan-800",
     diantar: "bg-blue-100 text-blue-800",
     selesai: "bg-emerald-100 text-emerald-800",
   };

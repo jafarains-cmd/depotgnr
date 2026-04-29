@@ -20,6 +20,7 @@ export function OrderForm({
   const [alamatAntar, setAlamatAntar] = useState(defaultAlamat);
   const [jadwalAntar, setJadwalAntar] = useState("");
   const [catatan, setCatatan] = useState("");
+  const [pakaiGalonSaya, setPakaiGalonSaya] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -70,6 +71,7 @@ export function OrderForm({
           alamatAntar,
           jadwalAntar: jadwalAntar || undefined,
           catatan: catatan || undefined,
+          tipePengantaran: pakaiGalonSaya ? "jemput-antar" : "antar-saja",
         });
       } catch (e) {
         // redirect() throws NEXT_REDIRECT — itu sukses, abaikan
@@ -134,6 +136,21 @@ export function OrderForm({
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+        <label className="flex items-start gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={pakaiGalonSaya}
+            onChange={(e) => setPakaiGalonSaya(e.target.checked)}
+            className="mt-1"
+          />
+          <span className="text-sm">
+            <span className="font-medium">Pakai galon saya sendiri</span>
+            <span className="block text-xs text-slate-500 mt-0.5">
+              Kurir akan jemput galon kosong, isi di depot, lalu antar balik. Cocok untuk
+              isi ulang galon merek tertentu.
+            </span>
+          </span>
+        </label>
         <div>
           <label className="block text-sm font-medium mb-1">Alamat Pengantaran</label>
           <textarea

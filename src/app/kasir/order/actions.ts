@@ -12,7 +12,14 @@ import { sendTelegram, renderTemplate, notifGrupOrder } from "@/lib/telegram";
 import { sendWhatsApp } from "@/lib/whatsapp";
 import { formatRupiah } from "@/lib/utils";
 
-type Status = "pending" | "diproses" | "diantar" | "selesai" | "batal";
+type Status =
+  | "pending"
+  | "diproses"
+  | "dijemput"
+  | "diisi"
+  | "diantar"
+  | "selesai"
+  | "batal";
 
 export async function updateOrderStatus(orderId: number, status: Status) {
   const session = await requireRole(["admin", "kasir"]);
@@ -21,8 +28,8 @@ export async function updateOrderStatus(orderId: number, status: Status) {
     status,
     updatedAt: new Date(),
   };
-  // Auto-assign kurir hanya jika belum ada — preserves manual assignment
-  if (status === "diproses" || status === "diantar") {
+  // Auto-assign kurir hanya jika belum ada
+  if (status === "diproses" || status === "diantar" || status === "dijemput") {
     const current = await db.query.orderHeader.findFirst({
       where: eq(orderHeader.id, orderId),
     });
@@ -31,15 +38,20 @@ export async function updateOrderStatus(orderId: number, status: Status) {
     }
   }
 
+  // Set timestamps khusus per status
+  if (status === "dijemput") {
+    (update as Record<string, unknown>).dijemputAt = new Date();
+  } else if (status === "diisi") {
+    (update as Record<string, unknown>).diisiAt = new Date();
+  }
+
   await db.update(orderHeader).set(update).where(eq(orderHeader.id, orderId));
 
   // Notif grup Telegram per perubahan status
   notifStatusKeGrup(orderId, status, session.user.name).catch(() => {});
 
-  // Notif pelanggan saat order selesai
-  if (status === "selesai") {
-    notifPelangganOrderSelesai(orderId).catch(() => {});
-  }
+  // Notif pelanggan tiap status berubah
+  notifPelangganStatus(orderId, status).catch(() => {});
 
   revalidatePath("/kasir/order");
   revalidatePath("/admin/order");
@@ -60,19 +72,18 @@ async function notifStatusKeGrup(
     ? await db.query.pelanggan.findFirst({ where: eq(pelanggan.id, order.pelangganId) })
     : null;
 
-  const emoji =
-    status === "diproses"
-      ? "🔧"
-      : status === "diantar"
-        ? "🚚"
-        : status === "selesai"
-          ? "✅"
-          : status === "batal"
-            ? "❌"
-            : "🔔";
+  const emoji: Record<Status, string> = {
+    pending: "🔔",
+    diproses: "🔧",
+    dijemput: "🛵",
+    diisi: "💧",
+    diantar: "🚚",
+    selesai: "✅",
+    batal: "❌",
+  };
 
   const text = [
-    `${emoji} *${order.nomorOrder}* — _${status}_`,
+    `${emoji[status]} *${order.nomorOrder}* — _${status}_`,
     `Pelanggan: ${pel?.nama ?? "-"}`,
     pel?.telp ? `Telp: ${pel.telp}` : null,
     order.alamatAntar ? `Alamat: ${order.alamatAntar}` : null,
@@ -83,6 +94,54 @@ async function notifStatusKeGrup(
     .join("\n");
 
   await notifGrupOrder(status, text);
+}
+
+export async function notifPelangganStatus(orderId: number, status: Status) {
+  const order = await db.query.orderHeader.findFirst({
+    where: eq(orderHeader.id, orderId),
+  });
+  if (!order || !order.pelangganId) return;
+  const pel = await db.query.pelanggan.findFirst({ where: eq(pelanggan.id, order.pelangganId) });
+  if (!pel) return;
+
+  const namaDepotRow = await db.query.pengaturan.findFirst({
+    where: eq(pengaturan.key, "namaDepot"),
+  });
+  const namaDepot = namaDepotRow?.value ?? "Depot Air";
+
+  let text: string | null = null;
+  switch (status) {
+    case "diproses":
+      text = `🔧 Order *${order.nomorOrder}* sedang diproses oleh ${namaDepot}.`;
+      break;
+    case "dijemput":
+      text = `🛵 Kurir berangkat menjemput galon kosong Anda untuk order *${order.nomorOrder}*.`;
+      break;
+    case "diisi":
+      text = `💧 Galon Anda sedang diisi di depot. Order *${order.nomorOrder}*.`;
+      break;
+    case "diantar":
+      text = `🚚 Kurir berangkat antar pesanan *${order.nomorOrder}*. Mohon disiapkan.`;
+      break;
+    case "selesai":
+      text = await renderTemplate("templateNotifOrderSelesaiPelanggan", {
+        nomorOrder: order.nomorOrder,
+        total: formatRupiah(order.totalEstimasi),
+        namaDepot,
+      });
+      if (!text) text = `✅ Order *${order.nomorOrder}* selesai. Terima kasih.`;
+      break;
+    case "batal":
+      text = `❌ Order *${order.nomorOrder}* dibatalkan.`;
+      break;
+  }
+  if (!text) return;
+
+  if (pel.userId) {
+    const u = await db.query.user.findFirst({ where: eq(userTable.id, pel.userId) });
+    if (u?.telegramChatId) await sendTelegram(u.telegramChatId, text).catch(() => {});
+  }
+  if (pel.telp) await sendWhatsApp(pel.telp, text).catch(() => {});
 }
 
 async function notifPelangganOrderSelesai(orderId: number) {

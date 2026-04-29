@@ -66,9 +66,16 @@ export default async function KurirOrderDetail({
       </Link>
 
       <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="font-bold">{o.nomorOrder}</div>
-          <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded">{o.status}</span>
+          <div className="flex items-center gap-1.5">
+            {o.tipePengantaran === "jemput-antar" && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700">
+                🔄 jemput-isi-antar
+              </span>
+            )}
+            <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded">{o.status}</span>
+          </div>
         </div>
         <div className="text-lg font-semibold">{pel?.nama ?? "Pelanggan"}</div>
         {o.jadwalAntar && (
@@ -151,7 +158,28 @@ export default async function KurirOrderDetail({
         </div>
       </div>
 
-      <KonfirmasiClient orderId={o.id} status={o.status} />
+      <KonfirmasiClient orderId={o.id} status={o.status} tipe={o.tipePengantaran} />
+
+      {o.buktiJemputUrl && (
+        <div className="bg-white border border-slate-200 rounded-xl p-4">
+          <div className="text-sm font-semibold mb-2">Bukti Jemput Galon</div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={o.buktiJemputUrl}
+            alt="Bukti jemput"
+            className="w-full rounded-lg border border-slate-200"
+          />
+          {o.dijemputAt && (
+            <div className="text-xs text-slate-500 mt-2">
+              Dijemput:{" "}
+              {new Date(o.dijemputAt).toLocaleString("id-ID", {
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {o.status === "selesai" && o.buktiFotoUrl && (
         <div className="bg-white border border-slate-200 rounded-xl p-4">

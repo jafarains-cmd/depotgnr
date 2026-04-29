@@ -12,15 +12,23 @@ export const orderHeader = sqliteTable("order", {
   alamatAntar: text("alamat_antar"),
   jadwalAntar: integer("jadwal_antar", { mode: "timestamp" }),
   status: text("status", {
-    enum: ["pending", "diproses", "diantar", "selesai", "batal"],
+    enum: ["pending", "diproses", "dijemput", "diisi", "diantar", "selesai", "batal"],
   })
     .notNull()
     .default("pending"),
+  tipePengantaran: text("tipe_pengantaran", {
+    enum: ["antar-saja", "jemput-antar"],
+  })
+    .notNull()
+    .default("antar-saja"),
   kurirUserId: text("kurir_user_id").references(() => user.id, { onDelete: "set null" }),
   totalEstimasi: integer("total_estimasi").notNull().default(0),
   transaksiId: integer("transaksi_id").references(() => transaksi.id, { onDelete: "set null" }),
   catatan: text("catatan"),
   buktiFotoUrl: text("bukti_foto_url"),
+  buktiJemputUrl: text("bukti_jemput_url"),
+  dijemputAt: integer("dijemput_at", { mode: "timestamp" }),
+  diisiAt: integer("diisi_at", { mode: "timestamp" }),
   diantarAt: integer("diantar_at", { mode: "timestamp" }),
   // Pembayaran online (Fase 2)
   metodeBayar: text("metode_bayar", {

@@ -23,6 +23,8 @@ export default async function OrderKasirPage() {
       catatan: orderHeader.catatan,
       createdAt: orderHeader.createdAt,
       buktiFotoUrl: orderHeader.buktiFotoUrl,
+      buktiJemputUrl: orderHeader.buktiJemputUrl,
+      tipePengantaran: orderHeader.tipePengantaran,
       diantarAt: orderHeader.diantarAt,
       kurirUserId: orderHeader.kurirUserId,
       pelangganNama: pelanggan.nama,
@@ -73,7 +75,15 @@ export default async function OrderKasirPage() {
 
   return (
     <div className="p-6">
-      <PageHeader title="Order Antar" description="Kelola order pengantaran yang masuk." />
+      <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
+        <PageHeader title="Order Antar" description="Kelola order pengantaran yang masuk." />
+        <a
+          href="/kasir/order/baru"
+          className="px-3 py-2 bg-brand-600 text-white rounded-md text-sm inline-flex items-center gap-1"
+        >
+          + Order Baru (Walk-in)
+        </a>
+      </div>
       <OrderClient rows={rows} kurirList={kurirList} />
     </div>
   );

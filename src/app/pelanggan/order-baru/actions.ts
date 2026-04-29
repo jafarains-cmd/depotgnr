@@ -20,6 +20,7 @@ export type OrderInput = {
   alamatAntar: string;
   jadwalAntar?: string; // ISO date-time
   catatan?: string;
+  tipePengantaran?: "antar-saja" | "jemput-antar";
 };
 
 export async function createOrder(input: OrderInput): Promise<void> {
@@ -55,6 +56,7 @@ export async function createOrder(input: OrderInput): Promise<void> {
         alamatAntar: input.alamatAntar,
         jadwalAntar: input.jadwalAntar ? new Date(input.jadwalAntar) : null,
         status: "pending",
+        tipePengantaran: input.tipePengantaran ?? "antar-saja",
         totalEstimasi,
         catatan: input.catatan ?? null,
       })

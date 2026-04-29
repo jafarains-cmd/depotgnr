@@ -50,11 +50,20 @@ export async function notifAdminTelegram(text: string): Promise<void> {
 /**
  * Status order yang punya topic terpisah di grup.
  */
-export type OrderTopicKey = "pending" | "diproses" | "diantar" | "selesai" | "batal";
+export type OrderTopicKey =
+  | "pending"
+  | "diproses"
+  | "dijemput"
+  | "diisi"
+  | "diantar"
+  | "selesai"
+  | "batal";
 
 const TOPIC_KEY_MAP: Record<OrderTopicKey, string> = {
   pending: "telegramTopicPending",
   diproses: "telegramTopicDiproses",
+  dijemput: "telegramTopicDiproses", // share topic dengan diproses
+  diisi: "telegramTopicDiproses",
   diantar: "telegramTopicDiantar",
   selesai: "telegramTopicSelesai",
   batal: "telegramTopicBatal",

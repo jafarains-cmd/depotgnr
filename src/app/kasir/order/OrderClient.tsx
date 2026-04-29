@@ -5,17 +5,28 @@ import Link from "next/link";
 import { formatRupiah } from "@/lib/utils";
 import { updateOrderStatus, assignKurir } from "./actions";
 
+export type OrderStatus =
+  | "pending"
+  | "diproses"
+  | "dijemput"
+  | "diisi"
+  | "diantar"
+  | "selesai"
+  | "batal";
+
 export type OrderRow = {
   id: number;
   nomorOrder: string;
   sumber: string;
-  status: "pending" | "diproses" | "diantar" | "selesai" | "batal";
+  status: OrderStatus;
+  tipePengantaran: "antar-saja" | "jemput-antar";
   alamatAntar: string | null;
   jadwalAntar: string | null;
   totalEstimasi: number;
   catatan: string | null;
   createdAt: string;
   buktiFotoUrl: string | null;
+  buktiJemputUrl: string | null;
   diantarAt: string | null;
   kurirUserId: string | null;
   pelangganNama: string | null;
@@ -23,17 +34,29 @@ export type OrderRow = {
   items: { qty: number; jenis: string; namaProduk: string }[];
 };
 
-const NEXT_STATUS: Record<OrderRow["status"], OrderRow["status"] | null> = {
-  pending: "diproses",
-  diproses: "diantar",
-  diantar: "selesai",
-  selesai: null,
-  batal: null,
-};
+function nextStatus(row: OrderRow): OrderStatus | null {
+  if (row.tipePengantaran === "jemput-antar") {
+    switch (row.status) {
+      case "pending": return "dijemput";
+      case "dijemput": return "diisi";
+      case "diisi": return "diantar";
+      case "diantar": return "selesai";
+      default: return null;
+    }
+  }
+  switch (row.status) {
+    case "pending": return "diproses";
+    case "diproses": return "diantar";
+    case "diantar": return "selesai";
+    default: return null;
+  }
+}
 
-const STATUS_COLOR: Record<OrderRow["status"], string> = {
+const STATUS_COLOR: Record<OrderStatus, string> = {
   pending: "bg-amber-100 text-amber-700",
   diproses: "bg-blue-100 text-blue-700",
+  dijemput: "bg-indigo-100 text-indigo-700",
+  diisi: "bg-cyan-100 text-cyan-700",
   diantar: "bg-purple-100 text-purple-700",
   selesai: "bg-emerald-100 text-emerald-700",
   batal: "bg-slate-200 text-slate-600",
@@ -47,14 +70,17 @@ export function OrderClient({
   kurirList: { id: string; name: string }[];
 }) {
   const [pending, startTransition] = useTransition();
-  const [filter, setFilter] = useState<OrderRow["status"] | "all">("all");
+  const [filter, setFilter] = useState<OrderStatus | "all">("all");
 
-  const filtered = filter === "all" ? rows : rows.filter((r) => r.status === filter);
+  const filtered =
+    filter === "all"
+      ? rows
+      : rows.filter((r) => r.status === (filter as OrderStatus));
 
   return (
     <div className="space-y-4">
       <div className="flex gap-1 text-sm flex-wrap">
-        {(["all", "pending", "diproses", "diantar", "selesai"] as const).map((f) => (
+        {(["all", "pending", "diproses", "dijemput", "diisi", "diantar", "selesai"] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -69,7 +95,7 @@ export function OrderClient({
 
       <div className="grid lg:grid-cols-2 gap-3">
         {filtered.map((o) => {
-          const next = NEXT_STATUS[o.status];
+          const next = nextStatus(o);
           return (
             <div key={o.id} className="bg-white rounded-xl border border-slate-200 p-4 space-y-2">
               <div className="flex justify-between items-start">
