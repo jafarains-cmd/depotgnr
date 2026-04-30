@@ -1,8 +1,22 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
 import { pelanggan } from "./pelanggan";
 import { produk } from "./produk";
 import { user } from "./auth";
 import { transaksi } from "./transaksi";
+
+export const lokasiKurir = sqliteTable("lokasi_kurir", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  orderId: integer("order_id").notNull(),
+  kurirUserId: text("kurir_user_id").notNull(),
+  lat: real("lat").notNull(),
+  lng: real("lng").notNull(),
+  accuracy: real("accuracy"),
+  speed: real("speed"),
+  heading: real("heading"),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
 
 export const orderHeader = sqliteTable("order", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -42,6 +56,7 @@ export const orderHeader = sqliteTable("order", {
   buktiBayarUrl: text("bukti_bayar_url"),
   bayarAt: integer("bayar_at", { mode: "timestamp" }),
   loyaltiDipakai: integer("loyalti_dipakai").notNull().default(0),
+  trackingToken: text("tracking_token"),
   sheetRowId: text("sheet_row_id"),
   lastSyncedAt: integer("last_synced_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),

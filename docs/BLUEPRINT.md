@@ -163,7 +163,7 @@ Eksekusi serial, urutan disepakati 2026-04-29.
 
 ---
 
-### Fase 4 · Tracking Kurir Live
+### Fase 4 · Tracking Kurir Live _(✅ done)_
 **Tujuan:** pelanggan bisa lihat posisi kurir realtime saat order diantar.
 
 **Schema:**
@@ -260,3 +260,4 @@ Eksekusi serial, urutan disepakati 2026-04-29.
 | 2026-04-29 | Fase 5: Loyalty earn (Rp 250 antar / Rp 500 depot) + referral Rp 5.000 dua arah + redeem di checkout |
 | 2026-04-29 | Stamp galon gratis (10 galon = Rp 5.000 saldo, configurable) + UI upload QRIS |
 | 2026-04-29 | Fase 6: PWA (manifest + SW) + push notif untuk status order, pembayaran lunas, stamp reward |
+| 2026-04-29 | Fase 4: tracking kurir live (geolocation 30s push) + halaman /track/[id]?token publik dengan peta + link auto-WA saat status=diantar |

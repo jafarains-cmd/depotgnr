@@ -10,6 +10,7 @@ import { pengaturan } from "@/db/schema/pengaturan";
 import { requireSession } from "@/lib/permissions";
 import { getOrCreatePelanggan } from "@/lib/pelanggan";
 import { generateNomorNota } from "@/lib/utils";
+import { generateTrackingToken } from "@/lib/tracking";
 import { notifGrupOrder } from "@/lib/telegram";
 import { pushOrder } from "@/lib/sheets";
 
@@ -59,6 +60,7 @@ export async function createOrder(input: OrderInput): Promise<void> {
         tipePengantaran: input.tipePengantaran ?? "antar-saja",
         totalEstimasi,
         catatan: input.catatan ?? null,
+        trackingToken: generateTrackingToken(),
       })
       .returning()
       .all();

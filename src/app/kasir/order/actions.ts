@@ -127,9 +127,16 @@ export async function notifPelangganStatus(orderId: number, status: Status) {
     case "diisi":
       text = `💧 Galon Anda sedang diisi di depot. Order *${order.nomorOrder}*.`;
       break;
-    case "diantar":
-      text = `🚚 Kurir berangkat antar pesanan *${order.nomorOrder}*. Mohon disiapkan.`;
+    case "diantar": {
+      const baseUrl = process.env.BETTER_AUTH_URL ?? "https://depot.genster.my.id";
+      const trackUrl = order.trackingToken
+        ? `${baseUrl}/track/${order.id}?token=${order.trackingToken}`
+        : null;
+      text = `🚚 Kurir berangkat antar pesanan *${order.nomorOrder}*. Mohon disiapkan.${
+        trackUrl ? `\n\nLacak posisi kurir: ${trackUrl}` : ""
+      }`;
       break;
+    }
     case "selesai":
       text = await renderTemplate("templateNotifOrderSelesaiPelanggan", {
         nomorOrder: order.nomorOrder,

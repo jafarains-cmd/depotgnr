@@ -9,6 +9,7 @@ import { produk } from "@/db/schema/produk";
 import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
 import { requireRole } from "@/lib/permissions";
 import { generateNomorNota } from "@/lib/utils";
+import { generateTrackingToken } from "@/lib/tracking";
 import { notifGrupOrder } from "@/lib/telegram";
 import { pushOrder } from "@/lib/sheets";
 
@@ -94,6 +95,7 @@ export async function createWalkInOrder(input: WalkInOrderInput): Promise<void> 
         tipePengantaran: input.tipePengantaran,
         totalEstimasi,
         catatan: input.catatan ?? null,
+        trackingToken: generateTrackingToken(),
       })
       .returning()
       .all();

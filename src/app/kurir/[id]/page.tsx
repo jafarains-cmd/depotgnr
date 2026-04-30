@@ -8,6 +8,7 @@ import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
 import { produk as produkTable } from "@/db/schema/produk";
 import { requireRole } from "@/lib/permissions";
 import { KonfirmasiClient } from "./KonfirmasiClient";
+import { TrackingButton } from "./TrackingButton";
 
 export const dynamic = "force-dynamic";
 
@@ -157,6 +158,8 @@ export default async function KurirOrderDetail({
           <span>Rp {o.totalEstimasi.toLocaleString("id-ID")}</span>
         </div>
       </div>
+
+      <TrackingButton orderId={o.id} status={o.status} />
 
       <KonfirmasiClient orderId={o.id} status={o.status} tipe={o.tipePengantaran} />
 
