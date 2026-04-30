@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { eq, desc, inArray } from "drizzle-orm";
-import { CreditCard } from "lucide-react";
+import { CreditCard, RefreshCw } from "lucide-react";
 import { db } from "@/db";
 import { orderHeader, orderItem } from "@/db/schema/order";
 import { transaksi } from "@/db/schema/transaksi";
@@ -8,19 +8,28 @@ import { produk } from "@/db/schema/produk";
 import { requireSession } from "@/lib/permissions";
 import { getOrCreatePelanggan } from "@/lib/pelanggan";
 import { formatRupiah } from "@/lib/utils";
+import { GallonArt } from "@/components/GallonArt";
 import { CancelOrderButton } from "../order-baru/CancelOrderButton";
+import { RiwayatFilter } from "./RiwayatFilter";
 
 export const dynamic = "force-dynamic";
 
 const STATUS_COLOR: Record<string, string> = {
   pending: "bg-amber-100 text-amber-700",
   diproses: "bg-blue-100 text-blue-700",
-  diantar: "bg-purple-100 text-purple-700",
+  dijemput: "bg-indigo-100 text-indigo-700",
+  diisi: "bg-cyan-100 text-cyan-700",
+  diantar: "bg-violet-100 text-violet-700",
   selesai: "bg-emerald-100 text-emerald-700",
   batal: "bg-slate-200 text-slate-600",
 };
 
-export default async function RiwayatPage() {
+export default async function RiwayatPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>;
+}) {
+  const { filter = "semua" } = await searchParams;
   const session = await requireSession();
   const me = await getOrCreatePelanggan(session.user.id, session.user.name);
 
@@ -57,101 +66,125 @@ export default async function RiwayatPage() {
     .from(transaksi)
     .where(eq(transaksi.pelangganId, me.id))
     .orderBy(desc(transaksi.createdAt))
-    .limit(50);
+    .limit(20);
+
+  const filtered = orders.filter((o) => {
+    if (filter === "aktif") return !["selesai", "batal"].includes(o.status);
+    if (filter === "selesai") return o.status === "selesai";
+    if (filter === "batal") return o.status === "batal";
+    return true;
+  });
 
   return (
-    <div className="space-y-6">
-      <section>
-        <h1 className="text-xl font-bold mb-3">Riwayat Order</h1>
-        {orders.length === 0 && (
-          <div className="bg-white border border-slate-200 rounded-xl p-6 text-center text-slate-400 text-sm">
-            Belum ada order.
+    <div>
+      <div className="bg-surface border-b border-line -mx-4 sm:mx-0 sm:rounded-t-2xl px-4 sm:px-5 pt-3 pb-3">
+        <h1 className="text-2xl font-extrabold tracking-tight">Riwayat Pesanan</h1>
+        <RiwayatFilter active={filter} />
+      </div>
+
+      <div className="space-y-2 mt-3">
+        {filtered.length === 0 && (
+          <div className="bg-surface border border-line rounded-2xl p-8 text-center text-[color:var(--muted)] text-sm">
+            Belum ada pesanan.
           </div>
         )}
-        <div className="space-y-2">
-          {orders.map((o) => {
-            const its = itemsByOrder.get(o.id) ?? [];
-            return (
-              <div key={o.id} className="bg-white border border-slate-200 rounded-xl p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <div className="font-mono text-xs text-slate-500">{o.nomorOrder}</div>
-                    <div className="text-xs text-slate-500">
-                      {o.createdAt.toLocaleString("id-ID")}
-                    </div>
-                  </div>
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      STATUS_COLOR[o.status] ?? "bg-slate-100"
-                    }`}
-                  >
-                    {o.status}
-                  </span>
+        {filtered.map((o) => {
+          const its = itemsByOrder.get(o.id) ?? [];
+          const summary = its
+            .map((i) => `${i.qty} ${i.namaProduk ?? "?"}`)
+            .join(" + ");
+          return (
+            <div key={o.id} className="bg-surface border border-line rounded-2xl p-4">
+              <div className="flex justify-between items-center mb-2.5">
+                <div className="text-[11px] text-[color:var(--muted)] font-semibold">
+                  {o.nomorOrder} ·{" "}
+                  {o.createdAt.toLocaleString("id-ID", {
+                    day: "2-digit",
+                    month: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </div>
-                <ul className="text-sm space-y-0.5 mb-2">
-                  {its.map((it, i) => (
-                    <li key={i}>
-                      • {it.qty}× {it.namaProduk ?? "?"}{" "}
-                      <span className="text-xs text-slate-500">({it.jenis})</span>
-                    </li>
-                  ))}
-                </ul>
-                {o.alamatAntar && (
-                  <div className="text-xs text-slate-500">📍 {o.alamatAntar}</div>
-                )}
-                <div className="flex justify-between items-center mt-2">
-                  <div className="text-sm font-medium">
-                    Estimasi: {formatRupiah(o.totalEstimasi)}
-                  </div>
-                  {o.status === "pending" && (
-                    <CancelOrderButton orderId={o.id} nomorOrder={o.nomorOrder} />
-                  )}
-                </div>
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wide ${
+                    STATUS_COLOR[o.status] ?? "bg-slate-100 text-slate-700"
+                  }`}
+                >
+                  {o.status}
+                </span>
+              </div>
 
-                {o.status !== "batal" && (
-                  <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-                    <PayBadge status={o.statusBayar} metode={o.metodeBayar} />
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-14 bg-[color:var(--surface2)] rounded-xl grid place-items-center flex-shrink-0">
+                  <GallonArt size={36} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-bold line-clamp-1">{summary || "—"}</div>
+                  <div className="text-base font-extrabold text-brand mt-1">
+                    {formatRupiah(o.totalEstimasi)}
+                  </div>
+                </div>
+                <Link
+                  href="/pelanggan/order-baru"
+                  className="px-3 py-2 border-2 border-line rounded-full text-[11px] font-bold inline-flex items-center gap-1 hover:border-brand hover:text-brand transition"
+                >
+                  <RefreshCw size={11} /> Pesan ulang
+                </Link>
+              </div>
+
+              {o.status !== "batal" && (
+                <div className="mt-2.5 pt-2.5 border-t border-line flex items-center justify-between gap-2">
+                  <PayBadge status={o.statusBayar} metode={o.metodeBayar} />
+                  <div className="flex gap-2">
+                    {o.status === "pending" && (
+                      <CancelOrderButton orderId={o.id} nomorOrder={o.nomorOrder} />
+                    )}
                     {(o.statusBayar === "belum" || o.statusBayar === "menunggu") && (
                       <Link
                         href={`/pelanggan/order/${o.id}/bayar`}
-                        className="text-xs px-3 py-1.5 bg-brand-600 text-white rounded inline-flex items-center gap-1"
+                        className="text-[11px] px-3 py-1.5 bg-brand text-white rounded-full font-bold inline-flex items-center gap-1"
                       >
-                        <CreditCard size={12} />
-                        {o.statusBayar === "menunggu" ? "Lihat Status" : "Bayar Sekarang"}
+                        <CreditCard size={11} />
+                        {o.statusBayar === "menunggu" ? "Status Bayar" : "Bayar"}
                       </Link>
                     )}
                   </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      <section>
-        <h2 className="text-lg font-bold mb-3">Riwayat Transaksi</h2>
-        {trxList.length === 0 && (
-          <div className="bg-white border border-slate-200 rounded-xl p-6 text-center text-slate-400 text-sm">
-            Belum ada transaksi.
-          </div>
-        )}
-        <div className="space-y-2">
-          {trxList.map((t) => (
-            <div
-              key={t.id}
-              className="bg-white border border-slate-200 rounded-xl p-3 flex justify-between"
-            >
-              <div>
-                <div className="font-mono text-xs text-slate-500">{t.nomorNota}</div>
-                <div className="text-xs text-slate-500">
-                  {t.createdAt.toLocaleString("id-ID")} · {t.metodeBayar.toUpperCase()}
                 </div>
-              </div>
-              <div className="text-right font-medium">{formatRupiah(t.total)}</div>
+              )}
             </div>
-          ))}
-        </div>
-      </section>
+          );
+        })}
+      </div>
+
+      {trxList.length > 0 && (
+        <section className="mt-6">
+          <h2 className="text-lg font-extrabold mb-3">Riwayat Transaksi</h2>
+          <div className="space-y-2">
+            {trxList.map((t) => (
+              <div
+                key={t.id}
+                className="bg-surface border border-line rounded-2xl p-3 flex justify-between items-center"
+              >
+                <div>
+                  <div className="text-[11px] font-mono text-[color:var(--muted)]">
+                    {t.nomorNota}
+                  </div>
+                  <div className="text-[11px] text-[color:var(--muted)]">
+                    {t.createdAt.toLocaleString("id-ID", {
+                      day: "2-digit",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}{" "}
+                    · {t.metodeBayar.toUpperCase()}
+                  </div>
+                </div>
+                <div className="font-extrabold text-brand">{formatRupiah(t.total)}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
@@ -159,29 +192,28 @@ export default async function RiwayatPage() {
 function PayBadge({ status, metode }: { status: string; metode: string | null }) {
   if (status === "lunas") {
     return (
-      <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded">
-        Lunas{metode ? ` · ${metode.toUpperCase()}` : ""}
+      <span className="text-[10px] px-2 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold">
+        ✓ Lunas{metode ? ` · ${metode.toUpperCase()}` : ""}
       </span>
     );
   }
   if (status === "menunggu") {
     return (
-      <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-800 rounded">
+      <span className="text-[10px] px-2 py-1 bg-amber-100 text-amber-800 rounded-full font-bold">
         Menunggu verifikasi
       </span>
     );
   }
   if (metode === "cod") {
     return (
-      <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded">
+      <span className="text-[10px] px-2 py-1 bg-blue-100 text-blue-800 rounded-full font-bold">
         Bayar saat antar
       </span>
     );
   }
   return (
-    <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded">
-      Belum dibayar
+    <span className="text-[10px] px-2 py-1 bg-slate-100 text-slate-600 rounded-full font-bold">
+      Belum bayar
     </span>
   );
 }
-

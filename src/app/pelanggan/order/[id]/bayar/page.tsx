@@ -54,29 +54,36 @@ export default async function BayarPage({
     <div className="space-y-4">
       <Link
         href="/pelanggan/riwayat"
-        className="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900"
+        className="inline-flex items-center gap-1 text-sm text-[color:var(--muted)] hover:text-ink"
       >
         <ArrowLeft size={16} /> Riwayat
       </Link>
 
-      <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-1">
-        <div className="text-xs text-slate-500">{o.nomorOrder}</div>
-        <div className="text-2xl font-bold">{formatRupiah(o.totalEstimasi - o.loyaltiDipakai)}</div>
+      <div className="bg-surface border border-line rounded-2xl p-5">
+        <div className="text-[11px] text-[color:var(--muted)] font-mono">{o.nomorOrder}</div>
+        <div className="text-3xl font-extrabold text-brand mt-1 tracking-tight">
+          {formatRupiah(o.totalEstimasi - o.loyaltiDipakai)}
+        </div>
         {o.loyaltiDipakai > 0 && (
-          <div className="text-xs text-slate-500">
-            Total {formatRupiah(o.totalEstimasi)} − saldo {formatRupiah(o.loyaltiDipakai)}
+          <div className="text-xs text-[color:var(--muted)] mt-1">
+            Total {formatRupiah(o.totalEstimasi)} − saldo{" "}
+            <span className="text-emerald-600 font-bold">
+              {formatRupiah(o.loyaltiDipakai)}
+            </span>
           </div>
         )}
-        <PaymentStatusBadge status={o.statusBayar} />
+        <div className="mt-2">
+          <PaymentStatusBadge status={o.statusBayar} />
+        </div>
       </div>
 
       {o.statusBayar === "lunas" ? (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-emerald-800 text-sm inline-flex items-start gap-2">
-          <CheckCircle2 size={18} className="mt-0.5 flex-shrink-0" />
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-emerald-800 text-sm flex items-start gap-3">
+          <CheckCircle2 size={20} className="mt-0.5 flex-shrink-0" />
           <div>
-            <div className="font-semibold">Pembayaran sudah dikonfirmasi</div>
+            <div className="font-extrabold">Pembayaran sudah dikonfirmasi ✓</div>
             {o.bayarAt && (
-              <div className="text-xs">
+              <div className="text-xs mt-1 opacity-90">
                 Lunas pada{" "}
                 {new Date(o.bayarAt).toLocaleString("id-ID", {
                   dateStyle: "medium",
@@ -87,14 +94,14 @@ export default async function BayarPage({
           </div>
         </div>
       ) : o.statusBayar === "menunggu" ? (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-amber-800 text-sm space-y-2">
-          <div className="inline-flex items-start gap-2">
-            <Clock size={18} className="mt-0.5 flex-shrink-0" />
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-amber-800 text-sm space-y-3">
+          <div className="flex items-start gap-3">
+            <Clock size={20} className="mt-0.5 flex-shrink-0" />
             <div>
-              <div className="font-semibold">Bukti pembayaran sedang diverifikasi</div>
-              <div className="text-xs">
-                Admin akan cek mutasi dan konfirmasi maksimal 1×24 jam. Anda akan
-                mendapat notifikasi WhatsApp setelah dikonfirmasi.
+              <div className="font-extrabold">Bukti pembayaran sedang diverifikasi</div>
+              <div className="text-xs mt-1 opacity-90">
+                Admin akan cek mutasi dan konfirmasi maksimal 1×24 jam. Anda akan dapat
+                notifikasi WhatsApp setelah dikonfirmasi.
               </div>
             </div>
           </div>
@@ -103,9 +110,9 @@ export default async function BayarPage({
               href={o.buktiBayarUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-block text-xs underline"
+              className="inline-block text-xs underline font-semibold"
             >
-              Lihat bukti yang Anda kirim
+              Lihat bukti yang Anda kirim →
             </a>
           )}
         </div>
@@ -133,10 +140,12 @@ function PaymentStatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; cls: string }> = {
     belum: { label: "Belum dibayar", cls: "bg-slate-100 text-slate-700" },
     menunggu: { label: "Menunggu verifikasi", cls: "bg-amber-100 text-amber-800" },
-    lunas: { label: "Lunas", cls: "bg-emerald-100 text-emerald-800" },
+    lunas: { label: "✓ Lunas", cls: "bg-emerald-100 text-emerald-800" },
   };
   const m = map[status] ?? map.belum;
   return (
-    <span className={`inline-block text-xs px-2 py-0.5 rounded ${m.cls}`}>{m.label}</span>
+    <span className={`inline-block text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wide ${m.cls}`}>
+      {m.label}
+    </span>
   );
 }
