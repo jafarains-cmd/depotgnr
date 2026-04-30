@@ -6,7 +6,7 @@ import { orderHeader } from "@/db/schema/order";
 import { stokGalon } from "@/db/schema/inventory";
 import { user as userTable } from "@/db/schema/auth";
 import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
-import { sql, gte, eq, desc, ne } from "drizzle-orm";
+import { sql, gte, eq, desc, ne, lt, and } from "drizzle-orm";
 import { formatRupiah } from "@/lib/utils";
 import { countChurnRisk } from "@/lib/analytics";
 
@@ -36,7 +36,7 @@ export default async function DashboardPage() {
     .select({ total: sql<number>`coalesce(sum(${transaksi.total}), 0)` })
     .from(transaksi)
     .where(
-      sql`${transaksi.createdAt} >= ${startOfYesterday} AND ${transaksi.createdAt} < ${startOfDay}`,
+      and(gte(transaksi.createdAt, startOfYesterday), lt(transaksi.createdAt, startOfDay)),
     );
 
   const [orderTodayCount] = await db
@@ -73,7 +73,7 @@ export default async function DashboardPage() {
     .orderBy(desc(orderHeader.createdAt))
     .limit(8);
 
-  const churnStats = await countChurnRisk();
+  const churnStats = await countChurnRisk().catch(() => ({ due: 0, overdue: 0, churn: 0 }));
   const totalActionable = churnStats.due + churnStats.overdue + churnStats.churn;
 
   const omzet = omzetTodayRow.total;
