@@ -2,21 +2,92 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Theme System: 4 palet × 2 mode ─────────────────────── */
+/* Default: aqua light */
 :root {
-  --background: #ffffff;
-  --foreground: #0f172a;
+  --brand: #00B7E4;
+  --brand-deep: #0078A8;
+  --brand-soft: #E5F8FE;
+  --accent: #FFD23F;
+  --accent2: #FF7A59;
+  --ink: #0B2030;
+  --ink2: #3A5060;
+  --mist: #F4FAFD;
+  --line: #D9ECF4;
+  --bg: #FFFFFF;
+  --surface: #FFFFFF;
+  --surface2: #F4FAFD;
+  --muted: #3A5060;
+  --border: #D9ECF4;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+[data-palette="ocean"] {
+  --brand: #1E5BFF;
+  --brand-deep: #0B2D8A;
+  --brand-soft: #EAF0FF;
+  --accent: #A6FF6E;
+  --accent2: #FF5C8A;
+  --ink: #06112B;
+  --ink2: #3A4566;
+  --mist: #F4F6FF;
+  --line: #DCE3F5;
+  --surface2: #F4F6FF;
+  --muted: #3A4566;
+  --border: #DCE3F5;
 }
 
-html,
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+[data-palette="mint"] {
+  --brand: #00C39A;
+  --brand-deep: #006B55;
+  --brand-soft: #E1FAF2;
+  --accent: #FFCD3C;
+  --accent2: #FF6F61;
+  --ink: #0A2A22;
+  --ink2: #3F5A52;
+  --mist: #F4FBF8;
+  --line: #D6EFE6;
+  --surface2: #F4FBF8;
+  --muted: #3F5A52;
+  --border: #D6EFE6;
 }
+
+[data-palette="sunrise"] {
+  --brand: #FF7A4A;
+  --brand-deep: #B33A12;
+  --brand-soft: #FFF1E8;
+  --accent: #3FD8C8;
+  --accent2: #FFC93C;
+  --ink: #2B1306;
+  --ink2: #664535;
+  --mist: #FFF8F4;
+  --line: #F5DECF;
+  --surface2: #FFF8F4;
+  --muted: #664535;
+  --border: #F5DECF;
+}
+
+/* Dark mode override */
+[data-mode="dark"] {
+  --bg: #0A1622;
+  --surface: #10202E;
+  --surface2: #0F1B27;
+  --mist: #0F1B27;
+  --ink: #EAF6FB;
+  --ink2: #9DB4C2;
+  --muted: #9DB4C2;
+  --line: #1B2D3D;
+  --border: #1B2D3D;
+  --brand-soft: rgba(0, 183, 228, 0.12);
+}
+[data-mode="dark"][data-palette="ocean"] { --brand-soft: rgba(30, 91, 255, 0.12); }
+[data-mode="dark"][data-palette="mint"]  { --brand-soft: rgba(0, 195, 154, 0.12); }
+[data-mode="dark"][data-palette="sunrise"] { --brand-soft: rgba(255, 122, 74, 0.12); }
+
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
