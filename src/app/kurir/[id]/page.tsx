@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { ArrowLeft, MapPin, Phone, Clock, MessageSquare } from "lucide-react";
 import { db } from "@/db";
+import { normalizeDriveUrl } from "@/lib/drive-url";
 import { orderHeader, orderItem } from "@/db/schema/order";
 import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
 import { produk as produkTable } from "@/db/schema/produk";
@@ -168,7 +169,7 @@ export default async function KurirOrderDetail({
           <div className="text-sm font-semibold mb-2">Bukti Jemput Galon</div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={o.buktiJemputUrl}
+            src={normalizeDriveUrl(o.buktiJemputUrl)}
             alt="Bukti jemput"
             className="w-full rounded-lg border border-line"
           />
@@ -189,7 +190,7 @@ export default async function KurirOrderDetail({
           <div className="text-sm font-semibold mb-2">Bukti Pengantaran</div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={o.buktiFotoUrl}
+            src={normalizeDriveUrl(o.buktiFotoUrl)}
             alt="Bukti"
             className="w-full rounded-lg border border-line"
           />

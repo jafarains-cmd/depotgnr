@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Upload, Check, Loader2 } from "lucide-react";
 import { uploadQrisFoto } from "./actions";
+import { normalizeDriveUrl } from "@/lib/drive-url";
 
 export function QrisUploader({ currentUrl }: { currentUrl: string | null }) {
   const [pending, startTransition] = useTransition();
@@ -46,7 +47,7 @@ export function QrisUploader({ currentUrl }: { currentUrl: string | null }) {
         <div className="border border-line rounded-md p-2 inline-block bg-[color:var(--surface2)]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={previewUrl}
+            src={normalizeDriveUrl(previewUrl)}
             alt="QRIS"
             className="w-40 h-40 object-contain"
           />

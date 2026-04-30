@@ -128,9 +128,11 @@ function opUploadFile(body) {
   }
 
   const fileId = file.getId();
+  // lh3.googleusercontent.com bisa di-embed sebagai <img src=...> tanpa CORS;
+  // drive.google.com/uc?id= tidak (Google deprecate hot-linking pattern itu).
   return {
     ok: true,
     fileId: fileId,
-    url: "https://drive.google.com/uc?id=" + fileId
+    url: "https://lh3.googleusercontent.com/d/" + fileId
   };
 }

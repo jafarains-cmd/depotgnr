@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { formatRupiah } from "@/lib/utils";
+import { normalizeDriveUrl } from "@/lib/drive-url";
 import { updateOrderStatus, assignKurir } from "./actions";
 
 export type OrderStatus =
@@ -160,7 +161,7 @@ export function OrderClient({
                   <a href={o.buktiFotoUrl} target="_blank" rel="noreferrer">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={o.buktiFotoUrl}
+                      src={normalizeDriveUrl(o.buktiFotoUrl)}
                       alt="Bukti"
                       className="w-24 h-24 object-cover rounded-md border border-line hover:opacity-80"
                     />

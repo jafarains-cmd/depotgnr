@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Check, X, ExternalLink } from "lucide-react";
 import { konfirmasiBayar, tolakBayar } from "./actions";
 import { formatRupiah } from "@/lib/utils";
+import { normalizeDriveUrl } from "@/lib/drive-url";
 
 export type Row = {
   id: number;
@@ -92,7 +93,7 @@ export function PembayaranClient({ rows }: { rows: Row[] }) {
                 <a href={r.buktiUrl} target="_blank" rel="noreferrer" className="block">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={r.buktiUrl}
+                    src={normalizeDriveUrl(r.buktiUrl)}
                     alt="Bukti"
                     className="w-full max-h-64 object-contain rounded-xl border border-line bg-[color:var(--surface2)]"
                   />

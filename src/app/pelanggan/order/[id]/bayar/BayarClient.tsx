@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Camera, Check, Copy, Loader2, QrCode, Wallet, Building2, HandCoins, Gift } from "lucide-react";
 import { pilihMetodeBayar, submitBuktiBayar, pakaiLoyalty } from "./actions";
 import { formatRupiah } from "@/lib/utils";
+import { normalizeDriveUrl } from "@/lib/drive-url";
 
 type Metode = "cash" | "transfer" | "qris" | "dana" | "cod";
 
@@ -130,7 +131,7 @@ export function BayarClient({
             <div className="flex flex-col items-center gap-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={qrisFotoUrl}
+                src={normalizeDriveUrl(qrisFotoUrl)}
                 alt="QRIS"
                 className="w-64 h-64 object-contain rounded-lg border border-line"
               />
