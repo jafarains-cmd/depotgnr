@@ -44,11 +44,11 @@ export function SheetsSync() {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-3 mt-4">
+    <div className="bg-surface rounded-xl border border-line p-5 space-y-3 mt-4">
       <h2 className="font-semibold inline-flex items-center gap-1.5">
         <FileSpreadsheet size={16} /> Google Sheets Sync (Apps Script)
       </h2>
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-[color:var(--muted)]">
         Pakai Apps Script Web App sebagai jembatan ke Google Sheets — tidak butuh service
         account.{" "}
         <Link
@@ -62,14 +62,14 @@ export function SheetsSync() {
         <button
           disabled={pending}
           onClick={() => run(actionPing, "Test koneksi")}
-          className="px-3 py-2 border border-slate-300 rounded-md text-sm disabled:opacity-50 inline-flex items-center gap-1.5"
+          className="px-3 py-2 border border-line rounded-md text-sm disabled:opacity-50 inline-flex items-center gap-1.5"
         >
           <Activity size={14} /> Test Koneksi
         </button>
         <button
           disabled={pending}
           onClick={() => run(actionEnsureSheets, "Inisialisasi tab")}
-          className="px-3 py-2 border border-slate-300 rounded-md text-sm disabled:opacity-50"
+          className="px-3 py-2 border border-line rounded-md text-sm disabled:opacity-50"
         >
           Inisialisasi Tab + Header
         </button>
@@ -97,7 +97,7 @@ export function SheetsSync() {
           {msg.text}
         </div>
       )}
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-[color:var(--muted)]">
         Transaksi dan order baru otomatis di-append ke sheet saat dibuat (kalau URL + token sudah diisi).
       </p>
     </div>

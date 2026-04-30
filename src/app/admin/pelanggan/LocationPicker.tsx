@@ -24,7 +24,7 @@ export function LocationPicker({
   return (
     <>
       <div className="flex items-center gap-2">
-        <span className="text-xs text-slate-500 flex-1">
+        <span className="text-xs text-[color:var(--muted)] flex-1">
           {lat !== null && lng !== null
             ? `${lat.toFixed(6)}, ${lng.toFixed(6)}`
             : "Belum diset"}
@@ -50,15 +50,15 @@ export function LocationPicker({
 
       {open && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-3xl h-[80vh] flex flex-col overflow-hidden">
-            <div className="flex justify-between items-center p-3 border-b border-slate-200">
+          <div className="bg-surface rounded-xl w-full max-w-3xl h-[80vh] flex flex-col overflow-hidden">
+            <div className="flex justify-between items-center p-3 border-b border-line">
               <div>
                 <div className="font-semibold">Pilih Lokasi Pelanggan</div>
-                <div className="text-xs text-slate-500">
+                <div className="text-xs text-[color:var(--muted)]">
                   Klik di peta untuk set koordinat. Geser/zoom dulu kalau perlu.
                 </div>
               </div>
-              <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-700">
+              <button onClick={() => setOpen(false)} className="text-[color:var(--muted)] hover:text-ink">
                 <X size={20} />
               </button>
             </div>
@@ -71,7 +71,7 @@ export function LocationPicker({
                 }}
               />
             </div>
-            <div className="p-3 border-t border-slate-200 flex justify-end">
+            <div className="p-3 border-t border-line flex justify-end">
               <button
                 onClick={() => setOpen(false)}
                 className="px-4 py-2 bg-brand-600 text-white rounded-md text-sm"

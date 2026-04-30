@@ -25,10 +25,10 @@ export function ProdukRow({ produk }: { produk: Row }) {
   if (editing) {
     return (
       <tr>
-        <td colSpan={6} className="p-3 bg-slate-50">
+        <td colSpan={6} className="p-3 bg-[color:var(--surface2)]">
           <div className="flex justify-between items-center mb-2">
             <span className="font-medium">Edit: {produk.nama}</span>
-            <button onClick={() => setEditing(false)} className="text-slate-400 hover:text-slate-700">
+            <button onClick={() => setEditing(false)} className="text-[color:var(--muted)] hover:text-ink">
               <X size={16} />
             </button>
           </div>
@@ -39,10 +39,10 @@ export function ProdukRow({ produk }: { produk: Row }) {
   }
 
   return (
-    <tr className="hover:bg-slate-50">
+    <tr className="hover:bg-[color:var(--surface2)]">
       <td className="p-3">
         <div className="font-medium">{produk.nama}</div>
-        {produk.deskripsi && <div className="text-xs text-slate-500">{produk.deskripsi}</div>}
+        {produk.deskripsi && <div className="text-xs text-[color:var(--muted)]">{produk.deskripsi}</div>}
       </td>
       <td className="p-3 text-right">{produk.hargaIsiUlangFmt}</td>
       <td className="p-3 text-right">{produk.hargaTukarFmt}</td>
@@ -51,7 +51,7 @@ export function ProdukRow({ produk }: { produk: Row }) {
         <button
           onClick={() => startTransition(() => toggleAktif(produk.id, !produk.aktif))}
           className={`px-2 py-0.5 rounded-full text-xs ${
-            produk.aktif ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"
+            produk.aktif ? "bg-emerald-100 text-emerald-700" : "bg-[color:var(--surface2)] text-[color:var(--muted)]"
           }`}
         >
           {produk.aktif ? "Aktif" : "Nonaktif"}

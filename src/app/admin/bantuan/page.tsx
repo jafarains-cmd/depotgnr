@@ -27,15 +27,15 @@ export default function BantuanPage() {
           </Step>
 
           <Step n={2} title="Paste kode di bawah ke editor">
-            <p className="text-sm text-slate-600 mb-2">
+            <p className="text-sm text-[color:var(--muted)] mb-2">
               Klik tombol <b>Copy</b>, paste ke editor Apps Script, lalu ganti baris{" "}
-              <code className="bg-slate-100 px-1 rounded">const TOKEN = "..."</code> dengan
+              <code className="bg-[color:var(--surface2)] px-1 rounded">const TOKEN = "..."</code> dengan
               string acak panjang (≥24 karakter). Simpan dengan <kbd>Ctrl+S</kbd>.
             </p>
             <CodeBlock code={APPS_SCRIPT_CODE} language="javascript" />
-            <p className="text-xs text-slate-500 mt-2">
+            <p className="text-xs text-[color:var(--muted)] mt-2">
               Tip generate token: di terminal jalankan{" "}
-              <code className="bg-slate-100 px-1 rounded">openssl rand -hex 24</code>, atau pakai
+              <code className="bg-[color:var(--surface2)] px-1 rounded">openssl rand -hex 24</code>, atau pakai
               hasil random dari https://passwordsgenerator.net/.
             </p>
           </Step>
@@ -87,7 +87,7 @@ export default function BantuanPage() {
           <Step n={2} title="Cari Chat ID admin">
             <ol className="list-decimal pl-5 space-y-0.5 text-sm">
               <li>Cari bot kamu di Telegram → start (kirim <code>/start</code>).</li>
-              <li>Buka di browser: <code className="bg-slate-100 px-1 rounded break-all">https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code></li>
+              <li>Buka di browser: <code className="bg-[color:var(--surface2)] px-1 rounded break-all">https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code></li>
               <li>Cari <code>chat.id</code> di response — itu Chat ID kamu (number).</li>
             </ol>
           </Step>
@@ -100,7 +100,7 @@ ADMIN_TELEGRAM_CHAT_ID=isi-chat-id-admin-disini
 # bisa lebih dari satu admin, pisah koma:
 # ADMIN_TELEGRAM_CHAT_ID=12345,67890`}
             />
-            <p className="text-xs text-slate-500 mt-1">Restart dev server setelah edit.</p>
+            <p className="text-xs text-[color:var(--muted)] mt-1">Restart dev server setelah edit.</p>
           </Step>
 
           <Step n={4} title="Pasang webhook">
@@ -148,7 +148,7 @@ ADMIN_TELEGRAM_CHAT_ID=isi-chat-id-admin-disini
                 Klik <b>Simpan</b>. Setiap order baru auto post ke topic <b>Pending</b> + <b>Semua Orderan</b>. Setiap status berubah auto post ke topic status baru + Semua Orderan.
               </li>
             </ol>
-            <p className="text-xs text-slate-500 mt-2">
+            <p className="text-xs text-[color:var(--muted)] mt-2">
               Grup chat ID kosong = fallback ke DM admin lewat <code>ADMIN_TELEGRAM_CHAT_ID</code> env (perilaku lama). Topic ID kosong = post ke main chat tanpa thread.
             </p>
           </Step>
@@ -196,11 +196,11 @@ WHATSAPP_API_URL=https://api.fonnte.com/send`}
           <Step n={4} title="Pasang webhook untuk pesan masuk">
             <p className="text-sm">
               Di dashboard provider → cari menu <b>Webhook</b> → isi URL:
-              <code className="bg-slate-100 px-2 py-0.5 rounded ml-1 text-xs break-all">
+              <code className="bg-[color:var(--surface2)] px-2 py-0.5 rounded ml-1 text-xs break-all">
                 {baseUrl}/api/webhooks/whatsapp
               </code>
             </p>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-[color:var(--muted)] mt-1">
               Untuk dev pakai ngrok URL.
             </p>
           </Step>
@@ -233,7 +233,7 @@ WHATSAPP_API_URL=https://api.fonnte.com/send`}
               language="bash"
               code={`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=AIzaSy....isi-api-key-disini`}
             />
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-[color:var(--muted)] mt-1">
               Restart dev server. Halaman <a href="/admin/peta" className="text-brand-600 underline">/admin/peta</a> dan picker lokasi otomatis pakai Google Maps.
             </p>
           </Step>
@@ -262,13 +262,13 @@ WHATSAPP_API_URL=https://api.fonnte.com/send`}
         <Section id="backup" title="Backup Database">
           <p className="text-sm">
             Database SQLite ada di file{" "}
-            <code className="bg-slate-100 px-1 rounded">./data/depot.db</code>. Backup tinggal copy
+            <code className="bg-[color:var(--surface2)] px-1 rounded">./data/depot.db</code>. Backup tinggal copy
             file ini ke lokasi aman secara berkala.
           </p>
           <p className="text-sm mt-2">
             Untuk produksi, pertimbangkan migrasi ke Postgres dengan ubah{" "}
-            <code className="bg-slate-100 px-1 rounded">drizzle.config.ts</code> dan{" "}
-            <code className="bg-slate-100 px-1 rounded">src/db/index.ts</code>.
+            <code className="bg-[color:var(--surface2)] px-1 rounded">drizzle.config.ts</code> dan{" "}
+            <code className="bg-[color:var(--surface2)] px-1 rounded">src/db/index.ts</code>.
           </p>
         </Section>
       </div>
@@ -288,9 +288,9 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="bg-white border border-slate-200 rounded-xl p-5 scroll-mt-4">
-      <h2 className="text-lg font-bold text-slate-800">{title}</h2>
-      {summary && <p className="text-sm text-slate-500 mb-4">{summary}</p>}
+    <section id={id} className="bg-surface border border-line rounded-2xl p-5 scroll-mt-4">
+      <h2 className="text-lg font-bold text-ink">{title}</h2>
+      {summary && <p className="text-sm text-[color:var(--muted)] mb-4">{summary}</p>}
       <div className="space-y-4">{children}</div>
     </section>
   );
@@ -311,7 +311,7 @@ function Step({
         {n}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="font-medium text-slate-800 mb-1.5">{title}</div>
+        <div className="font-medium text-ink mb-1.5">{title}</div>
         {children}
       </div>
     </div>

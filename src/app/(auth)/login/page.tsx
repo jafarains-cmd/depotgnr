@@ -17,7 +17,7 @@ function detectMode(input: string): DetectedMode {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="text-sm text-slate-500">Memuat...</div>}>
+    <Suspense fallback={<div className="text-sm text-[color:var(--muted)]">Memuat...</div>}>
       <LoginInner />
     </Suspense>
   );
@@ -95,7 +95,7 @@ function LoginInner() {
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-bold">Masuk</h1>
-        <p className="text-sm text-slate-500">Selamat datang kembali di Depot Air.</p>
+        <p className="text-sm text-[color:var(--muted)]">Selamat datang kembali di Depot Air.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3">
@@ -112,9 +112,9 @@ function LoginInner() {
               setError(null);
             }}
             placeholder="email / username / 08xxxxxxxxxx"
-            className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className="w-full px-3 py-2 border border-line rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
           />
-          <p className="text-xs text-slate-500 mt-1">{hint}</p>
+          <p className="text-xs text-[color:var(--muted)] mt-1">{hint}</p>
         </div>
 
         {mode !== "phone" && (
@@ -126,7 +126,7 @@ function LoginInner() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full px-3 py-2 border border-line rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
           </div>
         )}
@@ -140,7 +140,7 @@ function LoginInner() {
               required
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-md tracking-widest text-center"
+              className="w-full px-3 py-2 border border-line rounded-md tracking-widest text-center"
             />
             <button
               type="button"
@@ -148,7 +148,7 @@ function LoginInner() {
                 setOtpSent(false);
                 setOtp("");
               }}
-              className="text-xs text-slate-500 mt-1 hover:underline"
+              className="text-xs text-[color:var(--muted)] mt-1 hover:underline"
             >
               Kirim ulang / ganti nomor
             </button>
@@ -174,7 +174,7 @@ function LoginInner() {
         </button>
       </form>
 
-      <p className="text-sm text-center text-slate-600">
+      <p className="text-sm text-center text-[color:var(--muted)]">
         Belum punya akun?{" "}
         <Link href="/register" className="text-brand-600 hover:underline">
           Daftar

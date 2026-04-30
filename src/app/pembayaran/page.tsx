@@ -46,7 +46,7 @@ export default async function PembayaranPage() {
     <div className="space-y-3">
       <div>
         <h1 className="text-xl font-bold">Konfirmasi Pembayaran</h1>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-[color:var(--muted)]">
           Review bukti pembayaran online dari pelanggan & konfirmasi setelah cocok dengan mutasi.
         </p>
       </div>

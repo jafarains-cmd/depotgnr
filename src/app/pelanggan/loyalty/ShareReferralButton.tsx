@@ -32,7 +32,7 @@ export function ShareReferralButton({ kode, nama }: { kode: string; nama: string
       </button>
       <button
         onClick={copy}
-        className="px-3 py-2 bg-slate-100 rounded-md text-sm inline-flex items-center justify-center gap-1.5"
+        className="px-3 py-2 bg-[color:var(--surface2)] rounded-md text-sm inline-flex items-center justify-center gap-1.5"
       >
         {copied ? <Check size={14} /> : <Copy size={14} />}
         {copied ? "Tersalin" : "Salin"}

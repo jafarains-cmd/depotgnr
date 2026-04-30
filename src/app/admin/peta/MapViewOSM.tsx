@@ -65,7 +65,7 @@ export function MapViewOSM({ pelanggan }: { pelanggan: PelangganGeo[] }) {
                   className={`px-1.5 py-0.5 rounded ${
                     p.tipe === "langganan"
                       ? "bg-blue-100 text-blue-700"
-                      : "bg-slate-100 text-slate-600"
+                      : "bg-[color:var(--surface2)] text-[color:var(--muted)]"
                   }`}
                 >
                   {p.tipe}
@@ -110,7 +110,7 @@ export function MapViewOSM({ pelanggan }: { pelanggan: PelangganGeo[] }) {
                   href={`https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}`}
                   target="_blank"
                   rel="noopener"
-                  className="flex-1 text-center text-xs border border-slate-300 py-1 rounded"
+                  className="flex-1 text-center text-xs border border-line py-1 rounded"
                 >
                   Rute
                 </a>

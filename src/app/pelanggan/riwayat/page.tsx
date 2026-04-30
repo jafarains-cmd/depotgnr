@@ -21,7 +21,7 @@ const STATUS_COLOR: Record<string, string> = {
   diisi: "bg-cyan-100 text-cyan-700",
   diantar: "bg-violet-100 text-violet-700",
   selesai: "bg-emerald-100 text-emerald-700",
-  batal: "bg-slate-200 text-slate-600",
+  batal: "bg-[color:var(--surface2)] text-[color:var(--muted)]",
 };
 
 export default async function RiwayatPage({
@@ -107,7 +107,7 @@ export default async function RiwayatPage({
                 </div>
                 <span
                   className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wide ${
-                    STATUS_COLOR[o.status] ?? "bg-slate-100 text-slate-700"
+                    STATUS_COLOR[o.status] ?? "bg-[color:var(--surface2)] text-ink"
                   }`}
                 >
                   {o.status}
@@ -212,7 +212,7 @@ function PayBadge({ status, metode }: { status: string; metode: string | null })
     );
   }
   return (
-    <span className="text-[10px] px-2 py-1 bg-slate-100 text-slate-600 rounded-full font-bold">
+    <span className="text-[10px] px-2 py-1 bg-[color:var(--surface2)] text-[color:var(--muted)] rounded-full font-bold">
       Belum bayar
     </span>
   );

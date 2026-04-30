@@ -20,7 +20,7 @@ export type PelangganGeo = {
 const MapView = dynamic(() => import("./MapView").then((m) => m.MapView), {
   ssr: false,
   loading: () => (
-    <div className="h-full flex items-center justify-center text-slate-400">
+    <div className="h-full flex items-center justify-center text-[color:var(--muted)]">
       Memuat peta...
     </div>
   ),

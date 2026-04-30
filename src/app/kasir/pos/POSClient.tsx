@@ -107,9 +107,9 @@ export function POSClient({
       <div className="lg:col-span-3 space-y-3">
         <div className="grid sm:grid-cols-2 gap-3">
           {produkList.map((p) => (
-            <div key={p.id} className="bg-white rounded-xl border border-slate-200 p-4">
+            <div key={p.id} className="bg-surface rounded-xl border border-line p-4">
               <div className="font-medium">{p.nama}</div>
-              <div className="text-xs text-slate-500 mb-3">{p.deskripsi}</div>
+              <div className="text-xs text-[color:var(--muted)] mb-3">{p.deskripsi}</div>
               <div className="space-y-1.5 text-sm">
                 {p.hargaIsiUlang > 0 && (
                   <ProdBtn
@@ -142,11 +142,11 @@ export function POSClient({
 
       {/* Cart */}
       <div className="lg:col-span-2 space-y-3">
-        <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+        <div className="bg-surface rounded-xl border border-line p-4 space-y-3">
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-0.5">Pelanggan</label>
+            <label className="block text-xs font-medium text-[color:var(--muted)] mb-0.5">Pelanggan</label>
             {pelangganId ? (
-              <div className="flex justify-between items-center bg-slate-50 px-3 py-2 rounded-md">
+              <div className="flex justify-between items-center bg-[color:var(--surface2)] px-3 py-2 rounded-md">
                 <span className="text-sm">
                   {pelangganList.find((p) => p.id === pelangganId)?.nama ?? "—"}
                 </span>
@@ -155,7 +155,7 @@ export function POSClient({
                     setPelangganId(null);
                     setPelangganQ("");
                   }}
-                  className="text-xs text-slate-500 hover:text-red-600"
+                  className="text-xs text-[color:var(--muted)] hover:text-red-600"
                 >
                   Ganti
                 </button>
@@ -166,12 +166,12 @@ export function POSClient({
                   value={pelangganQ}
                   onChange={(e) => setPelangganQ(e.target.value)}
                   placeholder="Walk-in atau cari nama/telp..."
-                  className="w-full px-2.5 py-1.5 border border-slate-300 rounded-md text-sm"
+                  className="w-full px-2.5 py-1.5 border border-line rounded-md text-sm"
                 />
                 {pelangganQ && (
-                  <div className="mt-1 max-h-40 overflow-auto border border-slate-200 rounded-md text-sm">
+                  <div className="mt-1 max-h-40 overflow-auto border border-line rounded-md text-sm">
                     {filteredPelanggan.length === 0 && (
-                      <div className="p-2 text-slate-400 text-xs">Tidak ditemukan</div>
+                      <div className="p-2 text-[color:var(--muted)] text-xs">Tidak ditemukan</div>
                     )}
                     {filteredPelanggan.map((p) => (
                       <button
@@ -180,9 +180,9 @@ export function POSClient({
                           setPelangganId(p.id);
                           setPelangganQ("");
                         }}
-                        className="w-full text-left px-2 py-1 hover:bg-slate-50"
+                        className="w-full text-left px-2 py-1 hover:bg-[color:var(--surface2)]"
                       >
-                        {p.nama} <span className="text-xs text-slate-400">{p.telp}</span>
+                        {p.nama} <span className="text-xs text-[color:var(--muted)]">{p.telp}</span>
                       </button>
                     ))}
                   </div>
@@ -192,18 +192,18 @@ export function POSClient({
           </div>
 
           <div className="border-t pt-2 space-y-2">
-            <div className="text-xs font-medium text-slate-500">Keranjang</div>
-            {cart.length === 0 && <div className="text-xs text-slate-400 py-3">Kosong</div>}
+            <div className="text-xs font-medium text-[color:var(--muted)]">Keranjang</div>
+            {cart.length === 0 && <div className="text-xs text-[color:var(--muted)] py-3">Kosong</div>}
             {cart.map((it, idx) => {
               const p = produkList.find((x) => x.id === it.produkId);
               return (
                 <div
                   key={idx}
-                  className="flex items-center gap-2 text-sm border-b border-slate-100 pb-2"
+                  className="flex items-center gap-2 text-sm border-b border-line pb-2"
                 >
                   <div className="flex-1">
                     <div>{p?.nama ?? "?"}</div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-[color:var(--muted)]">
                       {labelJenis(it.jenis)} · {formatRupiah(it.hargaSatuan)}
                     </div>
                   </div>
@@ -212,7 +212,7 @@ export function POSClient({
                     min={1}
                     value={it.qty}
                     onChange={(e) => setQty(idx, Number(e.target.value))}
-                    className="w-14 px-2 py-1 border border-slate-300 rounded text-center"
+                    className="w-14 px-2 py-1 border border-line rounded text-center"
                   />
                   <div className="w-20 text-right text-xs">
                     {formatRupiah(it.hargaSatuan * it.qty)}
@@ -228,13 +228,13 @@ export function POSClient({
           <div className="border-t pt-3 space-y-2 text-sm">
             <Row label="Subtotal" value={formatRupiah(subtotal)} />
             <div className="flex justify-between items-center">
-              <label className="text-slate-600">Diskon</label>
+              <label className="text-[color:var(--muted)]">Diskon</label>
               <input
                 type="number"
                 min={0}
                 value={diskon}
                 onChange={(e) => setDiskon(Number(e.target.value))}
-                className="w-28 px-2 py-1 border border-slate-300 rounded text-right"
+                className="w-28 px-2 py-1 border border-line rounded text-right"
               />
             </div>
             <Row label="Total" value={formatRupiah(total)} bold />
@@ -247,7 +247,7 @@ export function POSClient({
                   className={`py-1.5 rounded-md uppercase ${
                     metodeBayar === m
                       ? "bg-brand-600 text-white"
-                      : "bg-slate-100 text-slate-600"
+                      : "bg-[color:var(--surface2)] text-[color:var(--muted)]"
                   }`}
                 >
                   {m}
@@ -260,7 +260,7 @@ export function POSClient({
               value={catatan}
               onChange={(e) => setCatatan(e.target.value)}
               rows={2}
-              className="w-full px-2 py-1 border border-slate-300 rounded text-xs"
+              className="w-full px-2 py-1 border border-line rounded text-xs"
             />
 
             {error && <div className="text-red-600 text-xs">{error}</div>}
@@ -302,7 +302,7 @@ function ProdBtn({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="w-full text-left px-3 py-1.5 rounded-md bg-slate-50 hover:bg-brand-50 hover:text-brand-700 flex items-center justify-between"
+      className="w-full text-left px-3 py-1.5 rounded-md bg-[color:var(--surface2)] hover:bg-brand-50 hover:text-brand-700 flex items-center justify-between"
     >
       <span>{label}</span>
       <Plus size={14} />
@@ -312,7 +312,7 @@ function ProdBtn({ label, onClick }: { label: string; onClick: () => void }) {
 
 function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
   return (
-    <div className={`flex justify-between ${bold ? "font-bold text-base" : "text-slate-600"}`}>
+    <div className={`flex justify-between ${bold ? "font-bold text-base" : "text-[color:var(--muted)]"}`}>
       <span>{label}</span>
       <span>{value}</span>
     </div>

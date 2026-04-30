@@ -90,11 +90,11 @@ export function TrackingButton({
   if (!["dijemput", "diisi", "diantar", "diproses"].includes(status)) return null;
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2">
+    <div className="bg-surface border border-line rounded-2xl p-4 space-y-2">
       <div className="text-sm font-semibold inline-flex items-center gap-1.5">
         <Navigation size={16} /> Tracking Live
       </div>
-      <p className="text-xs text-slate-600">
+      <p className="text-xs text-[color:var(--muted)]">
         Aktifkan supaya pelanggan bisa lihat posisi Anda di peta. Lokasi dikirim tiap 30 detik.
       </p>
 
@@ -115,7 +115,7 @@ export function TrackingButton({
             Tracking aktif
           </div>
           {lastSent && (
-            <div className="text-xs text-slate-500">
+            <div className="text-xs text-[color:var(--muted)]">
               Last sync:{" "}
               {lastSent.toLocaleTimeString("id-ID", {
                 hour: "2-digit",

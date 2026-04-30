@@ -7,7 +7,7 @@ import { authClient } from "@/lib/auth-client";
 
 export default function RegisterPage() {
   return (
-    <Suspense fallback={<div className="text-sm text-slate-500">Memuat...</div>}>
+    <Suspense fallback={<div className="text-sm text-[color:var(--muted)]">Memuat...</div>}>
       <RegisterInner />
     </Suspense>
   );
@@ -62,7 +62,7 @@ function RegisterInner() {
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-bold">Daftar Akun Pelanggan</h1>
-        <p className="text-sm text-slate-500">Order air minum jadi lebih mudah.</p>
+        <p className="text-sm text-[color:var(--muted)]">Order air minum jadi lebih mudah.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3">
@@ -82,7 +82,7 @@ function RegisterInner() {
             value={alamat}
             onChange={(e) => setAlamat(e.target.value)}
             rows={2}
-            className="w-full px-3 py-2 border border-slate-300 rounded-md"
+            className="w-full px-3 py-2 border border-line rounded-md"
           />
         </div>
 
@@ -101,7 +101,7 @@ function RegisterInner() {
         </button>
       </form>
 
-      <p className="text-sm text-center text-slate-600">
+      <p className="text-sm text-center text-[color:var(--muted)]">
         Sudah punya akun?{" "}
         <Link href="/login" className="text-brand-600 hover:underline">
           Masuk
@@ -138,7 +138,7 @@ function Field({
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
+        className="w-full px-3 py-2 border border-line rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
       />
     </div>
   );

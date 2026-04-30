@@ -20,7 +20,7 @@ export function CodeBlock({ code, language }: { code: string; language?: string 
     <div className="relative">
       <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
         {language && (
-          <span className="text-xs text-slate-400 px-2 py-0.5 bg-slate-800/40 rounded">
+          <span className="text-xs text-[color:var(--muted)] px-2 py-0.5 bg-slate-800/40 rounded">
             {language}
           </span>
         )}

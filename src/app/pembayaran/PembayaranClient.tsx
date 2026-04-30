@@ -26,66 +26,82 @@ export function PembayaranClient({ rows }: { rows: Row[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-1 text-sm">
-        {(["menunggu", "lunas", "all"] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-3 py-1.5 rounded-md ${
-              filter === f ? "bg-brand-600 text-white" : "bg-white border border-slate-200"
-            }`}
-          >
-            {f === "all" ? "Semua" : f === "menunggu" ? "Menunggu Verifikasi" : "Sudah Lunas"}
-            {f === "menunggu" && rows.filter((r) => r.status === "menunggu").length > 0 && (
-              <span className="ml-1.5 px-1.5 py-0 bg-amber-200 text-amber-900 rounded text-[10px]">
-                {rows.filter((r) => r.status === "menunggu").length}
-              </span>
-            )}
-          </button>
-        ))}
+      <div className="flex gap-2 text-sm">
+        {(["menunggu", "lunas", "all"] as const).map((f) => {
+          const count = rows.filter((r) => r.status === "menunggu").length;
+          return (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-3.5 py-1.5 rounded-full font-bold text-xs transition ${
+                filter === f
+                  ? "bg-brand text-white"
+                  : "bg-surface border border-line text-[color:var(--muted)] hover:text-ink"
+              }`}
+            >
+              {f === "all" ? "Semua" : f === "menunggu" ? "Menunggu" : "Lunas"}
+              {f === "menunggu" && count > 0 && (
+                <span className="ml-1.5 px-1.5 py-0.5 bg-[color:var(--accent2)] text-white rounded text-[10px]">
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       <div className="grid lg:grid-cols-2 gap-3">
         {filtered.map((r) => (
-          <div key={r.id} className="bg-white border border-slate-200 rounded-xl p-4 space-y-2">
-            <div className="flex justify-between items-start">
-              <div>
-                <div className="font-mono text-xs text-slate-500">{r.nomorOrder}</div>
-                <div className="font-medium">{r.pelangganNama ?? "-"}</div>
+          <div
+            key={r.id}
+            className="bg-surface border border-line rounded-2xl p-4 space-y-3"
+            style={{
+              borderLeftWidth: 4,
+              borderLeftColor: r.status === "lunas" ? "#22C55E" : "var(--accent)",
+            }}
+          >
+            <div className="flex justify-between items-start gap-2">
+              <div className="min-w-0">
+                <div className="font-mono text-xs text-[color:var(--muted)]">
+                  {r.nomorOrder}
+                </div>
+                <div className="font-extrabold truncate">{r.pelangganNama ?? "-"}</div>
                 {r.pelangganTelp && (
-                  <div className="text-xs text-slate-500">{r.pelangganTelp}</div>
+                  <div className="text-xs text-[color:var(--muted)]">{r.pelangganTelp}</div>
                 )}
               </div>
-              <div className="text-right">
-                <div className="text-lg font-bold">{formatRupiah(r.total)}</div>
+              <div className="text-right flex-shrink-0">
+                <div className="text-lg font-extrabold text-brand">{formatRupiah(r.total)}</div>
                 <span
-                  className={`text-xs px-2 py-0.5 rounded ${
+                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                     r.status === "lunas"
                       ? "bg-emerald-100 text-emerald-800"
                       : "bg-amber-100 text-amber-800"
                   }`}
                 >
-                  {(r.metode ?? "-").toUpperCase()} · {r.status}
+                  {(r.metode ?? "-").toUpperCase()} · {r.status.toUpperCase()}
                 </span>
               </div>
             </div>
 
             {r.buktiUrl && (
               <div>
-                <div className="text-xs text-slate-500 mb-1">Bukti Pembayaran:</div>
+                <div className="text-[10px] text-[color:var(--muted)] mb-1.5 font-semibold uppercase tracking-wide">
+                  Bukti Pembayaran
+                </div>
                 <a href={r.buktiUrl} target="_blank" rel="noreferrer" className="block">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={r.buktiUrl}
                     alt="Bukti"
-                    className="w-full max-h-64 object-contain rounded-md border border-slate-200 bg-slate-50"
+                    className="w-full max-h-64 object-contain rounded-xl border border-line bg-[color:var(--surface2)]"
                   />
                 </a>
                 <a
                   href={r.buktiUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-xs text-brand-600 inline-flex items-center gap-1 mt-1"
+                  className="text-xs text-brand font-bold inline-flex items-center gap-1 mt-2"
                 >
                   <ExternalLink size={11} /> Buka di tab baru
                 </a>
@@ -93,17 +109,21 @@ export function PembayaranClient({ rows }: { rows: Row[] }) {
             )}
 
             {r.status === "menunggu" && (
-              <div className="flex gap-2 pt-2 border-t border-slate-100">
+              <div className="flex gap-2 pt-3 border-t border-line">
                 <button
                   disabled={pending}
                   onClick={() => {
-                    if (confirm(`Konfirmasi pembayaran ${r.nomorOrder} sebesar ${formatRupiah(r.total)}?`)) {
+                    if (
+                      confirm(
+                        `Konfirmasi pembayaran ${r.nomorOrder} sebesar ${formatRupiah(r.total)}?`,
+                      )
+                    ) {
                       startTransition(async () => {
                         await konfirmasiBayar(r.id);
                       });
                     }
                   }}
-                  className="flex-1 py-2 bg-emerald-600 text-white rounded-md text-sm font-medium inline-flex items-center justify-center gap-1 disabled:opacity-50"
+                  className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-extrabold inline-flex items-center justify-center gap-1.5 disabled:opacity-50 active:scale-[0.98] transition"
                 >
                   <Check size={14} /> Konfirmasi Lunas
                 </button>
@@ -117,16 +137,16 @@ export function PembayaranClient({ rows }: { rows: Row[] }) {
                       });
                     }
                   }}
-                  className="px-3 py-2 border border-red-200 text-red-600 rounded-md text-sm inline-flex items-center justify-center gap-1 disabled:opacity-50"
+                  className="px-3 py-2.5 border-2 border-rose-200 text-rose-600 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-1 disabled:opacity-50"
                 >
-                  <X size={14} /> Tolak
+                  <X size={14} />
                 </button>
               </div>
             )}
 
             {r.status === "lunas" && r.bayarAt && (
-              <div className="text-xs text-slate-500 pt-2 border-t border-slate-100">
-                Lunas:{" "}
+              <div className="text-[11px] text-[color:var(--muted)] pt-3 border-t border-line">
+                ✓ Lunas{" "}
                 {new Date(r.bayarAt).toLocaleString("id-ID", {
                   dateStyle: "medium",
                   timeStyle: "short",
@@ -136,7 +156,7 @@ export function PembayaranClient({ rows }: { rows: Row[] }) {
           </div>
         ))}
         {filtered.length === 0 && (
-          <div className="lg:col-span-2 p-8 text-center text-slate-400 bg-white rounded-xl border border-slate-200">
+          <div className="lg:col-span-2 p-10 text-center text-[color:var(--muted)] bg-surface rounded-2xl border border-line">
             Tidak ada data.
           </div>
         )}

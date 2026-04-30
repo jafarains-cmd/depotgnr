@@ -15,7 +15,7 @@ export default async function Home() {
     <main className="min-h-screen flex items-center justify-center p-8">
       <div className="max-w-2xl text-center space-y-6">
         <h1 className="text-4xl font-bold text-brand-700">Depot Air Minum Isi Ulang</h1>
-        <p className="text-slate-600">
+        <p className="text-[color:var(--muted)]">
           Aplikasi manajemen depot — POS kasir, order online, inventory galon, integrasi
           Telegram/WhatsApp, dan sinkronisasi Google Sheets.
         </p>

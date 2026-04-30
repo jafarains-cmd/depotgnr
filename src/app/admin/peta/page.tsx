@@ -74,7 +74,7 @@ export default async function PetaPage() {
         title="Peta Pelanggan"
         description={`${data.length} dari ${totalPelanggan.count} pelanggan punya koordinat. Klik marker untuk detail.`}
       />
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden h-[calc(100vh-200px)]">
+      <div className="bg-surface rounded-xl border border-line overflow-hidden h-[calc(100vh-200px)]">
         <PetaClient pelanggan={data} />
       </div>
       {data.length === 0 && (

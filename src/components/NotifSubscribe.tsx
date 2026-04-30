@@ -95,7 +95,7 @@ export function NotifSubscribe() {
       <button
         onClick={unsubscribe}
         disabled={busy}
-        className="text-xs text-slate-500 hover:text-red-600 inline-flex items-center gap-1"
+        className="text-xs text-[color:var(--muted)] hover:text-red-600 inline-flex items-center gap-1"
         title="Matikan notifikasi"
       >
         <BellOff size={12} /> Matikan notif
@@ -104,7 +104,7 @@ export function NotifSubscribe() {
   }
   if (permission === "denied") {
     return (
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-[color:var(--muted)]">
         Notifikasi diblokir. Aktifkan di pengaturan browser kalau mau dapat update real-time.
       </p>
     );
@@ -115,7 +115,7 @@ export function NotifSubscribe() {
       <Bell size={18} className="text-brand-700 mt-0.5 flex-shrink-0" />
       <div className="flex-1 text-sm">
         <div className="font-medium">Aktifkan notifikasi</div>
-        <p className="text-xs text-slate-600 mb-2">
+        <p className="text-xs text-[color:var(--muted)] mb-2">
           Dapat update status order, pembayaran, dan bonus loyalty langsung di HP — tanpa harus
           buka WhatsApp.
         </p>
@@ -132,7 +132,7 @@ export function NotifSubscribe() {
               localStorage.setItem("notif-dismissed", "1");
               setHidden(true);
             }}
-            className="px-2 py-1.5 text-slate-500 text-xs"
+            className="px-2 py-1.5 text-[color:var(--muted)] text-xs"
           >
             Nanti saja
           </button>
@@ -143,7 +143,7 @@ export function NotifSubscribe() {
           localStorage.setItem("notif-dismissed", "1");
           setHidden(true);
         }}
-        className="text-slate-400"
+        className="text-[color:var(--muted)]"
       >
         <X size={14} />
       </button>

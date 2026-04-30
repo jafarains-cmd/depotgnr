@@ -74,23 +74,23 @@ export default async function LaporanPage({
     <div className="p-6 space-y-6">
       <PageHeader title="Laporan" description="Omzet, transaksi, dan breakdown produk." />
 
-      <form className="bg-white border border-slate-200 rounded-xl p-4 flex gap-3 items-end text-sm">
+      <form className="bg-surface border border-line rounded-2xl p-4 flex gap-3 items-end text-sm">
         <div>
-          <label className="block text-xs text-slate-600 mb-1">Dari</label>
+          <label className="block text-xs text-[color:var(--muted)] mb-1">Dari</label>
           <input
             type="date"
             name="from"
             defaultValue={fromStr}
-            className="px-3 py-1.5 border border-slate-300 rounded-md"
+            className="px-3 py-1.5 border border-line rounded-md"
           />
         </div>
         <div>
-          <label className="block text-xs text-slate-600 mb-1">Sampai</label>
+          <label className="block text-xs text-[color:var(--muted)] mb-1">Sampai</label>
           <input
             type="date"
             name="to"
             defaultValue={toStr}
-            className="px-3 py-1.5 border border-slate-300 rounded-md"
+            className="px-3 py-1.5 border border-line rounded-md"
           />
         </div>
         <button className="px-4 py-1.5 bg-brand-600 text-white rounded-md">Terapkan</button>
@@ -102,37 +102,37 @@ export default async function LaporanPage({
         <Card
           label="Rata-rata / Transaksi"
           value={formatRupiah(ringkasan.jumlahTransaksi ? ringkasan.totalOmzet / ringkasan.jumlahTransaksi : 0)}
-          color="bg-slate-100 text-slate-700"
+          color="bg-[color:var(--surface2)] text-ink"
         />
       </div>
 
-      <section className="bg-white border border-slate-200 rounded-xl p-4">
+      <section className="bg-surface border border-line rounded-2xl p-4">
         <h2 className="font-semibold mb-3">Omzet Harian</h2>
         {harian.length === 0 ? (
-          <div className="text-sm text-slate-400 p-4 text-center">Belum ada data.</div>
+          <div className="text-sm text-[color:var(--muted)] p-4 text-center">Belum ada data.</div>
         ) : (
           <div className="space-y-1.5">
             {harian.map((h) => (
               <div key={h.tanggal} className="flex items-center gap-3 text-xs">
-                <div className="w-24 text-slate-500">{h.tanggal}</div>
-                <div className="flex-1 bg-slate-100 rounded h-6 relative overflow-hidden">
+                <div className="w-24 text-[color:var(--muted)]">{h.tanggal}</div>
+                <div className="flex-1 bg-[color:var(--surface2)] rounded h-6 relative overflow-hidden">
                   <div
                     className="bg-brand-500 h-full"
                     style={{ width: `${(h.omzet / maxOmzet) * 100}%` }}
                   />
                 </div>
                 <div className="w-32 text-right font-medium">{formatRupiah(h.omzet)}</div>
-                <div className="w-12 text-right text-slate-500">{h.jml}×</div>
+                <div className="w-12 text-right text-[color:var(--muted)]">{h.jml}×</div>
               </div>
             ))}
           </div>
         )}
       </section>
 
-      <section className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-100 font-semibold">Breakdown per Produk</div>
+      <section className="bg-surface border border-line rounded-2xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-line font-semibold">Breakdown per Produk</div>
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-600 text-left text-xs">
+          <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left text-xs">
             <tr>
               <th className="p-3">Produk</th>
               <th className="p-3">Jenis</th>
@@ -140,7 +140,7 @@ export default async function LaporanPage({
               <th className="p-3 text-right">Subtotal</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-line">
             {breakdownProduk.map((b, i) => (
               <tr key={i}>
                 <td className="p-3 font-medium">{b.namaProduk ?? "-"}</td>
@@ -151,7 +151,7 @@ export default async function LaporanPage({
             ))}
             {breakdownProduk.length === 0 && (
               <tr>
-                <td colSpan={4} className="p-6 text-center text-slate-400">
+                <td colSpan={4} className="p-6 text-center text-[color:var(--muted)]">
                   Belum ada data.
                 </td>
               </tr>
@@ -160,7 +160,7 @@ export default async function LaporanPage({
         </table>
       </section>
 
-      <div className="text-xs text-slate-500">
+      <div className="text-xs text-[color:var(--muted)]">
         Push laporan ke Google Sheets tersedia di milestone Sheets sync (M11).
       </div>
     </div>
@@ -169,7 +169,7 @@ export default async function LaporanPage({
 
 function Card({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div className={`rounded-xl p-5 border border-slate-200 ${color}`}>
+    <div className={`rounded-xl p-5 border border-line ${color}`}>
       <div className="text-sm font-medium opacity-80">{label}</div>
       <div className="text-2xl font-bold mt-1">{value}</div>
     </div>

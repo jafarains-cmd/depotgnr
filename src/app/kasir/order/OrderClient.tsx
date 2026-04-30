@@ -59,7 +59,7 @@ const STATUS_COLOR: Record<OrderStatus, string> = {
   diisi: "bg-cyan-100 text-cyan-700",
   diantar: "bg-purple-100 text-purple-700",
   selesai: "bg-emerald-100 text-emerald-700",
-  batal: "bg-slate-200 text-slate-600",
+  batal: "bg-[color:var(--surface2)] text-[color:var(--muted)]",
 };
 
 export function OrderClient({
@@ -85,7 +85,7 @@ export function OrderClient({
             key={f}
             onClick={() => setFilter(f)}
             className={`px-3 py-1.5 rounded-md ${
-              filter === f ? "bg-brand-600 text-white" : "bg-white border border-slate-200"
+              filter === f ? "bg-brand-600 text-white" : "bg-surface border border-line"
             }`}
           >
             {f === "all" ? "Semua" : f}
@@ -97,13 +97,13 @@ export function OrderClient({
         {filtered.map((o) => {
           const next = nextStatus(o);
           return (
-            <div key={o.id} className="bg-white rounded-xl border border-slate-200 p-4 space-y-2">
+            <div key={o.id} className="bg-surface rounded-xl border border-line p-4 space-y-2">
               <div className="flex justify-between items-start">
                 <div>
-                  <div className="font-mono text-xs text-slate-500">{o.nomorOrder}</div>
+                  <div className="font-mono text-xs text-[color:var(--muted)]">{o.nomorOrder}</div>
                   <div className="font-medium">
                     {o.pelangganNama ?? "Tanpa Akun"}{" "}
-                    <span className="text-xs text-slate-400">{o.pelangganTelp}</span>
+                    <span className="text-xs text-[color:var(--muted)]">{o.pelangganTelp}</span>
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-1">
@@ -112,36 +112,36 @@ export function OrderClient({
                   >
                     {o.status}
                   </span>
-                  <span className="text-xs text-slate-400">via {o.sumber}</span>
+                  <span className="text-xs text-[color:var(--muted)]">via {o.sumber}</span>
                 </div>
               </div>
 
-              <ul className="text-sm text-slate-700 space-y-0.5">
+              <ul className="text-sm text-ink space-y-0.5">
                 {o.items.map((it, i) => (
                   <li key={i}>
                     • {it.qty}× {it.namaProduk}{" "}
-                    <span className="text-xs text-slate-500">({it.jenis})</span>
+                    <span className="text-xs text-[color:var(--muted)]">({it.jenis})</span>
                   </li>
                 ))}
               </ul>
 
               {o.alamatAntar && (
-                <div className="text-xs text-slate-500">📍 {o.alamatAntar}</div>
+                <div className="text-xs text-[color:var(--muted)]">📍 {o.alamatAntar}</div>
               )}
-              {o.catatan && <div className="text-xs italic text-slate-500">"{o.catatan}"</div>}
+              {o.catatan && <div className="text-xs italic text-[color:var(--muted)]">"{o.catatan}"</div>}
               <div className="text-sm font-medium">
                 Estimasi: {formatRupiah(o.totalEstimasi)}
               </div>
 
               {(o.status === "pending" || o.status === "diproses" || o.status === "diantar") && (
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="text-slate-500">Kurir:</span>
+                  <span className="text-[color:var(--muted)]">Kurir:</span>
                   <select
                     value={o.kurirUserId ?? ""}
                     onChange={(e) =>
                       startTransition(() => assignKurir(o.id, e.target.value || null))
                     }
-                    className="flex-1 px-2 py-1 border border-slate-300 rounded text-xs"
+                    className="flex-1 px-2 py-1 border border-line rounded text-xs"
                     disabled={pending}
                   >
                     <option value="">— belum di-assign —</option>
@@ -156,17 +156,17 @@ export function OrderClient({
 
               {o.buktiFotoUrl && (
                 <div className="pt-1">
-                  <div className="text-xs text-slate-500 mb-1">Bukti pengantaran:</div>
+                  <div className="text-xs text-[color:var(--muted)] mb-1">Bukti pengantaran:</div>
                   <a href={o.buktiFotoUrl} target="_blank" rel="noreferrer">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={o.buktiFotoUrl}
                       alt="Bukti"
-                      className="w-24 h-24 object-cover rounded-md border border-slate-200 hover:opacity-80"
+                      className="w-24 h-24 object-cover rounded-md border border-line hover:opacity-80"
                     />
                   </a>
                   {o.diantarAt && (
-                    <div className="text-xs text-slate-400 mt-1">
+                    <div className="text-xs text-[color:var(--muted)] mt-1">
                       Diantar:{" "}
                       {new Date(o.diantarAt).toLocaleString("id-ID", {
                         dateStyle: "short",
@@ -177,7 +177,7 @@ export function OrderClient({
                 </div>
               )}
 
-              <div className="flex gap-2 pt-2 border-t border-slate-100">
+              <div className="flex gap-2 pt-2 border-t border-line">
                 {next && (
                   <button
                     disabled={pending}
@@ -213,7 +213,7 @@ export function OrderClient({
           );
         })}
         {filtered.length === 0 && (
-          <div className="col-span-2 p-8 text-center text-slate-400">Tidak ada order.</div>
+          <div className="col-span-2 p-8 text-center text-[color:var(--muted)]">Tidak ada order.</div>
         )}
       </div>
     </div>

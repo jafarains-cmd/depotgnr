@@ -37,26 +37,26 @@ export function PengaturanForm({
     <form
       ref={formRef}
       onSubmit={handleSubmit}
-      className="bg-white rounded-xl border border-slate-200 p-5 space-y-4"
+      className="bg-surface rounded-xl border border-line p-5 space-y-4"
     >
       {fields.map((f) => (
         <div key={f.key}>
-          <label className="block text-sm font-medium text-slate-700 mb-1">{f.label}</label>
+          <label className="block text-sm font-medium text-ink mb-1">{f.label}</label>
           {f.type === "textarea" ? (
             <textarea
               name={f.key}
               defaultValue={values[f.key] ?? ""}
               rows={3}
-              className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm font-mono"
+              className="w-full px-3 py-2 border border-line rounded-md text-sm font-mono"
             />
           ) : (
             <input
               name={f.key}
               defaultValue={values[f.key] ?? ""}
-              className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+              className="w-full px-3 py-2 border border-line rounded-md text-sm"
             />
           )}
-          {f.help && <p className="text-xs text-slate-500 mt-1">{f.help}</p>}
+          {f.help && <p className="text-xs text-[color:var(--muted)] mt-1">{f.help}</p>}
         </div>
       ))}
       <div className="flex items-center gap-3 pt-2">

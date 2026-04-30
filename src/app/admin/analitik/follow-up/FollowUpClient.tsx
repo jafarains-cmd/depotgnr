@@ -38,7 +38,7 @@ const STATUS: Record<Row["status"], { label: string; cls: string; icon: React.Re
   },
   "not-due": {
     label: "Belum waktunya",
-    cls: "bg-slate-100 text-slate-500",
+    cls: "bg-[color:var(--surface2)] text-[color:var(--muted)]",
     icon: null,
   },
 };
@@ -112,7 +112,7 @@ export function FollowUpClient({ rows }: { rows: Row[] }) {
         <StatCard label="Churn Risk" value={counts.churn} cls="bg-red-50 border-red-200 text-red-700" />
         <StatCard label="Overdue" value={counts.overdue} cls="bg-amber-50 border-amber-200 text-amber-700" />
         <StatCard label="Due" value={counts.due} cls="bg-blue-50 border-blue-200 text-blue-700" />
-        <StatCard label="Total Tracked" value={counts.total} cls="bg-slate-50 border-slate-200 text-slate-700" />
+        <StatCard label="Total Tracked" value={counts.total} cls="bg-[color:var(--surface2)] border-line text-ink" />
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
@@ -121,7 +121,7 @@ export function FollowUpClient({ rows }: { rows: Row[] }) {
             key={f}
             onClick={() => setFilter(f)}
             className={`px-3 py-1.5 rounded-md text-sm ${
-              filter === f ? "bg-brand-600 text-white" : "bg-white border border-slate-200"
+              filter === f ? "bg-brand-600 text-white" : "bg-surface border border-line"
             }`}
           >
             {f === "actionable" ? "Yang Perlu Follow-up" : f === "all" ? "Semua" : STATUS[f as Row["status"]].label}
@@ -130,12 +130,12 @@ export function FollowUpClient({ rows }: { rows: Row[] }) {
       </div>
 
       {filtered.length > 0 && (
-        <div className="flex items-center justify-between bg-white border border-slate-200 rounded-md px-3 py-2">
+        <div className="flex items-center justify-between bg-surface border border-line rounded-md px-3 py-2">
           <button onClick={toggleAll} className="text-sm inline-flex items-center gap-1.5">
             {selected.size === filtered.length ? <CheckSquare size={14} /> : <Square size={14} />}
             {selected.size === filtered.length ? "Batalkan semua" : "Pilih semua"}
             {selected.size > 0 && (
-              <span className="text-xs text-slate-500">({selected.size} dipilih)</span>
+              <span className="text-xs text-[color:var(--muted)]">({selected.size} dipilih)</span>
             )}
           </button>
           <button
@@ -149,14 +149,14 @@ export function FollowUpClient({ rows }: { rows: Row[] }) {
       )}
 
       {msg && (
-        <div className="text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded p-2">
+        <div className="text-sm text-ink bg-[color:var(--surface2)] border border-line rounded p-2">
           {msg}
         </div>
       )}
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className="bg-surface border border-line rounded-2xl overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-600 text-left">
+          <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
             <tr>
               <th className="p-3 w-8"></th>
               <th className="p-3">Pelanggan</th>
@@ -167,7 +167,7 @@ export function FollowUpClient({ rows }: { rows: Row[] }) {
               <th className="p-3"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-line">
             {filtered.map((r) => {
               const s = STATUS[r.status];
               return (
@@ -181,7 +181,7 @@ export function FollowUpClient({ rows }: { rows: Row[] }) {
                   </td>
                   <td className="p-3">
                     <div className="font-medium">{r.nama}</div>
-                    {r.telp && <div className="text-xs text-slate-500">{r.telp}</div>}
+                    {r.telp && <div className="text-xs text-[color:var(--muted)]">{r.telp}</div>}
                   </td>
                   <td className="p-3">
                     <span
@@ -200,9 +200,9 @@ export function FollowUpClient({ rows }: { rows: Row[] }) {
                         day: "numeric",
                         month: "short",
                       })}
-                      <span className="text-slate-400"> · {r.daysSinceLastOrder}h lalu</span>
+                      <span className="text-[color:var(--muted)]"> · {r.daysSinceLastOrder}h lalu</span>
                     </div>
-                    <div className="text-slate-500">
+                    <div className="text-[color:var(--muted)]">
                       Prediksi:{" "}
                       {new Date(r.predictedNext).toLocaleDateString("id-ID", {
                         day: "numeric",
@@ -227,7 +227,7 @@ export function FollowUpClient({ rows }: { rows: Row[] }) {
             })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="p-8 text-center text-slate-400">
+                <td colSpan={7} className="p-8 text-center text-[color:var(--muted)]">
                   Tidak ada data.
                 </td>
               </tr>

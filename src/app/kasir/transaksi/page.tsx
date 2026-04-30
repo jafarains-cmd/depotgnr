@@ -37,9 +37,9 @@ export default async function RiwayatKasirPage() {
         title="Riwayat Transaksi"
         description={role === "admin" ? "Semua transaksi (100 terbaru)." : "Transaksi yang Anda buat."}
       />
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="bg-surface rounded-xl border border-line overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-600 text-left">
+          <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
             <tr>
               <th className="p-3">Waktu</th>
               <th className="p-3">No. Nota</th>
@@ -50,14 +50,14 @@ export default async function RiwayatKasirPage() {
               <th className="p-3"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-line">
             {rows.map((r) => (
-              <tr key={r.id} className="hover:bg-slate-50">
-                <td className="p-3 text-xs text-slate-500">
+              <tr key={r.id} className="hover:bg-[color:var(--surface2)]">
+                <td className="p-3 text-xs text-[color:var(--muted)]">
                   {r.createdAt.toLocaleString("id-ID")}
                 </td>
                 <td className="p-3 font-mono text-xs">{r.nomorNota}</td>
-                <td className="p-3">{r.pelangganNama ?? <span className="text-slate-400">walk-in</span>}</td>
+                <td className="p-3">{r.pelangganNama ?? <span className="text-[color:var(--muted)]">walk-in</span>}</td>
                 <td className="p-3">{r.kasir ?? "-"}</td>
                 <td className="p-3 uppercase text-xs">{r.metodeBayar}</td>
                 <td className="p-3 text-right font-medium">{formatRupiah(r.total)}</td>
@@ -73,7 +73,7 @@ export default async function RiwayatKasirPage() {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={7} className="p-6 text-center text-slate-400">
+                <td colSpan={7} className="p-6 text-center text-[color:var(--muted)]">
                   Belum ada transaksi.
                 </td>
               </tr>

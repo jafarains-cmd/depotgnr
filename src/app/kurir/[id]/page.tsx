@@ -61,12 +61,12 @@ export default async function KurirOrderDetail({
     <div className="space-y-3">
       <Link
         href="/kurir"
-        className="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900"
+        className="inline-flex items-center gap-1 text-sm text-[color:var(--muted)] hover:text-ink"
       >
         <ArrowLeft size={16} /> Kembali
       </Link>
 
-      <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2">
+      <div className="bg-surface border border-line rounded-2xl p-4 space-y-2">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="font-bold">{o.nomorOrder}</div>
           <div className="flex items-center gap-1.5">
@@ -80,7 +80,7 @@ export default async function KurirOrderDetail({
         </div>
         <div className="text-lg font-semibold">{pel?.nama ?? "Pelanggan"}</div>
         {o.jadwalAntar && (
-          <div className="text-sm text-slate-600 inline-flex items-center gap-1">
+          <div className="text-sm text-[color:var(--muted)] inline-flex items-center gap-1">
             <Clock size={14} />
             {new Date(o.jadwalAntar).toLocaleString("id-ID", {
               dateStyle: "full",
@@ -90,11 +90,11 @@ export default async function KurirOrderDetail({
         )}
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+      <div className="bg-surface border border-line rounded-2xl p-4 space-y-3">
         <div className="text-sm font-semibold">Alamat & Kontak</div>
         {o.alamatAntar && (
           <div className="text-sm">
-            <div className="inline-flex items-start gap-1 text-slate-700">
+            <div className="inline-flex items-start gap-1 text-ink">
               <MapPin size={14} className="mt-0.5 flex-shrink-0" />
               <span>{o.alamatAntar}</span>
             </div>
@@ -106,7 +106,7 @@ export default async function KurirOrderDetail({
               href={mapsUrl}
               target="_blank"
               rel="noreferrer"
-              className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm inline-flex items-center justify-center gap-1.5"
+              className="px-3 py-2 bg-[color:var(--surface2)] hover:bg-[color:var(--surface2)] rounded-lg text-sm inline-flex items-center justify-center gap-1.5"
             >
               <MapPin size={14} /> Buka Maps
             </a>
@@ -123,7 +123,7 @@ export default async function KurirOrderDetail({
           )}
         </div>
         {pel?.telp && (
-          <div className="text-xs text-slate-500">No. WA: {pel.telp}</div>
+          <div className="text-xs text-[color:var(--muted)]">No. WA: {pel.telp}</div>
         )}
       </div>
 
@@ -136,24 +136,24 @@ export default async function KurirOrderDetail({
         </div>
       )}
 
-      <div className="bg-white border border-slate-200 rounded-xl p-4">
+      <div className="bg-surface border border-line rounded-2xl p-4">
         <div className="text-sm font-semibold mb-2">Item Order</div>
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-line">
           {items.map((it, i) => (
             <div key={i} className="py-2 flex justify-between text-sm">
               <div>
                 <div className="font-medium">{it.produkNama}</div>
-                <div className="text-xs text-slate-500">
+                <div className="text-xs text-[color:var(--muted)]">
                   {it.jenis.replace("_", " ")} × {it.qty}
                 </div>
               </div>
-              <div className="text-right text-slate-700">
+              <div className="text-right text-ink">
                 Rp {(it.hargaEstimasi * it.qty).toLocaleString("id-ID")}
               </div>
             </div>
           ))}
         </div>
-        <div className="mt-3 pt-3 border-t border-slate-200 flex justify-between font-semibold text-sm">
+        <div className="mt-3 pt-3 border-t border-line flex justify-between font-semibold text-sm">
           <span>Total Estimasi</span>
           <span>Rp {o.totalEstimasi.toLocaleString("id-ID")}</span>
         </div>
@@ -164,16 +164,16 @@ export default async function KurirOrderDetail({
       <KonfirmasiClient orderId={o.id} status={o.status} tipe={o.tipePengantaran} />
 
       {o.buktiJemputUrl && (
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
+        <div className="bg-surface border border-line rounded-2xl p-4">
           <div className="text-sm font-semibold mb-2">Bukti Jemput Galon</div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={o.buktiJemputUrl}
             alt="Bukti jemput"
-            className="w-full rounded-lg border border-slate-200"
+            className="w-full rounded-lg border border-line"
           />
           {o.dijemputAt && (
-            <div className="text-xs text-slate-500 mt-2">
+            <div className="text-xs text-[color:var(--muted)] mt-2">
               Dijemput:{" "}
               {new Date(o.dijemputAt).toLocaleString("id-ID", {
                 dateStyle: "medium",
@@ -185,16 +185,16 @@ export default async function KurirOrderDetail({
       )}
 
       {o.status === "selesai" && o.buktiFotoUrl && (
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
+        <div className="bg-surface border border-line rounded-2xl p-4">
           <div className="text-sm font-semibold mb-2">Bukti Pengantaran</div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={o.buktiFotoUrl}
             alt="Bukti"
-            className="w-full rounded-lg border border-slate-200"
+            className="w-full rounded-lg border border-line"
           />
           {o.diantarAt && (
-            <div className="text-xs text-slate-500 mt-2">
+            <div className="text-xs text-[color:var(--muted)] mt-2">
               Diantar:{" "}
               {new Date(o.diantarAt).toLocaleString("id-ID", {
                 dateStyle: "medium",

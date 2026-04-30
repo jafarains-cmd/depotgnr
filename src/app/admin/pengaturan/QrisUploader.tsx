@@ -33,17 +33,17 @@ export function QrisUploader({ currentUrl }: { currentUrl: string | null }) {
   }
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+    <div className="bg-surface border border-line rounded-2xl p-4 space-y-3">
       <div className="text-sm font-semibold inline-flex items-center gap-1.5">
         <Upload size={16} /> Upload Gambar QRIS
       </div>
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-[color:var(--muted)]">
         Pilih file gambar QRIS depot. Setelah upload, otomatis tersimpan ke folder Drive
         dan field "URL Gambar QRIS Statis" terisi.
       </p>
 
       {previewUrl && (
-        <div className="border border-slate-200 rounded-md p-2 inline-block bg-slate-50">
+        <div className="border border-line rounded-md p-2 inline-block bg-[color:var(--surface2)]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={previewUrl}
@@ -67,7 +67,7 @@ export function QrisUploader({ currentUrl }: { currentUrl: string | null }) {
         <span
           className={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm cursor-pointer ${
             pending
-              ? "bg-slate-200 text-slate-500"
+              ? "bg-[color:var(--surface2)] text-[color:var(--muted)]"
               : "bg-brand-600 text-white hover:bg-brand-700"
           }`}
         >

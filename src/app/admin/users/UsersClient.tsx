@@ -30,10 +30,10 @@ export function UsersClient({ users }: { users: Row[] }) {
       </div>
 
       {creating && (
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
+        <div className="bg-surface rounded-xl border border-line p-4">
           <div className="flex justify-between items-center mb-3">
             <h2 className="font-semibold">Tambah Staff</h2>
-            <button onClick={() => setCreating(false)} className="text-slate-400">
+            <button onClick={() => setCreating(false)} className="text-[color:var(--muted)]">
               <X size={18} />
             </button>
           </div>
@@ -41,9 +41,9 @@ export function UsersClient({ users }: { users: Row[] }) {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="bg-surface rounded-xl border border-line overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-600 text-left">
+          <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
             <tr>
               <th className="p-3">Nama</th>
               <th className="p-3">Login</th>
@@ -52,14 +52,14 @@ export function UsersClient({ users }: { users: Row[] }) {
               <th className="p-3"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-line">
             {users.map((u) => (
               <tr key={u.id}>
                 <td className="p-3 font-medium">{u.name}</td>
                 <td className="p-3 text-xs">
                   <div>{u.email}</div>
-                  {u.username && <div className="text-slate-500">@{u.username}</div>}
-                  {u.phoneNumber && <div className="text-slate-500">{u.phoneNumber}</div>}
+                  {u.username && <div className="text-[color:var(--muted)]">@{u.username}</div>}
+                  {u.phoneNumber && <div className="text-[color:var(--muted)]">{u.phoneNumber}</div>}
                 </td>
                 <td className="p-3">
                   <select
@@ -69,7 +69,7 @@ export function UsersClient({ users }: { users: Row[] }) {
                         updateUserRole(u.id, e.target.value as Row["role"]),
                       )
                     }
-                    className="px-2 py-1 border border-slate-300 rounded-md text-xs"
+                    className="px-2 py-1 border border-line rounded-md text-xs"
                   >
                     <option value="pelanggan">pelanggan</option>
                     <option value="kurir">kurir</option>
@@ -134,8 +134,8 @@ function CreateStaffForm({ onDone }: { onDone: () => void }) {
     >
       <Field label="Nama" name="nama" required />
       <div>
-        <label className="block text-xs font-medium text-slate-600 mb-0.5">Role</label>
-        <select name="role" defaultValue="kasir" className="w-full px-2.5 py-1.5 border border-slate-300 rounded-md">
+        <label className="block text-xs font-medium text-[color:var(--muted)] mb-0.5">Role</label>
+        <select name="role" defaultValue="kasir" className="w-full px-2.5 py-1.5 border border-line rounded-md">
           <option value="kasir">Kasir</option>
           <option value="kurir">Kurir</option>
           <option value="admin">Admin</option>
@@ -171,12 +171,12 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-slate-600 mb-0.5">{label}</label>
+      <label className="block text-xs font-medium text-[color:var(--muted)] mb-0.5">{label}</label>
       <input
         name={name}
         type={type}
         required={required}
-        className="w-full px-2.5 py-1.5 border border-slate-300 rounded-md"
+        className="w-full px-2.5 py-1.5 border border-line rounded-md"
       />
     </div>
   );

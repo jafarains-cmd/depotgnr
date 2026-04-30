@@ -61,11 +61,11 @@ export function KonfirmasiClient({
   if (tipe === "jemput-antar") {
     if (status === "pending" || status === "diproses") {
       return (
-        <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+        <div className="bg-surface border border-line rounded-2xl p-4 space-y-3">
           <div className="text-sm font-semibold inline-flex items-center gap-1.5">
             <ArrowDownToLine size={16} /> Jemput Galon Kosong
           </div>
-          <p className="text-xs text-slate-600">
+          <p className="text-xs text-[color:var(--muted)]">
             Datangi pelanggan, ambil galon kosong. Foto bukti opsional.
           </p>
 
@@ -80,12 +80,12 @@ export function KonfirmasiClient({
               }}
               className="hidden"
             />
-            <div className="cursor-pointer aspect-video bg-slate-50 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center overflow-hidden hover:border-brand-400">
+            <div className="cursor-pointer aspect-video bg-[color:var(--surface2)] border-2 border-dashed border-line rounded-lg flex items-center justify-center overflow-hidden hover:border-brand-400">
               {preview ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={preview} alt="Bukti jemput" className="w-full h-full object-cover" />
               ) : (
-                <div className="text-center text-slate-400 text-sm py-6">
+                <div className="text-center text-[color:var(--muted)] text-sm py-6">
                   <Camera size={28} className="mx-auto mb-1" />
                   Foto galon kosong (opsional)
                 </div>
@@ -95,7 +95,7 @@ export function KonfirmasiClient({
           {preview && (
             <button
               onClick={clearFile}
-              className="text-xs text-slate-500 hover:text-red-600"
+              className="text-xs text-[color:var(--muted)] hover:text-red-600"
             >
               Hapus foto
             </button>
@@ -131,11 +131,11 @@ export function KonfirmasiClient({
 
     if (status === "dijemput") {
       return (
-        <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+        <div className="bg-surface border border-line rounded-2xl p-4 space-y-3">
           <div className="text-sm font-semibold inline-flex items-center gap-1.5">
             <Droplet size={16} /> Isi Galon di Depot
           </div>
-          <p className="text-xs text-slate-600">
+          <p className="text-xs text-[color:var(--muted)]">
             Setelah galon selesai diisi di depot, klik tombol di bawah.
           </p>
           {msg && (
@@ -189,11 +189,11 @@ export function KonfirmasiClient({
   // === Status diantar (sama untuk kedua tipe) ===
   if (status === "diantar") {
     return (
-      <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+      <div className="bg-surface border border-line rounded-2xl p-4 space-y-3">
         <div className="text-sm font-semibold inline-flex items-center gap-1.5">
           <Camera size={16} /> Upload Bukti Pengantaran
         </div>
-        <p className="text-xs text-slate-600">
+        <p className="text-xs text-[color:var(--muted)]">
           Foto galon di tempat pengantaran atau tanda terima dari pelanggan.
         </p>
 
@@ -208,12 +208,12 @@ export function KonfirmasiClient({
             }}
             className="hidden"
           />
-          <div className="cursor-pointer aspect-video bg-slate-50 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center overflow-hidden hover:border-brand-400">
+          <div className="cursor-pointer aspect-video bg-[color:var(--surface2)] border-2 border-dashed border-line rounded-lg flex items-center justify-center overflow-hidden hover:border-brand-400">
             {preview ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={preview} alt="Bukti" className="w-full h-full object-cover" />
             ) : (
-              <div className="text-center text-slate-400 text-sm py-6">
+              <div className="text-center text-[color:var(--muted)] text-sm py-6">
                 <Camera size={28} className="mx-auto mb-1" />
                 Tap untuk ambil foto / pilih gambar
               </div>
@@ -275,7 +275,7 @@ function MulaiAntarBlock({
 }) {
   const router = useRouter();
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+    <div className="bg-surface border border-line rounded-2xl p-4 space-y-3">
       {msg && (
         <p className={`text-xs ${msg.ok ? "text-emerald-700" : "text-red-600"}`}>{msg.text}</p>
       )}

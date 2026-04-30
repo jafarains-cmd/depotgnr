@@ -90,7 +90,7 @@ export function BayarClient({
         totalAsli={totalAsli}
       />
 
-      <div className="bg-white border border-slate-200 rounded-xl p-4">
+      <div className="bg-surface border border-line rounded-2xl p-4">
         <div className="text-sm font-semibold mb-2">Pilih metode pembayaran</div>
         <div className="grid grid-cols-2 gap-2">
           <MetodeButton
@@ -132,9 +132,9 @@ export function BayarClient({
               <img
                 src={qrisFotoUrl}
                 alt="QRIS"
-                className="w-64 h-64 object-contain rounded-lg border border-slate-200"
+                className="w-64 h-64 object-contain rounded-lg border border-line"
               />
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[color:var(--muted)]">
                 Scan QR ini di aplikasi e-wallet/m-banking apa saja.
               </p>
             </div>
@@ -150,7 +150,7 @@ export function BayarClient({
             <div className="space-y-2">
               <CopyRow label="Nomor DANA" value={nomorDana} />
               {atasNamaDana && <CopyRow label="Atas Nama" value={atasNamaDana} />}
-              <p className="text-xs text-slate-500 mt-2">
+              <p className="text-xs text-[color:var(--muted)] mt-2">
                 Buka aplikasi DANA → Kirim → masukkan nomor di atas → bayar tepat sesuai nominal.
               </p>
             </div>
@@ -165,13 +165,13 @@ export function BayarClient({
           {rekeningList.length > 0 ? (
             <div className="space-y-3">
               {rekeningList.map((r, i) => (
-                <div key={i} className="border border-slate-200 rounded-lg p-3 space-y-1">
+                <div key={i} className="border border-line rounded-lg p-3 space-y-1">
                   <div className="font-semibold text-sm">{r.bank}</div>
                   <CopyRow label="Nomor Rekening" value={r.nomor} />
-                  <div className="text-xs text-slate-500">a.n. {r.atasNama}</div>
+                  <div className="text-xs text-[color:var(--muted)]">a.n. {r.atasNama}</div>
                 </div>
               ))}
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[color:var(--muted)]">
                 Transfer tepat sesuai nominal di atas. Lebih disarankan transfer sesama bank biar
                 cepat verifikasi.
               </p>
@@ -192,11 +192,11 @@ export function BayarClient({
       )}
 
       {(selected === "qris" || selected === "dana" || selected === "transfer") && (
-        <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+        <div className="bg-surface border border-line rounded-2xl p-4 space-y-3">
           <div className="text-sm font-semibold inline-flex items-center gap-1.5">
             <Camera size={16} /> Upload Bukti Pembayaran
           </div>
-          <p className="text-xs text-slate-600">
+          <p className="text-xs text-[color:var(--muted)]">
             Screenshot bukti transfer / pembayaran dari aplikasi Anda.
           </p>
 
@@ -210,7 +210,7 @@ export function BayarClient({
               }}
               className="hidden"
             />
-            <div className="cursor-pointer aspect-video bg-slate-50 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center overflow-hidden hover:border-brand-400">
+            <div className="cursor-pointer aspect-video bg-[color:var(--surface2)] border-2 border-dashed border-line rounded-lg flex items-center justify-center overflow-hidden hover:border-brand-400">
               {preview ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={preview} alt="Bukti" className="w-full h-full object-cover" />
@@ -218,7 +218,7 @@ export function BayarClient({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={buktiUrl} alt="Bukti" className="w-full h-full object-cover opacity-60" />
               ) : (
-                <div className="text-center text-slate-400 text-sm py-6">
+                <div className="text-center text-[color:var(--muted)] text-sm py-6">
                   <Camera size={28} className="mx-auto mb-1" />
                   Tap untuk upload bukti
                 </div>
@@ -277,11 +277,11 @@ function LoyaltyBlock({
   const useAble = Math.min(saldo, max);
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2">
+    <div className="bg-surface border border-line rounded-2xl p-4 space-y-2">
       <div className="text-sm font-semibold inline-flex items-center gap-1.5">
         <Gift size={16} /> Saldo Loyalty
       </div>
-      <div className="text-xs text-slate-600">
+      <div className="text-xs text-[color:var(--muted)]">
         Saldo Anda: <b>{formatRupiah(saldo)}</b>. Maksimal pakai{" "}
         <b>{formatRupiah(useAble)}</b> di order ini.
       </div>
@@ -293,11 +293,11 @@ function LoyaltyBlock({
           placeholder="Jumlah saldo dipakai"
           value={pakai}
           onChange={(e) => setPakai(e.target.value)}
-          className="flex-1 px-3 py-2 border border-slate-300 rounded-md text-sm"
+          className="flex-1 px-3 py-2 border border-line rounded-md text-sm"
         />
         <button
           onClick={() => setPakai(String(useAble))}
-          className="px-3 bg-slate-100 rounded-md text-xs"
+          className="px-3 bg-[color:var(--surface2)] rounded-md text-xs"
         >
           Pakai semua
         </button>
@@ -346,7 +346,7 @@ function MetodeButton({
       className={`p-3 rounded-lg border-2 flex flex-col items-center gap-1 text-sm transition disabled:opacity-50 ${
         active
           ? "border-brand-600 bg-brand-50 text-brand-700"
-          : "border-slate-200 bg-white hover:border-slate-300"
+          : "border-line bg-surface hover:border-line"
       }`}
     >
       {icon}
@@ -367,12 +367,12 @@ function PaymentInfo({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+    <div className="bg-surface border border-line rounded-2xl p-4 space-y-3">
       <div className="text-sm font-semibold">{title}</div>
       <div className="bg-amber-50 border border-amber-200 rounded p-2 text-sm">
-        <div className="text-xs text-slate-600">Bayar tepat:</div>
+        <div className="text-xs text-[color:var(--muted)]">Bayar tepat:</div>
         <div className="text-lg font-bold text-amber-900">{formatRupiah(total)}</div>
-        <div className="text-xs text-slate-500">Ref: {ref}</div>
+        <div className="text-xs text-[color:var(--muted)]">Ref: {ref}</div>
       </div>
       {children}
     </div>
@@ -384,7 +384,7 @@ function CopyRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-2">
       <div className="min-w-0">
-        <div className="text-xs text-slate-500">{label}</div>
+        <div className="text-xs text-[color:var(--muted)]">{label}</div>
         <div className="font-mono text-sm font-semibold truncate">{value}</div>
       </div>
       <button
@@ -393,7 +393,7 @@ function CopyRow({ label, value }: { label: string; value: string }) {
           setCopied(true);
           setTimeout(() => setCopied(false), 1500);
         }}
-        className="px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded inline-flex items-center gap-1"
+        className="px-2 py-1 text-xs bg-[color:var(--surface2)] hover:bg-[color:var(--surface2)] rounded inline-flex items-center gap-1"
       >
         {copied ? <Check size={12} /> : <Copy size={12} />}
         {copied ? "Tersalin" : "Salin"}

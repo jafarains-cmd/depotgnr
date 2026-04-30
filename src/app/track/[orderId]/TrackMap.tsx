@@ -71,7 +71,7 @@ export function TrackMap({ orderId, token }: { orderId: number; token: string })
   }, [data]);
 
   if (loading) {
-    return <div className="p-8 text-center text-slate-500">Memuat peta...</div>;
+    return <div className="p-8 text-center text-[color:var(--muted)]">Memuat peta...</div>;
   }
   if (error || !data) {
     return (
@@ -85,14 +85,14 @@ export function TrackMap({ orderId, token }: { orderId: number; token: string })
 
   return (
     <div className="space-y-3">
-      <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-1">
-        <div className="text-xs text-slate-500 font-mono">{data.order.nomorOrder}</div>
+      <div className="bg-surface border border-line rounded-2xl p-4 space-y-1">
+        <div className="text-xs text-[color:var(--muted)] font-mono">{data.order.nomorOrder}</div>
         <div className="text-sm font-semibold capitalize">Status: {data.order.status}</div>
         {data.order.alamatAntar && (
-          <div className="text-xs text-slate-600">📍 {data.order.alamatAntar}</div>
+          <div className="text-xs text-[color:var(--muted)]">📍 {data.order.alamatAntar}</div>
         )}
         {data.kurir && (
-          <div className="text-xs text-slate-500 mt-1">
+          <div className="text-xs text-[color:var(--muted)] mt-1">
             Kurir update terakhir:{" "}
             {new Date(data.kurir.updatedAt).toLocaleTimeString("id-ID", {
               hour: "2-digit",
@@ -108,7 +108,7 @@ export function TrackMap({ orderId, token }: { orderId: number; token: string })
         )}
       </div>
 
-      <div className="rounded-xl overflow-hidden border border-slate-200" style={{ height: 400 }}>
+      <div className="rounded-xl overflow-hidden border border-line" style={{ height: 400 }}>
         <MapContainer
           center={center}
           zoom={14}
@@ -142,7 +142,7 @@ export function TrackMap({ orderId, token }: { orderId: number; token: string })
         </MapContainer>
       </div>
 
-      <div className="text-xs text-slate-400 text-center">
+      <div className="text-xs text-[color:var(--muted)] text-center">
         Auto-refresh tiap 15 detik
       </div>
     </div>

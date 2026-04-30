@@ -31,7 +31,7 @@ export function InventoryClient({
     <div className="space-y-6">
       <div className="grid lg:grid-cols-3 gap-3">
         {produk.map((p) => (
-          <div key={p.id} className="bg-white border border-slate-200 rounded-xl p-4">
+          <div key={p.id} className="bg-surface border border-line rounded-2xl p-4">
             <div className="font-medium mb-3">{p.nama}</div>
             <div className="space-y-1.5 text-sm">
               <StokRow
@@ -74,7 +74,7 @@ export function InventoryClient({
                 }
               });
             }}
-            className="bg-white rounded-xl p-5 w-full max-w-sm space-y-3"
+            className="bg-surface rounded-xl p-5 w-full max-w-sm space-y-3"
           >
             <h2 className="font-semibold">
               {open.sign === 1 ? "Tambah" : "Kurangi"} stok {open.status} —{" "}
@@ -83,25 +83,25 @@ export function InventoryClient({
             <input type="hidden" name="produkId" value={open.produkId} />
             <input type="hidden" name="status" value={open.status} />
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Jumlah</label>
+              <label className="block text-xs font-medium text-[color:var(--muted)] mb-1">Jumlah</label>
               <input
                 type="number"
                 name="perubahan"
                 defaultValue={open.sign}
                 step={1}
-                className="w-full px-3 py-2 border border-slate-300 rounded-md"
+                className="w-full px-3 py-2 border border-line rounded-md"
               />
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-[color:var(--muted)] mt-1">
                 Gunakan angka negatif untuk mengurangi.
               </p>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Alasan</label>
+              <label className="block text-xs font-medium text-[color:var(--muted)] mb-1">Alasan</label>
               <input
                 name="alasan"
                 required
                 placeholder="Mis. setor air baru, galon pecah, koreksi"
-                className="w-full px-3 py-2 border border-slate-300 rounded-md"
+                className="w-full px-3 py-2 border border-line rounded-md"
               />
             </div>
             {error && <div className="text-red-600 text-xs">{error}</div>}
@@ -109,7 +109,7 @@ export function InventoryClient({
               <button
                 type="button"
                 onClick={() => setOpen(null)}
-                className="px-3 py-1.5 text-slate-600"
+                className="px-3 py-1.5 text-[color:var(--muted)]"
               >
                 Batal
               </button>
@@ -125,12 +125,12 @@ export function InventoryClient({
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-100 font-medium text-sm">
+      <div className="bg-surface rounded-xl border border-line overflow-hidden">
+        <div className="px-4 py-3 border-b border-line font-medium text-sm">
           Riwayat Mutasi (50 terbaru)
         </div>
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-600 text-left text-xs">
+          <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left text-xs">
             <tr>
               <th className="p-3">Waktu</th>
               <th className="p-3">Produk</th>
@@ -140,10 +140,10 @@ export function InventoryClient({
               <th className="p-3">Oleh</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-line">
             {mutasi.map((m) => (
               <tr key={m.id}>
-                <td className="p-3 text-xs text-slate-500">
+                <td className="p-3 text-xs text-[color:var(--muted)]">
                   {new Date(m.createdAt).toLocaleString("id-ID")}
                 </td>
                 <td className="p-3">{m.namaProduk}</td>
@@ -156,12 +156,12 @@ export function InventoryClient({
                   {m.perubahan > 0 ? `+${m.perubahan}` : m.perubahan}
                 </td>
                 <td className="p-3 text-xs">{m.alasan}</td>
-                <td className="p-3 text-xs text-slate-500">{m.userName ?? "-"}</td>
+                <td className="p-3 text-xs text-[color:var(--muted)]">{m.userName ?? "-"}</td>
               </tr>
             ))}
             {mutasi.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-6 text-center text-slate-400">
+                <td colSpan={6} className="p-6 text-center text-[color:var(--muted)]">
                   Belum ada mutasi.
                 </td>
               </tr>
@@ -188,13 +188,13 @@ function StokRow({
 }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-slate-600">{label}</span>
+      <span className="text-[color:var(--muted)]">{label}</span>
       <div className="flex items-center gap-2">
-        <button onClick={onSub} className="w-6 h-6 rounded border border-slate-300">
+        <button onClick={onSub} className="w-6 h-6 rounded border border-line">
           <Minus size={12} className="mx-auto" />
         </button>
         <span className={`w-8 text-center font-bold ${color}`}>{jumlah}</span>
-        <button onClick={onAdd} className="w-6 h-6 rounded border border-slate-300">
+        <button onClick={onAdd} className="w-6 h-6 rounded border border-line">
           <Plus size={12} className="mx-auto" />
         </button>
       </div>

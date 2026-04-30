@@ -14,9 +14,9 @@ export default async function ProdukPage() {
       <PageHeader title="Produk" description="Kelola jenis galon, kemasan, dan harga." />
 
       <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="lg:col-span-2 bg-surface rounded-xl border border-line overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-600">
+            <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)]">
               <tr className="text-left">
                 <th className="p-3">Nama</th>
                 <th className="p-3 text-right">Isi Ulang</th>
@@ -26,7 +26,7 @@ export default async function ProdukPage() {
                 <th className="p-3"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-line">
               {list.map((p) => (
                 <ProdukRow
                   key={p.id}
@@ -40,7 +40,7 @@ export default async function ProdukPage() {
               ))}
               {list.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-6 text-center text-slate-400">
+                  <td colSpan={6} className="p-6 text-center text-[color:var(--muted)]">
                     Belum ada produk.
                   </td>
                 </tr>
@@ -49,7 +49,7 @@ export default async function ProdukPage() {
           </table>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
+        <div className="bg-surface rounded-xl border border-line p-4">
           <h2 className="font-semibold mb-3">Tambah Produk</h2>
           <ProdukForm />
         </div>

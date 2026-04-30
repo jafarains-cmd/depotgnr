@@ -56,14 +56,14 @@ export function MapViewGoogle({
             onCloseClick={() => setActive(null)}
             pixelOffset={[0, -32]}
           >
-            <div className="space-y-1.5 min-w-[200px] text-slate-800">
+            <div className="space-y-1.5 min-w-[200px] text-ink">
               <div className="font-semibold text-base">{active.nama}</div>
               <div className="text-xs">
                 <span
                   className={`px-1.5 py-0.5 rounded ${
                     active.tipe === "langganan"
                       ? "bg-blue-100 text-blue-700"
-                      : "bg-slate-100 text-slate-600"
+                      : "bg-[color:var(--surface2)] text-[color:var(--muted)]"
                   }`}
                 >
                   {active.tipe}
@@ -108,7 +108,7 @@ export function MapViewGoogle({
                   href={`https://www.google.com/maps/dir/?api=1&destination=${active.lat},${active.lng}`}
                   target="_blank"
                   rel="noopener"
-                  className="flex-1 text-center text-xs border border-slate-300 py-1 rounded"
+                  className="flex-1 text-center text-xs border border-line py-1 rounded"
                 >
                   Rute
                 </a>

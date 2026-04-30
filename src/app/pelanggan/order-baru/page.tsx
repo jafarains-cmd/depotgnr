@@ -19,7 +19,7 @@ export default async function OrderBaruPage() {
     <div className="space-y-4">
       <div>
         <h1 className="text-xl font-bold">Order Baru</h1>
-        <p className="text-sm text-slate-500">Pilih produk, alamat antar, lalu kirim.</p>
+        <p className="text-sm text-[color:var(--muted)]">Pilih produk, alamat antar, lalu kirim.</p>
       </div>
       <OrderForm
         produkList={produkList}

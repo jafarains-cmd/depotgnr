@@ -41,16 +41,16 @@ export function CancelOrderButton({
 
       {open && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-sm p-5 space-y-3">
+          <div className="bg-surface rounded-xl w-full max-w-sm p-5 space-y-3">
             <div>
               <h2 className="font-semibold text-lg">Batalkan Order?</h2>
-              <p className="text-sm text-slate-600 mt-1">
+              <p className="text-sm text-[color:var(--muted)] mt-1">
                 Order <span className="font-mono">{nomorOrder}</span> akan dibatalkan. Aksi ini
                 tidak bisa di-undo.
               </p>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">
+              <label className="block text-xs font-medium text-[color:var(--muted)] mb-1">
                 Alasan (opsional)
               </label>
               <textarea
@@ -58,7 +58,7 @@ export function CancelOrderButton({
                 onChange={(e) => setAlasan(e.target.value)}
                 rows={2}
                 placeholder="Mis. salah qty, salah alamat, ganti pikiran"
-                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+                className="w-full px-3 py-2 border border-line rounded-md text-sm"
               />
             </div>
             {error && (
@@ -73,7 +73,7 @@ export function CancelOrderButton({
                   setOpen(false);
                   setError(null);
                 }}
-                className="px-4 py-2 text-sm text-slate-600"
+                className="px-4 py-2 text-sm text-[color:var(--muted)]"
               >
                 Tidak jadi
               </button>

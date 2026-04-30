@@ -15,7 +15,7 @@ export function ProfilClient({
   const [pending, startTransition] = useTransition();
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+    <div className="bg-surface border border-line rounded-2xl p-4 space-y-3">
       <h2 className="font-semibold inline-flex items-center gap-1.5">
         <Send size={16} /> Notifikasi Telegram
       </h2>
@@ -40,16 +40,16 @@ export function ProfilClient({
         </>
       ) : (
         <>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-[color:var(--muted)]">
             Hubungkan akun untuk dapat notifikasi update order via Telegram.
           </p>
           {code ? (
             <div className="bg-brand-50 border border-brand-200 rounded-md p-3 text-sm">
               <div>1. Buka bot Telegram depot Anda.</div>
               <div className="my-2">
-                2. Kirim pesan: <code className="bg-white px-2 py-0.5 rounded font-mono text-base">/start {code}</code>
+                2. Kirim pesan: <code className="bg-surface px-2 py-0.5 rounded font-mono text-base">/start {code}</code>
               </div>
-              <div className="text-xs text-slate-500">
+              <div className="text-xs text-[color:var(--muted)]">
                 Kode berlaku 10 menit. Refresh halaman setelah kirim untuk verifikasi.
               </div>
             </div>

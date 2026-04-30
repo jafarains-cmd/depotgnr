@@ -13,7 +13,7 @@ export function LogoutButton() {
         router.push("/login");
         router.refresh();
       }}
-      className="text-sm text-slate-600 hover:text-red-600 inline-flex items-center gap-1"
+      className="text-sm text-[color:var(--muted)] hover:text-red-600 inline-flex items-center gap-1"
     >
       <LogOut size={14} /> Keluar
     </button>

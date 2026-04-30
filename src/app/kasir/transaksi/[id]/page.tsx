@@ -52,7 +52,7 @@ export default async function NotaPage({ params }: { params: Promise<{ id: strin
           .nota-paper { box-shadow: none !important; border: none !important; }
         }
       `}</style>
-      <div className="min-h-screen bg-slate-100 py-8 print:py-0 print:bg-white">
+      <div className="min-h-screen bg-[color:var(--surface2)] py-8 print:py-0 print:bg-surface">
         <div className="max-w-md mx-auto">
           <div className="no-print mb-4">
             <NotaActions
@@ -62,8 +62,8 @@ export default async function NotaPage({ params }: { params: Promise<{ id: strin
             />
           </div>
 
-          <div className="nota-paper bg-white rounded-lg shadow-sm border border-slate-200 p-6 font-mono text-sm">
-            <div className="text-center border-b border-dashed border-slate-300 pb-3 mb-3">
+          <div className="nota-paper bg-surface rounded-lg shadow-sm border border-line p-6 font-mono text-sm">
+            <div className="text-center border-b border-dashed border-line pb-3 mb-3">
               <div className="font-bold text-base">{cfg.namaDepot || "Depot Air Minum"}</div>
               {cfg.alamatDepot && <div className="text-xs">{cfg.alamatDepot}</div>}
               {cfg.telpDepot && <div className="text-xs">Telp: {cfg.telpDepot}</div>}
@@ -76,13 +76,13 @@ export default async function NotaPage({ params }: { params: Promise<{ id: strin
               <Row label="Pelanggan" value={pel?.nama ?? "Walk-in"} />
             </div>
 
-            <table className="w-full text-xs border-t border-dashed border-slate-300 pt-2">
+            <table className="w-full text-xs border-t border-dashed border-line pt-2">
               <tbody>
                 {items.map((it, i) => (
                   <tr key={i} className="align-top">
                     <td className="py-1">
                       <div>{it.namaProduk}</div>
-                      <div className="text-slate-500">
+                      <div className="text-[color:var(--muted)]">
                         {it.qty} × {formatRupiah(it.hargaSatuan)} ({it.jenis})
                       </div>
                     </td>
@@ -94,7 +94,7 @@ export default async function NotaPage({ params }: { params: Promise<{ id: strin
               </tbody>
             </table>
 
-            <div className="border-t border-dashed border-slate-300 mt-2 pt-2 space-y-1 text-xs">
+            <div className="border-t border-dashed border-line mt-2 pt-2 space-y-1 text-xs">
               <Row label="Subtotal" value={formatRupiah(t.subtotal)} />
               {t.diskon > 0 && <Row label="Diskon" value={`- ${formatRupiah(t.diskon)}`} />}
               <Row label="TOTAL" value={formatRupiah(t.total)} bold />
@@ -103,13 +103,13 @@ export default async function NotaPage({ params }: { params: Promise<{ id: strin
             </div>
 
             {t.catatan && (
-              <div className="mt-3 pt-2 border-t border-dashed border-slate-300 text-xs">
+              <div className="mt-3 pt-2 border-t border-dashed border-line text-xs">
                 <div className="font-medium">Catatan:</div>
-                <div className="text-slate-700">{t.catatan}</div>
+                <div className="text-ink">{t.catatan}</div>
               </div>
             )}
 
-            <div className="text-center text-xs mt-4 pt-3 border-t border-dashed border-slate-300">
+            <div className="text-center text-xs mt-4 pt-3 border-t border-dashed border-line">
               Terima kasih atas kunjungan Anda 🙏
             </div>
           </div>

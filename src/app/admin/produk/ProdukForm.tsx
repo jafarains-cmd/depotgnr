@@ -89,13 +89,13 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-slate-600 mb-0.5">{label}</label>
+      <label className="block text-xs font-medium text-[color:var(--muted)] mb-0.5">{label}</label>
       <input
         type={type}
         name={name}
         defaultValue={defaultValue}
         required={required}
-        className="w-full px-2.5 py-1.5 border border-slate-300 rounded-md"
+        className="w-full px-2.5 py-1.5 border border-line rounded-md"
       />
     </div>
   );

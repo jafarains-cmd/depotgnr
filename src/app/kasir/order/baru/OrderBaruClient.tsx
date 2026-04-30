@@ -129,14 +129,14 @@ export function OrderBaruClient({ produkList }: { produkList: Produk[] }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+      <div className="bg-surface rounded-xl border border-line p-4 space-y-3">
         <div className="font-semibold text-sm">Pelanggan</div>
         <div className="flex gap-1">
           <button
             type="button"
             onClick={() => setPelMode("existing")}
             className={`flex-1 px-3 py-1.5 rounded text-sm ${
-              pelMode === "existing" ? "bg-brand-600 text-white" : "bg-slate-100"
+              pelMode === "existing" ? "bg-brand-600 text-white" : "bg-[color:var(--surface2)]"
             }`}
           >
             Pelanggan Existing
@@ -148,7 +148,7 @@ export function OrderBaruClient({ produkList }: { produkList: Produk[] }) {
               clearPel();
             }}
             className={`flex-1 px-3 py-1.5 rounded text-sm ${
-              pelMode === "baru" ? "bg-brand-600 text-white" : "bg-slate-100"
+              pelMode === "baru" ? "bg-brand-600 text-white" : "bg-[color:var(--surface2)]"
             }`}
           >
             <UserPlus size={14} className="inline -mt-0.5" /> Pelanggan Baru
@@ -161,12 +161,12 @@ export function OrderBaruClient({ produkList }: { produkList: Produk[] }) {
               <div className="border border-emerald-200 bg-emerald-50 rounded-md p-2 flex items-start justify-between">
                 <div className="text-sm">
                   <div className="font-medium">{selected.nama}</div>
-                  {selected.telp && <div className="text-xs text-slate-600">{selected.telp}</div>}
+                  {selected.telp && <div className="text-xs text-[color:var(--muted)]">{selected.telp}</div>}
                   {selected.alamat && (
-                    <div className="text-xs text-slate-500">{selected.alamat}</div>
+                    <div className="text-xs text-[color:var(--muted)]">{selected.alamat}</div>
                   )}
                 </div>
-                <button type="button" onClick={clearPel} className="text-slate-400 hover:text-red-600">
+                <button type="button" onClick={clearPel} className="text-[color:var(--muted)] hover:text-red-600">
                   <X size={16} />
                 </button>
               </div>
@@ -177,28 +177,28 @@ export function OrderBaruClient({ produkList }: { produkList: Produk[] }) {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Cari nama / nomor HP"
-                    className="flex-1 px-3 py-2 border border-slate-300 rounded-md text-sm"
+                    className="flex-1 px-3 py-2 border border-line rounded-md text-sm"
                   />
                   <button
                     type="button"
                     onClick={doSearch}
                     disabled={pending}
-                    className="px-3 bg-slate-200 rounded-md text-sm inline-flex items-center gap-1"
+                    className="px-3 bg-[color:var(--surface2)] rounded-md text-sm inline-flex items-center gap-1"
                   >
                     <Search size={14} /> Cari
                   </button>
                 </div>
                 {results.length > 0 && (
-                  <div className="border border-slate-200 rounded-md divide-y divide-slate-100 text-sm">
+                  <div className="border border-line rounded-md divide-y divide-line text-sm">
                     {results.map((r) => (
                       <button
                         type="button"
                         key={r.id}
                         onClick={() => pickPel(r)}
-                        className="w-full text-left p-2 hover:bg-slate-50"
+                        className="w-full text-left p-2 hover:bg-[color:var(--surface2)]"
                       >
                         <div className="font-medium">{r.nama}</div>
-                        <div className="text-xs text-slate-500">
+                        <div className="text-xs text-[color:var(--muted)]">
                           {r.telp ?? "-"} · {r.alamat ?? "-"}
                         </div>
                       </button>
@@ -216,23 +216,23 @@ export function OrderBaruClient({ produkList }: { produkList: Produk[] }) {
               value={namaBaru}
               onChange={(e) => setNamaBaru(e.target.value)}
               placeholder="Nama pelanggan"
-              className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+              className="w-full px-3 py-2 border border-line rounded-md text-sm"
               required
             />
             <input
               value={telpBaru}
               onChange={(e) => setTelpBaru(e.target.value)}
               placeholder="Nomor HP / WA (opsional)"
-              className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+              className="w-full px-3 py-2 border border-line rounded-md text-sm"
             />
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[color:var(--muted)]">
               Pelanggan akan disimpan tanpa akun. Bisa diberi akun nanti dari menu Pelanggan.
             </p>
           </div>
         )}
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+      <div className="bg-surface rounded-xl border border-line p-4 space-y-3">
         <div className="font-semibold text-sm">Item Order</div>
         {produkList.map((p) => {
           const variants = [
@@ -242,7 +242,7 @@ export function OrderBaruClient({ produkList }: { produkList: Produk[] }) {
           ].filter((v) => v.harga > 0);
 
           return (
-            <div key={p.id} className="border border-slate-200 rounded-md p-2">
+            <div key={p.id} className="border border-line rounded-md p-2">
               <div className="font-medium text-sm">{p.nama}</div>
               <div className="space-y-1">
                 {variants.map((v) => {
@@ -252,14 +252,14 @@ export function OrderBaruClient({ produkList }: { produkList: Produk[] }) {
                     <div key={v.jenis} className="flex items-center justify-between text-sm py-1">
                       <div>
                         <div>{v.label}</div>
-                        <div className="text-xs text-slate-500">{formatRupiah(v.harga)}</div>
+                        <div className="text-xs text-[color:var(--muted)]">{formatRupiah(v.harga)}</div>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
                           onClick={() => setQty(p.id, v.jenis, -1)}
                           disabled={qty === 0}
-                          className="w-8 h-8 rounded-md border border-slate-300 disabled:opacity-30 flex items-center justify-center"
+                          className="w-8 h-8 rounded-md border border-line disabled:opacity-30 flex items-center justify-center"
                         >
                           <Minus size={14} />
                         </button>
@@ -281,7 +281,7 @@ export function OrderBaruClient({ produkList }: { produkList: Produk[] }) {
         })}
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+      <div className="bg-surface rounded-xl border border-line p-4 space-y-3">
         <label className="flex items-start gap-2">
           <input
             type="checkbox"
@@ -291,7 +291,7 @@ export function OrderBaruClient({ produkList }: { produkList: Produk[] }) {
           />
           <span className="text-sm">
             <span className="font-medium">Pakai galon pelanggan (jemput-isi-antar)</span>
-            <span className="block text-xs text-slate-500 mt-0.5">
+            <span className="block text-xs text-[color:var(--muted)] mt-0.5">
               Kurir jemput galon kosong → isi di depot → antar balik.
             </span>
           </span>
@@ -303,7 +303,7 @@ export function OrderBaruClient({ produkList }: { produkList: Produk[] }) {
             onChange={(e) => setAlamatAntar(e.target.value)}
             required
             rows={2}
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+            className="w-full px-3 py-2 border border-line rounded-md text-sm"
           />
         </div>
         <div>
@@ -312,7 +312,7 @@ export function OrderBaruClient({ produkList }: { produkList: Produk[] }) {
             type="datetime-local"
             value={jadwalAntar}
             onChange={(e) => setJadwalAntar(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+            className="w-full px-3 py-2 border border-line rounded-md text-sm"
           />
         </div>
         <div>
@@ -321,14 +321,14 @@ export function OrderBaruClient({ produkList }: { produkList: Produk[] }) {
             value={catatan}
             onChange={(e) => setCatatan(e.target.value)}
             rows={2}
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+            className="w-full px-3 py-2 border border-line rounded-md text-sm"
           />
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 p-4 sticky bottom-0">
+      <div className="bg-surface rounded-xl border border-line p-4 sticky bottom-0">
         <div className="flex justify-between items-center mb-3">
-          <span className="text-slate-600 text-sm">Total Estimasi</span>
+          <span className="text-[color:var(--muted)] text-sm">Total Estimasi</span>
           <span className="text-lg font-bold">{formatRupiah(total)}</span>
         </div>
         {error && <div className="text-red-600 text-xs mb-2">{error}</div>}

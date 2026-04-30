@@ -8,9 +8,9 @@ export function TelegramWebhook() {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-3 mt-4">
+    <div className="bg-surface rounded-xl border border-line p-5 space-y-3 mt-4">
       <h2 className="font-semibold">Webhook Telegram</h2>
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-[color:var(--muted)]">
         Daftarkan URL webhook ke Bot API. Pastikan domain publik (bukan localhost) untuk
         produksi — atau pakai ngrok untuk testing.
       </p>
@@ -35,7 +35,7 @@ export function TelegramWebhook() {
               setMsg({ ok: r.ok, text: r.ok ? "Webhook dihapus." : r.description ?? "Gagal" });
             })
           }
-          className="px-4 py-2 border border-slate-300 rounded-md text-sm disabled:opacity-50"
+          className="px-4 py-2 border border-line rounded-md text-sm disabled:opacity-50"
         >
           Hapus Webhook
         </button>

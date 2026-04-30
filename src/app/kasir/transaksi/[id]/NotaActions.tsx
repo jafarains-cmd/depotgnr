@@ -34,13 +34,13 @@ export function NotaActions({
       <div className="flex items-center justify-between">
         <Link
           href="/kasir/transaksi"
-          className="text-sm text-slate-600 hover:text-brand-700 inline-flex items-center gap-1"
+          className="text-sm text-[color:var(--muted)] hover:text-brand-700 inline-flex items-center gap-1"
         >
           <ArrowLeft size={14} /> Kembali
         </Link>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-2">
+      <div className="bg-surface border border-line rounded-2xl p-3 space-y-2">
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => window.print()}
@@ -50,7 +50,7 @@ export function NotaActions({
           </button>
           <button
             onClick={() => window.print()}
-            className="py-2 border border-slate-300 rounded-md text-sm inline-flex items-center justify-center gap-1.5"
+            className="py-2 border border-line rounded-md text-sm inline-flex items-center justify-center gap-1.5"
             title="Pakai dialog cetak browser → Save as PDF"
           >
             <FileDown size={14} /> Save PDF
@@ -86,7 +86,7 @@ export function NotaActions({
               value={waNomor}
               onChange={(e) => setWaNomor(e.target.value)}
               placeholder="08xxxxxxxxxx"
-              className="w-full px-3 py-1.5 border border-slate-300 rounded-md text-sm"
+              className="w-full px-3 py-1.5 border border-line rounded-md text-sm"
             />
             <div className="grid grid-cols-2 gap-2">
               <button

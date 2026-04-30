@@ -25,11 +25,11 @@ function UsernameForm({ currentUsername }: { currentUsername: string | null }) {
   const [msg, setMsg] = useState<{ ok?: boolean; text: string } | null>(null);
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+    <div className="bg-surface border border-line rounded-2xl p-4 space-y-3">
       <h2 className="font-semibold inline-flex items-center gap-1.5">
         <AtSign size={16} /> Username
       </h2>
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-[color:var(--muted)]">
         {currentUsername
           ? "Ganti username Anda. Bisa dipakai untuk login."
           : "Buat username untuk login lebih cepat (selain email/nomor WA)."}
@@ -51,7 +51,7 @@ function UsernameForm({ currentUsername }: { currentUsername: string | null }) {
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           placeholder="username Anda"
-          className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+          className="w-full px-3 py-2 border border-line rounded-md text-sm"
           required
           minLength={3}
           maxLength={30}
@@ -81,11 +81,11 @@ function PasswordForm({ hasPassword }: { hasPassword: boolean }) {
   const [msg, setMsg] = useState<{ ok?: boolean; text: string } | null>(null);
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+    <div className="bg-surface border border-line rounded-2xl p-4 space-y-3">
       <h2 className="font-semibold inline-flex items-center gap-1.5">
         <KeyRound size={16} /> {hasPassword ? "Ganti Password" : "Buat Password"}
       </h2>
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-[color:var(--muted)]">
         {hasPassword
           ? "Masukkan password lama untuk mengubah password Anda."
           : "Buat password agar bisa login pakai email/username (selain OTP WhatsApp)."}
@@ -121,7 +121,7 @@ function PasswordForm({ hasPassword }: { hasPassword: boolean }) {
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
             placeholder="Password lama"
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+            className="w-full px-3 py-2 border border-line rounded-md text-sm"
             required
             autoComplete="current-password"
           />
@@ -131,7 +131,7 @@ function PasswordForm({ hasPassword }: { hasPassword: boolean }) {
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
           placeholder={hasPassword ? "Password baru (min 6)" : "Password (min 6)"}
-          className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+          className="w-full px-3 py-2 border border-line rounded-md text-sm"
           required
           minLength={6}
           autoComplete="new-password"
@@ -141,7 +141,7 @@ function PasswordForm({ hasPassword }: { hasPassword: boolean }) {
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
           placeholder="Ulangi password"
-          className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+          className="w-full px-3 py-2 border border-line rounded-md text-sm"
           required
           minLength={6}
           autoComplete="new-password"

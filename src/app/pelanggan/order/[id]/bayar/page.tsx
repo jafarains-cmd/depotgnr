@@ -138,7 +138,7 @@ export default async function BayarPage({
 
 function PaymentStatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; cls: string }> = {
-    belum: { label: "Belum dibayar", cls: "bg-slate-100 text-slate-700" },
+    belum: { label: "Belum dibayar", cls: "bg-[color:var(--surface2)] text-ink" },
     menunggu: { label: "Menunggu verifikasi", cls: "bg-amber-100 text-amber-800" },
     lunas: { label: "✓ Lunas", cls: "bg-emerald-100 text-emerald-800" },
   };
