@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { AlertTriangle } from "lucide-react";
 import { db } from "@/db";
 import { transaksi } from "@/db/schema/transaksi";
 import { orderHeader } from "@/db/schema/order";
@@ -6,6 +8,7 @@ import { user as userTable } from "@/db/schema/auth";
 import { sql, gte, eq } from "drizzle-orm";
 import { formatRupiah } from "@/lib/utils";
 import { PageHeader } from "@/components/AppShell";
+import { countChurnRisk } from "@/lib/analytics";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +35,9 @@ export default async function DashboardPage() {
     .select({ count: sql<number>`count(*)` })
     .from(userTable);
 
+  const churnStats = await countChurnRisk();
+  const totalActionable = churnStats.due + churnStats.overdue + churnStats.churn;
+
   const cards = [
     { label: "Omzet Hari Ini", value: formatRupiah(omzetRow.total), color: "bg-emerald-50 text-emerald-700" },
     { label: "Order Pending", value: orderPendingRow.count.toString(), color: "bg-amber-50 text-amber-700" },
@@ -50,6 +56,44 @@ export default async function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {totalActionable > 0 && (
+        <Link
+          href="/admin/analitik/follow-up"
+          className="mt-4 block bg-white border border-slate-200 rounded-xl p-4 hover:border-brand-400"
+        >
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <div className="font-semibold inline-flex items-center gap-1.5">
+                <AlertTriangle size={16} className="text-amber-600" /> Pelanggan Perlu Follow-up
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                Berdasarkan pola order tiap pelanggan.
+              </p>
+            </div>
+            <div className="flex gap-3 text-sm">
+              {churnStats.churn > 0 && (
+                <div className="text-red-700">
+                  <div className="text-xs">Churn Risk</div>
+                  <div className="font-bold text-lg">{churnStats.churn}</div>
+                </div>
+              )}
+              {churnStats.overdue > 0 && (
+                <div className="text-amber-700">
+                  <div className="text-xs">Overdue</div>
+                  <div className="font-bold text-lg">{churnStats.overdue}</div>
+                </div>
+              )}
+              {churnStats.due > 0 && (
+                <div className="text-blue-700">
+                  <div className="text-xs">Due Hari Ini</div>
+                  <div className="font-bold text-lg">{churnStats.due}</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </Link>
+      )}
     </div>
   );
 }

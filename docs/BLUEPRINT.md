@@ -212,7 +212,7 @@ Eksekusi serial, urutan disepakati 2026-04-29.
 
 ---
 
-### Fase 7 · Analitik Prediksi
+### Fase 7 · Analitik Prediksi _(✅ done)_
 **Tujuan:** bantu admin proaktif follow-up pelanggan yang biasanya order tapi belum.
 
 **Tasks:**
@@ -261,3 +261,4 @@ Eksekusi serial, urutan disepakati 2026-04-29.
 | 2026-04-29 | Stamp galon gratis (10 galon = Rp 5.000 saldo, configurable) + UI upload QRIS |
 | 2026-04-29 | Fase 6: PWA (manifest + SW) + push notif untuk status order, pembayaran lunas, stamp reward |
 | 2026-04-29 | Fase 4: tracking kurir live (geolocation 30s push) + halaman /track/[id]?token publik dengan peta + link auto-WA saat status=diantar |
+| 2026-04-29 | Fase 7: analitik prediksi (interval avg + std dev) + halaman follow-up + reminder WA massal + widget churn risk di dashboard |

@@ -1,4 +1,4 @@
-import { LayoutDashboard, Package, Users, Boxes, Receipt, Truck, BarChart3, Settings, UserCog, HelpCircle, Map, KeyRound, Bike, Wallet } from "lucide-react";
+import { LayoutDashboard, Package, Users, Boxes, Receipt, Truck, BarChart3, Settings, UserCog, HelpCircle, Map, KeyRound, Bike, Wallet, TrendingUp } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { requireRole } from "@/lib/permissions";
 
@@ -12,6 +12,7 @@ const NAV = [
   { href: "/pembayaran", label: "Pembayaran", icon: <Wallet size={16} /> },
   { href: "/admin/order", label: "Order Antar", icon: <Truck size={16} /> },
   { href: "/admin/laporan", label: "Laporan", icon: <BarChart3 size={16} /> },
+  { href: "/admin/analitik/follow-up", label: "Follow-up", icon: <TrendingUp size={16} /> },
   { href: "/admin/users", label: "User", icon: <UserCog size={16} /> },
   { href: "/admin/pengaturan", label: "Pengaturan", icon: <Settings size={16} /> },
   { href: "/admin/bantuan", label: "Bantuan", icon: <HelpCircle size={16} /> },
