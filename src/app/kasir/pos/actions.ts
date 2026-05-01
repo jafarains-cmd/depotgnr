@@ -14,8 +14,7 @@ import {
   earnLoyalty,
   redeemLoyalty,
   claimReferralBonusIfFirstOrder,
-  RATE_ANTAR_PER_GALON,
-  RATE_DEPOT_PER_GALON,
+  getLoyaltyConfig,
 } from "@/lib/loyalty";
 import { bestEffort } from "@/lib/best-effort";
 
@@ -120,10 +119,11 @@ export async function createTransaksi(input: CreateTransaksiInput) {
     ),
   );
 
-  // Earn loyalty (best-effort) — Rp 500/galon walk-in, Rp 250/galon dari order delivery
+  // Earn loyalty (best-effort) — rate baca dari pengaturan, fallback default
   if (input.pelangganId) {
     const totalGalon = input.items.reduce((s, it) => s + it.qty, 0);
-    const rate = input.refOrderId ? RATE_ANTAR_PER_GALON : RATE_DEPOT_PER_GALON;
+    const cfg = await getLoyaltyConfig();
+    const rate = input.refOrderId ? cfg.ratePerGalonAntar : cfg.ratePerGalonDepot;
     bestEffort(
       `earnLoyalty(${nomorNota})`,
       earnLoyalty({

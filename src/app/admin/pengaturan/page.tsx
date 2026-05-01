@@ -81,6 +81,21 @@ const FIELDS: { key: string; label: string; type?: "text" | "textarea"; help?: s
     help: "Satu rekening per baris. Format: BANK | NOMOR | ATAS NAMA. Contoh: BCA | 1234567890 | Depot Air",
   },
   {
+    key: "loyaltiPerGalonAntar",
+    label: "Loyalti per Galon — Antar (Rp)",
+    help: "Saldo yang didapat pelanggan per galon untuk order yang diantar (default: 250).",
+  },
+  {
+    key: "loyaltiPerGalonDepot",
+    label: "Loyalti per Galon — Datang ke Depot (Rp)",
+    help: "Saldo yang didapat pelanggan per galon untuk transaksi langsung di depot/POS (default: 500).",
+  },
+  {
+    key: "nilaiReferralBonus",
+    label: "Bonus Referral (Rp)",
+    help: "Saldo yang didapat referee + referrer saat referee selesaikan order pertama (default: 5000).",
+  },
+  {
     key: "aktifkanStampGalon",
     label: "Aktifkan Bonus Stamp Galon",
     help: "Isi 1 untuk aktif, 0 untuk nonaktif. Setiap kelipatan stamp threshold, pelanggan dapat saldo loyalty.",
@@ -88,12 +103,12 @@ const FIELDS: { key: string; label: string; type?: "text" | "textarea"; help?: s
   {
     key: "stampThresholdGalon",
     label: "Threshold Stamp Galon",
-    help: "Berapa galon untuk dapat 1 reward (default: 10).",
+    help: "Berapa galon untuk dapat 1 reward stamp (default: 10).",
   },
   {
     key: "nilaiGalonGratis",
-    label: "Nilai 1 Galon Gratis (Rp)",
-    help: "Saldo loyalty yang ditambahkan saat pelanggan capai threshold (default: 5000).",
+    label: "Nilai 1 Galon Gratis Stamp (Rp)",
+    help: "Saldo yang ditambahkan saat pelanggan capai stamp threshold (default: 5000).",
   },
 ];
 

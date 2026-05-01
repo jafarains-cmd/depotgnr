@@ -16,9 +16,34 @@ export {
   REFERRAL_BONUS,
 } from "./constants";
 import {
-  RATE_ANTAR_PER_GALON,
-  REFERRAL_BONUS,
+  RATE_ANTAR_PER_GALON as DEFAULT_RATE_ANTAR,
+  RATE_DEPOT_PER_GALON as DEFAULT_RATE_DEPOT,
+  REFERRAL_BONUS as DEFAULT_REFERRAL_BONUS,
 } from "./constants";
+
+/**
+ * Baca konfigurasi loyalty dari pengaturan (kalau ada), fallback ke konstanta default.
+ * Dipakai oleh earnLoyalty / earnFromOrderIfEligible / claimReferralBonus.
+ */
+export async function getLoyaltyConfig(): Promise<{
+  ratePerGalonAntar: number;
+  ratePerGalonDepot: number;
+  referralBonus: number;
+}> {
+  const rows = await db.query.pengaturan.findMany();
+  const map = new Map(rows.map((r) => [r.key, r.value ?? ""]));
+
+  const parse = (key: string, fallback: number) => {
+    const v = Number(map.get(key));
+    return Number.isFinite(v) && v > 0 ? v : fallback;
+  };
+
+  return {
+    ratePerGalonAntar: parse("loyaltiPerGalonAntar", DEFAULT_RATE_ANTAR),
+    ratePerGalonDepot: parse("loyaltiPerGalonDepot", DEFAULT_RATE_DEPOT),
+    referralBonus: parse("nilaiReferralBonus", DEFAULT_REFERRAL_BONUS),
+  };
+}
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // skip ambiguous I/O/0/1
 
@@ -206,12 +231,13 @@ export async function earnFromOrderIfEligible(orderId: number): Promise<void> {
   const totalGalon = items.reduce((s, it) => s + it.qty, 0);
   if (totalGalon === 0) return;
 
+  const cfg = await getLoyaltyConfig();
   await earnLoyalty({
     pelangganId: o.pelangganId,
     jumlahGalon: totalGalon,
-    rate: RATE_ANTAR_PER_GALON,
+    rate: cfg.ratePerGalonAntar,
     refOrderId: orderId,
-    deskripsi: `Earn dari order ${o.nomorOrder} (${totalGalon} galon × Rp ${RATE_ANTAR_PER_GALON.toLocaleString("id-ID")})`,
+    deskripsi: `Earn dari order ${o.nomorOrder} (${totalGalon} galon × Rp ${cfg.ratePerGalonAntar.toLocaleString("id-ID")})`,
   });
   await claimReferralBonusIfFirstOrder(o.pelangganId, orderId);
 }
@@ -292,12 +318,15 @@ export async function claimReferralBonusIfFirstOrder(
   });
   if (existingClaim) return;
 
+  // Baca bonus dari pengaturan
+  const { referralBonus: bonusAmount } = await getLoyaltyConfig();
+
   await db.transaction((tx) => {
     // Referee bonus
     tx.insert(mutasiLoyalti)
       .values({
         pelangganId,
-        jumlah: REFERRAL_BONUS,
+        jumlah: bonusAmount,
         tipe: "referral_in",
         refOrderId,
         refTransaksiId,
@@ -306,7 +335,7 @@ export async function claimReferralBonusIfFirstOrder(
       .run();
     tx.update(pelanggan)
       .set({
-        saldoLoyalti: sql`${pelanggan.saldoLoyalti} + ${REFERRAL_BONUS}`,
+        saldoLoyalti: sql`${pelanggan.saldoLoyalti} + ${bonusAmount}`,
         firstOrderRewardClaimed: true, // legacy, tetap di-set untuk backward-compat
       })
       .where(eq(pelanggan.id, pelangganId))
@@ -316,7 +345,7 @@ export async function claimReferralBonusIfFirstOrder(
     tx.insert(mutasiLoyalti)
       .values({
         pelangganId: p.referredBy!,
-        jumlah: REFERRAL_BONUS,
+        jumlah: bonusAmount,
         tipe: "referral_bonus",
         refOrderId,
         refTransaksiId,
@@ -324,7 +353,7 @@ export async function claimReferralBonusIfFirstOrder(
       })
       .run();
     tx.update(pelanggan)
-      .set({ saldoLoyalti: sql`${pelanggan.saldoLoyalti} + ${REFERRAL_BONUS}` })
+      .set({ saldoLoyalti: sql`${pelanggan.saldoLoyalti} + ${bonusAmount}` })
       .where(eq(pelanggan.id, p.referredBy!))
       .run();
   });
