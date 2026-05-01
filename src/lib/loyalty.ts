@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, gte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { pelanggan, mutasiLoyalti } from "@/db/schema/pelanggan";
 import { orderHeader, orderItem } from "@/db/schema/order";
@@ -7,6 +7,7 @@ import { pengaturan } from "@/db/schema/pengaturan";
 import { sendWhatsApp } from "./whatsapp";
 import { sendTelegram } from "./telegram";
 import { sendPushToUser } from "./push";
+import { bestEffort } from "./best-effort";
 
 export const RATE_ANTAR_PER_GALON = 250;
 export const RATE_DEPOT_PER_GALON = 500;
@@ -92,7 +93,10 @@ export async function earnLoyalty(args: EarnArgs): Promise<number> {
   });
 
   // Cek apakah ada reward stamp baru
-  await checkAndClaimStampReward(args.pelangganId, args.refOrderId, args.refTransaksiId).catch(() => {});
+  await bestEffort(
+    "checkAndClaimStampReward",
+    checkAndClaimStampReward(args.pelangganId, args.refOrderId, args.refTransaksiId),
+  );
 
   return total;
 }
@@ -148,7 +152,10 @@ async function checkAndClaimStampReward(
   });
 
   // Notif pelanggan
-  notifStampReward(pelangganId, newRewards, totalReward, p.stampGalon).catch(() => {});
+  bestEffort(
+    "notifStampReward",
+    notifStampReward(pelangganId, newRewards, totalReward, p.stampGalon),
+  );
 }
 
 async function notifStampReward(
@@ -210,15 +217,29 @@ export async function redeemLoyalty(args: {
   deskripsi: string;
 }): Promise<{ ok: true; redeemed: number } | { ok: false; error: string }> {
   if (args.jumlah <= 0) return { ok: false, error: "Jumlah redeem harus > 0" };
-  const p = await db.query.pelanggan.findFirst({
-    where: eq(pelanggan.id, args.pelangganId),
-  });
-  if (!p) return { ok: false, error: "Pelanggan tidak ditemukan" };
-  if (p.saldoLoyalti < args.jumlah) {
-    return { ok: false, error: `Saldo tidak cukup (saldo: ${p.saldoLoyalti})` };
-  }
 
-  await db.transaction((tx) => {
+  // Atomic check-and-deduct: UPDATE conditional WHERE saldo cukup.
+  // Dengan begitu 2 concurrent redeem tidak bisa overdraft.
+  const result = db.transaction((tx) => {
+    const updated = tx
+      .update(pelanggan)
+      .set({ saldoLoyalti: sql`${pelanggan.saldoLoyalti} - ${args.jumlah}` })
+      .where(
+        and(
+          eq(pelanggan.id, args.pelangganId),
+          gte(pelanggan.saldoLoyalti, args.jumlah),
+        ),
+      )
+      .run();
+
+    if (updated.changes === 0) {
+      // Cek alasan gagal (pelanggan tidak ada vs saldo tidak cukup)
+      const p = tx.select().from(pelanggan).where(eq(pelanggan.id, args.pelangganId)).get();
+      return p
+        ? { ok: false as const, error: `Saldo tidak cukup (saldo: ${p.saldoLoyalti})` }
+        : { ok: false as const, error: "Pelanggan tidak ditemukan" };
+    }
+
     tx.insert(mutasiLoyalti)
       .values({
         pelangganId: args.pelangganId,
@@ -229,13 +250,11 @@ export async function redeemLoyalty(args: {
         deskripsi: args.deskripsi,
       })
       .run();
-    tx.update(pelanggan)
-      .set({ saldoLoyalti: sql`${pelanggan.saldoLoyalti} - ${args.jumlah}` })
-      .where(eq(pelanggan.id, args.pelangganId))
-      .run();
+
+    return { ok: true as const, redeemed: args.jumlah };
   });
 
-  return { ok: true, redeemed: args.jumlah };
+  return result;
 }
 
 /**

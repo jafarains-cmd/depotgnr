@@ -1,0 +1,9 @@
+CREATE INDEX `lokasi_kurir_order_date_idx` ON `lokasi_kurir` (`order_id`,`created_at`);--> statement-breakpoint
+CREATE INDEX `lokasi_kurir_created_at_idx` ON `lokasi_kurir` (`created_at`);--> statement-breakpoint
+CREATE INDEX `order_pelanggan_date_idx` ON `order` (`pelanggan_id`,`created_at`);--> statement-breakpoint
+CREATE INDEX `order_status_date_idx` ON `order` (`status`,`created_at`);--> statement-breakpoint
+CREATE INDEX `order_kurir_status_idx` ON `order` (`kurir_user_id`,`status`);--> statement-breakpoint
+CREATE INDEX `mutasi_loyalti_pelanggan_date_idx` ON `mutasi_loyalti` (`pelanggan_id`,`created_at`);--> statement-breakpoint
+CREATE INDEX `mutasi_loyalti_ref_order_tipe_idx` ON `mutasi_loyalti` (`ref_order_id`,`tipe`);--> statement-breakpoint
+CREATE INDEX `mutasi_loyalti_ref_trx_tipe_idx` ON `mutasi_loyalti` (`ref_transaksi_id`,`tipe`);--> statement-breakpoint
+CREATE UNIQUE INDEX `pelanggan_user_id_unique` ON `pelanggan` (`user_id`);

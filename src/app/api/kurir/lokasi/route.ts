@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   const o = await db.query.orderHeader.findFirst({ where: eq(orderHeader.id, orderId) });
   if (!o) return NextResponse.json({ error: "order not found" }, { status: 404 });
 
-  const role = (session.user as { role?: string }).role;
+  const role = session.user.role;
   if (o.kurirUserId !== session.user.id && role !== "admin" && role !== "kasir") {
     return NextResponse.json({ error: "not your order" }, { status: 403 });
   }

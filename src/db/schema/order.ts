@@ -1,22 +1,29 @@
-import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, index } from "drizzle-orm/sqlite-core";
 import { pelanggan } from "./pelanggan";
 import { produk } from "./produk";
 import { user } from "./auth";
 import { transaksi } from "./transaksi";
 
-export const lokasiKurir = sqliteTable("lokasi_kurir", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  orderId: integer("order_id").notNull(),
-  kurirUserId: text("kurir_user_id").notNull(),
-  lat: real("lat").notNull(),
-  lng: real("lng").notNull(),
-  accuracy: real("accuracy"),
-  speed: real("speed"),
-  heading: real("heading"),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .$defaultFn(() => new Date()),
-});
+export const lokasiKurir = sqliteTable(
+  "lokasi_kurir",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    orderId: integer("order_id").notNull(),
+    kurirUserId: text("kurir_user_id").notNull(),
+    lat: real("lat").notNull(),
+    lng: real("lng").notNull(),
+    accuracy: real("accuracy"),
+    speed: real("speed"),
+    heading: real("heading"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => ({
+    orderDateIdx: index("lokasi_kurir_order_date_idx").on(t.orderId, t.createdAt),
+    createdAtIdx: index("lokasi_kurir_created_at_idx").on(t.createdAt), // untuk cleanup TTL
+  }),
+);
 
 export const orderHeader = sqliteTable("order", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -61,7 +68,11 @@ export const orderHeader = sqliteTable("order", {
   lastSyncedAt: integer("last_synced_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
-});
+}, (t) => ({
+  pelangganDateIdx: index("order_pelanggan_date_idx").on(t.pelangganId, t.createdAt),
+  statusDateIdx: index("order_status_date_idx").on(t.status, t.createdAt),
+  kurirStatusIdx: index("order_kurir_status_idx").on(t.kurirUserId, t.status),
+}));
 
 export const orderItem = sqliteTable("order_item", {
   id: integer("id").primaryKey({ autoIncrement: true }),

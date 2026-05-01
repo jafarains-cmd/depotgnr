@@ -64,6 +64,13 @@
       "when": 1777561067706,
       "tag": "0008_kind_namora",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1777647246077,
+      "tag": "0009_previous_warbound",
+      "breakpoints": true
     }
   ]
 }

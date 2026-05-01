@@ -5,7 +5,7 @@ import { getSession } from "@/lib/permissions";
 export default async function Home() {
   const session = await getSession();
   if (session) {
-    const role = (session.user as { role?: string }).role ?? "pelanggan";
+    const role = session.user.role ?? "pelanggan";
     if (role === "admin") redirect("/admin/dashboard");
     if (role === "kasir") redirect("/kasir/pos");
     redirect("/pelanggan/beranda");

@@ -13,6 +13,7 @@ import { sendTelegram } from "@/lib/telegram";
 import { formatRupiah } from "@/lib/utils";
 import { earnFromOrderIfEligible } from "@/lib/loyalty";
 import { sendPushToUser } from "@/lib/push";
+import { bestEffort } from "@/lib/best-effort";
 
 export async function konfirmasiBayar(
   orderId: number,
@@ -28,11 +29,8 @@ export async function konfirmasiBayar(
     .set({ statusBayar: "lunas", bayarAt: new Date(), updatedAt: new Date() })
     .where(eq(orderHeader.id, orderId));
 
-  // Notif pelanggan
-  notifLunas(orderId).catch(() => {});
-
-  // Earn loyalty (kalau order sudah selesai, idempoten)
-  earnFromOrderIfEligible(orderId).catch(() => {});
+  bestEffort("notifLunas", notifLunas(orderId));
+  bestEffort("earnFromOrderIfEligible", earnFromOrderIfEligible(orderId));
 
   revalidatePath("/pembayaran");
   revalidatePath(`/pelanggan/order/${orderId}/bayar`);
@@ -61,7 +59,7 @@ export async function tolakBayar(
     })
     .where(eq(orderHeader.id, orderId));
 
-  notifTolak(orderId, alasan).catch(() => {});
+  bestEffort("notifTolak", notifTolak(orderId, alasan));
 
   revalidatePath("/pembayaran");
   return { ok: true };

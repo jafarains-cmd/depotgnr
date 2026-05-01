@@ -17,6 +17,7 @@ import {
   RATE_ANTAR_PER_GALON,
   RATE_DEPOT_PER_GALON,
 } from "@/lib/loyalty";
+import { bestEffort } from "@/lib/best-effort";
 
 type Jenis = "isi_ulang" | "tukar" | "beli_baru";
 
@@ -111,25 +112,33 @@ export async function createTransaksi(input: CreateTransaksiInput) {
     return trx.id;
   });
 
-  // Notifikasi admin (best-effort, tidak gagalkan transaksi)
-  notifAdminTelegram(
-    `🧾 Transaksi *${nomorNota}*\nTotal: ${total.toLocaleString("id-ID")}\nKasir: ${session.user.name}`,
-  ).catch(() => {});
+  // Notifikasi admin (best-effort)
+  bestEffort(
+    "notifAdminTelegram(transaksi)",
+    notifAdminTelegram(
+      `🧾 Transaksi *${nomorNota}*\nTotal: ${total.toLocaleString("id-ID")}\nKasir: ${session.user.name}`,
+    ),
+  );
 
-  // Earn loyalty (best-effort) — Rp 500/galon kalau POS walk-in, Rp 250/galon kalau dari order delivery
+  // Earn loyalty (best-effort) — Rp 500/galon walk-in, Rp 250/galon dari order delivery
   if (input.pelangganId) {
     const totalGalon = input.items.reduce((s, it) => s + it.qty, 0);
     const rate = input.refOrderId ? RATE_ANTAR_PER_GALON : RATE_DEPOT_PER_GALON;
-    earnLoyalty({
-      pelangganId: input.pelangganId,
-      jumlahGalon: totalGalon,
-      rate,
-      refTransaksiId: trxId,
-      refOrderId: input.refOrderId,
-      deskripsi: `Earn dari ${nomorNota} (${totalGalon} galon × Rp ${rate.toLocaleString("id-ID")})`,
-    }).catch(() => {});
-    // Klaim referral bonus kalau order pertama
-    claimReferralBonusIfFirstOrder(input.pelangganId, input.refOrderId, trxId).catch(() => {});
+    bestEffort(
+      `earnLoyalty(${nomorNota})`,
+      earnLoyalty({
+        pelangganId: input.pelangganId,
+        jumlahGalon: totalGalon,
+        rate,
+        refTransaksiId: trxId,
+        refOrderId: input.refOrderId,
+        deskripsi: `Earn dari ${nomorNota} (${totalGalon} galon × Rp ${rate.toLocaleString("id-ID")})`,
+      }),
+    );
+    bestEffort(
+      `claimReferralBonus(${nomorNota})`,
+      claimReferralBonusIfFirstOrder(input.pelangganId, input.refOrderId, trxId),
+    );
   }
 
   // Push ke Sheets (best-effort)

@@ -8,6 +8,7 @@ import { requireRole } from "@/lib/permissions";
 import { uploadBuktiKurir } from "@/lib/drive";
 import { notifPelangganStatus } from "../kasir/order/actions";
 import { earnFromOrderIfEligible } from "@/lib/loyalty";
+import { bestEffort } from "@/lib/best-effort";
 
 export async function mulaiAntar(
   orderId: number,
@@ -16,7 +17,7 @@ export async function mulaiAntar(
   const o = await db.query.orderHeader.findFirst({ where: eq(orderHeader.id, orderId) });
   if (!o) return { error: "Order tidak ditemukan" };
   if (o.kurirUserId !== session.user.id) {
-    const role = (session.user as { role?: string }).role;
+    const role = session.user.role;
     if (role !== "admin" && role !== "kasir") {
       return { error: "Order ini bukan tugas Anda" };
     }
@@ -33,7 +34,7 @@ export async function mulaiAntar(
     .update(orderHeader)
     .set({ status: "diantar", updatedAt: new Date() })
     .where(eq(orderHeader.id, orderId));
-  notifPelangganStatus(orderId, "diantar").catch(() => {});
+  bestEffort("notifPelangganStatus(diantar)", notifPelangganStatus(orderId, "diantar"));
   revalidatePath(`/kurir/${orderId}`);
   revalidatePath("/kurir");
   return { ok: true };
@@ -50,7 +51,7 @@ export async function konfirmasiJemput(args: {
   });
   if (!o) return { error: "Order tidak ditemukan" };
   if (o.kurirUserId !== session.user.id) {
-    const role = (session.user as { role?: string }).role;
+    const role = session.user.role;
     if (role !== "admin" && role !== "kasir") {
       return { error: "Order ini bukan tugas Anda" };
     }
@@ -85,7 +86,7 @@ export async function konfirmasiJemput(args: {
     })
     .where(eq(orderHeader.id, args.orderId));
 
-  notifPelangganStatus(args.orderId, "dijemput").catch(() => {});
+  bestEffort("notifPelangganStatus(dijemput)", notifPelangganStatus(args.orderId, "dijemput"));
   revalidatePath(`/kurir/${args.orderId}`);
   revalidatePath("/kurir");
   return { ok: true };
@@ -98,7 +99,7 @@ export async function tandaiDiisi(
   const o = await db.query.orderHeader.findFirst({ where: eq(orderHeader.id, orderId) });
   if (!o) return { error: "Order tidak ditemukan" };
   if (o.kurirUserId !== session.user.id) {
-    const role = (session.user as { role?: string }).role;
+    const role = session.user.role;
     if (role !== "admin" && role !== "kasir") {
       return { error: "Order ini bukan tugas Anda" };
     }
@@ -113,7 +114,7 @@ export async function tandaiDiisi(
     .update(orderHeader)
     .set({ status: "diisi", diisiAt: new Date(), updatedAt: new Date() })
     .where(eq(orderHeader.id, orderId));
-  notifPelangganStatus(orderId, "diisi").catch(() => {});
+  bestEffort("notifPelangganStatus(diisi)", notifPelangganStatus(orderId, "diisi"));
   revalidatePath(`/kurir/${orderId}`);
   revalidatePath("/kurir");
   return { ok: true };
@@ -130,7 +131,7 @@ export async function konfirmasiDiantar(args: {
   });
   if (!o) return { error: "Order tidak ditemukan" };
   if (o.kurirUserId !== session.user.id) {
-    const role = (session.user as { role?: string }).role;
+    const role = session.user.role;
     if (role !== "admin" && role !== "kasir") {
       return { error: "Order ini bukan tugas Anda" };
     }
@@ -158,8 +159,8 @@ export async function konfirmasiDiantar(args: {
     })
     .where(eq(orderHeader.id, args.orderId));
 
-  notifPelangganStatus(args.orderId, "selesai").catch(() => {});
-  earnFromOrderIfEligible(args.orderId).catch(() => {});
+  bestEffort("notifPelangganStatus(selesai)", notifPelangganStatus(args.orderId, "selesai"));
+  bestEffort("earnFromOrderIfEligible(selesai)", earnFromOrderIfEligible(args.orderId));
   revalidatePath(`/kurir/${args.orderId}`);
   revalidatePath("/kurir");
   return { ok: true, url: up.url };

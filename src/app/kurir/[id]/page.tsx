@@ -23,7 +23,7 @@ export default async function KurirOrderDetail({
   if (!Number.isFinite(orderId)) notFound();
 
   const session = await requireRole(["admin", "kasir", "kurir"]);
-  const role = (session.user as { role?: string }).role;
+  const role = session.user.role;
 
   const o = await db.query.orderHeader.findFirst({ where: eq(orderHeader.id, orderId) });
   if (!o) notFound();

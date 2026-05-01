@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function RiwayatKasirPage() {
   const session = await requireRole(["admin", "kasir"]);
-  const role = (session.user as { role?: string }).role;
+  const role = session.user.role;
 
   const rows = await db
     .select({

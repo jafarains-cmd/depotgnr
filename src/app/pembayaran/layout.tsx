@@ -9,7 +9,7 @@ export default async function PembayaranLayout({
   children: React.ReactNode;
 }) {
   const session = await requireRole(["admin", "kasir"]);
-  const role = (session.user as { role?: string }).role;
+  const role = session.user.role;
   const homeHref = role === "admin" ? "/admin/dashboard" : "/kasir/pos";
 
   return (

@@ -22,7 +22,7 @@ export default async function AkunPage() {
   });
   const hasPassword = !!cred?.password;
 
-  const role = (session.user as { role?: string }).role ?? "pelanggan";
+  const role = session.user.role ?? "pelanggan";
   const homeHref =
     role === "admin" ? "/admin/dashboard" : role === "kasir" ? "/kasir/pos" : "/pelanggan/beranda";
 

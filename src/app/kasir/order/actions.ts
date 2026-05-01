@@ -13,6 +13,7 @@ import { sendWhatsApp } from "@/lib/whatsapp";
 import { formatRupiah } from "@/lib/utils";
 import { earnFromOrderIfEligible } from "@/lib/loyalty";
 import { sendPushToUser } from "@/lib/push";
+import { bestEffort } from "@/lib/best-effort";
 
 type Status =
   | "pending"
@@ -49,15 +50,15 @@ export async function updateOrderStatus(orderId: number, status: Status) {
 
   await db.update(orderHeader).set(update).where(eq(orderHeader.id, orderId));
 
-  // Notif grup Telegram per perubahan status
-  notifStatusKeGrup(orderId, status, session.user.name).catch(() => {});
+  // Notif grup Telegram per perubahan status (best-effort, tidak blok flow)
+  bestEffort("notifStatusKeGrup", notifStatusKeGrup(orderId, status, session.user.name));
 
   // Notif pelanggan tiap status berubah
-  notifPelangganStatus(orderId, status).catch(() => {});
+  bestEffort("notifPelangganStatus", notifPelangganStatus(orderId, status));
 
   // Earn loyalty kalau order selesai & sudah lunas
   if (status === "selesai") {
-    earnFromOrderIfEligible(orderId).catch(() => {});
+    bestEffort("earnFromOrderIfEligible", earnFromOrderIfEligible(orderId));
   }
 
   revalidatePath("/kasir/order");
