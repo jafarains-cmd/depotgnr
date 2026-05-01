@@ -4,6 +4,7 @@ import { Plus, Truck, History, Bell, ArrowRight, MapPin } from "lucide-react";
 import { db } from "@/db";
 import { orderHeader } from "@/db/schema/order";
 import { produk } from "@/db/schema/produk";
+import { pengaturan } from "@/db/schema/pengaturan";
 import { requireSession } from "@/lib/permissions";
 import { getOrCreatePelanggan } from "@/lib/pelanggan";
 import { formatRupiah } from "@/lib/utils";
@@ -29,6 +30,42 @@ export default async function BerandaPage() {
     orderBy: (p, { asc }) => [asc(p.id)],
     limit: 6,
   });
+
+  // Baca pengaturan untuk hero copy + reward card dinamis
+  const cfgRows = await db.query.pengaturan.findMany();
+  const cfg = Object.fromEntries(cfgRows.map((r) => [r.key, r.value ?? ""]));
+  const hero = {
+    badge: cfg.heroBadge?.trim() || "SEGAR TIAP HARI",
+    title: cfg.heroTitle?.trim() || "Stok air keluarga aman dalam 30 menit.",
+    subtitle:
+      cfg.heroSubtitle?.trim() ||
+      "Pesan galon isi ulang dari depot terdekat. Antar cepat, harga jujur.",
+    cta: cfg.heroCta?.trim() || "Pesan sekarang",
+  };
+
+  // Reward card dinamis berdasarkan pengaturan loyalty
+  const stampAktif = (cfg.aktifkanStampGalon ?? "1") !== "0";
+  const stampThreshold = Math.max(1, Number(cfg.stampThresholdGalon) || 10);
+  const stampNilai = Math.max(0, Number(cfg.nilaiGalonGratis) || 5_000);
+  const rateAntar = Math.max(0, Number(cfg.loyaltiPerGalonAntar) || 250);
+  const rateDepot = Math.max(0, Number(cfg.loyaltiPerGalonDepot) || 500);
+
+  const reward = (() => {
+    if (stampAktif && stampNilai > 0) {
+      return {
+        badge: "REWARD LOYALTY",
+        title: `Setiap ${stampThreshold} galon, dapat\nRp ${stampNilai.toLocaleString("id-ID")} saldo!`,
+      };
+    }
+    if (rateAntar > 0 || rateDepot > 0) {
+      const max = Math.max(rateAntar, rateDepot);
+      return {
+        badge: "CASHBACK GALON",
+        title: `Tiap galon dapat\nhingga Rp ${max.toLocaleString("id-ID")} saldo`,
+      };
+    }
+    return null; // Hide card kalau tidak ada program reward
+  })();
 
   const totalOrders = await db
     .select()
@@ -80,13 +117,13 @@ export default async function BerandaPage() {
           />
           <div className="relative">
             <div className="text-[11px] font-bold tracking-widest opacity-85">
-              SEGAR TIAP HARI
+              {hero.badge}
             </div>
-            <h2 className="text-[28px] font-extrabold leading-[1.1] tracking-tight mt-2">
-              Stok air keluarga<br />aman dalam 30 menit.
+            <h2 className="text-[28px] font-extrabold leading-[1.1] tracking-tight mt-2 whitespace-pre-line">
+              {hero.title}
             </h2>
             <p className="text-[13px] opacity-85 mt-2 max-w-[280px]">
-              Pesan galon isi ulang dari depot terdekat. Antar cepat, harga jujur.
+              {hero.subtitle}
             </p>
           </div>
           <div
@@ -99,7 +136,7 @@ export default async function BerandaPage() {
             href="/pelanggan/order-baru"
             className="absolute left-6 bottom-6 inline-flex items-center gap-2 h-12 px-5 rounded-full bg-white text-[color:var(--brand-deep)] font-extrabold text-sm"
           >
-            Pesan sekarang <ArrowRight size={16} />
+            {hero.cta} <ArrowRight size={16} />
           </Link>
         </div>
       </div>
@@ -212,28 +249,30 @@ export default async function BerandaPage() {
       </section>
 
       {/* Promo / Auto-refill */}
-      <section className="px-4 mt-5 mb-4">
-        <Link
-          href="/pelanggan/loyalty"
-          className="block rounded-2xl p-5 text-ink relative overflow-hidden"
-          style={{
-            background: "linear-gradient(135deg, var(--accent), var(--accent))",
-          }}
-        >
-          <div className="text-[11px] font-bold tracking-widest opacity-80">
-            REWARD LOYALTY
-          </div>
-          <div className="text-lg font-extrabold mt-1 leading-tight">
-            Setiap 10 galon, dapat<br />Rp 5.000 saldo!
-          </div>
-          <div className="mt-3 inline-flex items-center gap-1 px-3 py-1.5 bg-ink text-white rounded-full text-[11px] font-bold">
-            Lihat saldo →
-          </div>
-          <div className="absolute right-2 -bottom-2 opacity-50">
-            <GallonArt size={90} tier="standard" />
-          </div>
-        </Link>
-      </section>
+      {reward && (
+        <section className="px-4 mt-5 mb-4">
+          <Link
+            href="/pelanggan/loyalty"
+            className="block rounded-2xl p-5 text-ink relative overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg, var(--accent), var(--accent))",
+            }}
+          >
+            <div className="text-[11px] font-bold tracking-widest opacity-80">
+              {reward.badge}
+            </div>
+            <div className="text-lg font-extrabold mt-1 leading-tight whitespace-pre-line">
+              {reward.title}
+            </div>
+            <div className="mt-3 inline-flex items-center gap-1 px-3 py-1.5 bg-ink text-white rounded-full text-[11px] font-bold">
+              Lihat saldo →
+            </div>
+            <div className="absolute right-2 -bottom-2 opacity-50">
+              <GallonArt size={90} tier="standard" />
+            </div>
+          </Link>
+        </section>
+      )}
 
       <Link
         href="/pelanggan/riwayat"

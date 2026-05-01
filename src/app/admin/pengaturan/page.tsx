@@ -13,6 +13,28 @@ const FIELDS: { key: string; label: string; type?: "text" | "textarea"; help?: s
   { key: "alamatDepot", label: "Alamat Depot", type: "textarea" },
   { key: "telpDepot", label: "Telp Depot" },
   {
+    key: "heroBadge",
+    label: "Hero · Badge (atas judul)",
+    help: "Default: 'SEGAR TIAP HARI'. Ditampilkan di card hero halaman beranda pelanggan.",
+  },
+  {
+    key: "heroTitle",
+    label: "Hero · Judul",
+    type: "textarea",
+    help: "Default: 'Stok air keluarga aman dalam 30 menit.' Pakai 1-2 baris.",
+  },
+  {
+    key: "heroSubtitle",
+    label: "Hero · Subtitle",
+    type: "textarea",
+    help: "Default: 'Pesan galon isi ulang dari depot terdekat. Antar cepat, harga jujur.'",
+  },
+  {
+    key: "heroCta",
+    label: "Hero · Tombol CTA",
+    help: "Default: 'Pesan sekarang'.",
+  },
+  {
     key: "templateNotifOrderMasukAdmin",
     label: "Template Notif Order Masuk (untuk Admin)",
     type: "textarea",
