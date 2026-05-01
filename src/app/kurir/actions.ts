@@ -149,19 +149,29 @@ export async function konfirmasiDiantar(args: {
     return { error: up.error ?? "Gagal upload bukti" };
   }
 
-  await db
-    .update(orderHeader)
-    .set({
-      status: "selesai",
-      buktiFotoUrl: up.url,
-      diantarAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .where(eq(orderHeader.id, args.orderId));
+  // Kalau metode bayar = COD, auto-lunas saat kurir konfirmasi diantar.
+  // Asumsi: kurir sudah terima cash sebelum tap konfirmasi.
+  // Order online (qris/dana/transfer) tetap belum lunas — perlu konfirmasi admin di /pembayaran.
+  const update: Partial<typeof orderHeader.$inferInsert> = {
+    status: "selesai",
+    buktiFotoUrl: up.url,
+    diantarAt: new Date(),
+    updatedAt: new Date(),
+  };
+  let codAutoLunas = false;
+  if (o.metodeBayar === "cod" && o.statusBayar !== "lunas") {
+    update.statusBayar = "lunas";
+    update.bayarAt = new Date();
+    update.bayarDikonfirmasiOleh = session.user.id;
+    codAutoLunas = true;
+  }
+
+  await db.update(orderHeader).set(update).where(eq(orderHeader.id, args.orderId));
 
   bestEffort("notifPelangganStatus(selesai)", notifPelangganStatus(args.orderId, "selesai"));
   bestEffort("earnFromOrderIfEligible(selesai)", earnFromOrderIfEligible(args.orderId));
   revalidatePath(`/kurir/${args.orderId}`);
   revalidatePath("/kurir");
+  if (codAutoLunas) revalidatePath("/pembayaran");
   return { ok: true, url: up.url };
 }

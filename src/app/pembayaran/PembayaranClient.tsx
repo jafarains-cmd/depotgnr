@@ -11,39 +11,61 @@ export type Row = {
   nomorOrder: string;
   total: number;
   metode: string | null;
-  status: string;
+  status: string; // statusBayar: belum | menunggu | lunas
+  statusOrder: string;
   buktiUrl: string | null;
   bayarAt: string | null;
+  diantarAt: string | null;
   createdAt: string;
   pelangganNama: string | null;
   pelangganTelp: string | null;
 };
 
+type Tab = "menunggu" | "piutang" | "lunas" | "all";
+
 export function PembayaranClient({ rows }: { rows: Row[] }) {
-  const [filter, setFilter] = useState<"menunggu" | "lunas" | "all">("menunggu");
+  const [filter, setFilter] = useState<Tab>("menunggu");
   const [pending, startTransition] = useTransition();
 
-  const filtered = filter === "all" ? rows : rows.filter((r) => r.status === filter);
+  // Piutang = order selesai tapi belum lunas
+  function isPiutang(r: Row) {
+    return r.statusOrder === "selesai" && r.status === "belum";
+  }
+
+  const filtered =
+    filter === "all"
+      ? rows
+      : filter === "piutang"
+        ? rows.filter(isPiutang)
+        : rows.filter((r) => r.status === filter);
+
+  const countMenunggu = rows.filter((r) => r.status === "menunggu").length;
+  const countPiutang = rows.filter(isPiutang).length;
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2 text-sm">
-        {(["menunggu", "lunas", "all"] as const).map((f) => {
-          const count = rows.filter((r) => r.status === "menunggu").length;
+      <div className="flex gap-2 text-sm flex-wrap">
+        {([
+          { id: "menunggu", label: "Menunggu Verifikasi", count: countMenunggu },
+          { id: "piutang", label: "Piutang", count: countPiutang },
+          { id: "lunas", label: "Lunas", count: 0 },
+          { id: "all", label: "Semua", count: 0 },
+        ] as const).map((f) => {
+          const isActive = filter === f.id;
           return (
             <button
-              key={f}
-              onClick={() => setFilter(f)}
+              key={f.id}
+              onClick={() => setFilter(f.id as Tab)}
               className={`px-3.5 py-1.5 rounded-full font-bold text-xs transition ${
-                filter === f
+                isActive
                   ? "bg-brand text-white"
                   : "bg-surface border border-line text-[color:var(--muted)] hover:text-ink"
               }`}
             >
-              {f === "all" ? "Semua" : f === "menunggu" ? "Menunggu" : "Lunas"}
-              {f === "menunggu" && count > 0 && (
+              {f.label}
+              {f.count > 0 && (
                 <span className="ml-1.5 px-1.5 py-0.5 bg-[color:var(--accent2)] text-white rounded text-[10px]">
-                  {count}
+                  {f.count}
                 </span>
               )}
             </button>
@@ -58,7 +80,12 @@ export function PembayaranClient({ rows }: { rows: Row[] }) {
             className="bg-surface border border-line rounded-2xl p-4 space-y-3"
             style={{
               borderLeftWidth: 4,
-              borderLeftColor: r.status === "lunas" ? "#22C55E" : "var(--accent)",
+              borderLeftColor:
+                r.status === "lunas"
+                  ? "#22C55E"
+                  : isPiutang(r)
+                    ? "#EF4444" // merah untuk piutang
+                    : "var(--accent)",
             }}
           >
             <div className="flex justify-between items-start gap-2">
@@ -77,11 +104,23 @@ export function PembayaranClient({ rows }: { rows: Row[] }) {
                   className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                     r.status === "lunas"
                       ? "bg-emerald-100 text-emerald-800"
-                      : "bg-amber-100 text-amber-800"
+                      : isPiutang(r)
+                        ? "bg-red-100 text-red-800"
+                        : "bg-amber-100 text-amber-800"
                   }`}
                 >
-                  {(r.metode ?? "-").toUpperCase()} · {r.status.toUpperCase()}
+                  {(r.metode ?? "-").toUpperCase()} ·{" "}
+                  {isPiutang(r) ? "PIUTANG" : r.status.toUpperCase()}
                 </span>
+                {r.diantarAt && r.statusOrder === "selesai" && (
+                  <div className="text-[10px] text-[color:var(--muted)] mt-1">
+                    Diantar:{" "}
+                    {new Date(r.diantarAt).toLocaleDateString("id-ID", {
+                      day: "2-digit",
+                      month: "short",
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -109,16 +148,15 @@ export function PembayaranClient({ rows }: { rows: Row[] }) {
               </div>
             )}
 
-            {r.status === "menunggu" && (
+            {(r.status === "menunggu" || isPiutang(r)) && (
               <div className="flex gap-2 pt-3 border-t border-line">
                 <button
                   disabled={pending}
                   onClick={() => {
-                    if (
-                      confirm(
-                        `Konfirmasi pembayaran ${r.nomorOrder} sebesar ${formatRupiah(r.total)}?`,
-                      )
-                    ) {
+                    const msg = isPiutang(r)
+                      ? `Tandai LUNAS piutang ${r.nomorOrder} (${formatRupiah(r.total)})?`
+                      : `Konfirmasi pembayaran ${r.nomorOrder} sebesar ${formatRupiah(r.total)}?`;
+                    if (confirm(msg)) {
                       startTransition(async () => {
                         await konfirmasiBayar(r.id);
                       });
@@ -126,22 +164,25 @@ export function PembayaranClient({ rows }: { rows: Row[] }) {
                   }}
                   className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-extrabold inline-flex items-center justify-center gap-1.5 disabled:opacity-50 active:scale-[0.98] transition"
                 >
-                  <Check size={14} /> Konfirmasi Lunas
+                  <Check size={14} /> {isPiutang(r) ? "Tandai Lunas" : "Konfirmasi Lunas"}
                 </button>
-                <button
-                  disabled={pending}
-                  onClick={() => {
-                    const alasan = prompt("Alasan tolak (opsional):") ?? "";
-                    if (confirm(`Tolak bukti pembayaran ${r.nomorOrder}?`)) {
-                      startTransition(async () => {
-                        await tolakBayar(r.id, alasan);
-                      });
-                    }
-                  }}
-                  className="px-3 py-2.5 border-2 border-rose-200 text-rose-600 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-1 disabled:opacity-50"
-                >
-                  <X size={14} />
-                </button>
+                {/* Tombol tolak hanya untuk yang punya bukti (statusBayar=menunggu) */}
+                {r.status === "menunggu" && (
+                  <button
+                    disabled={pending}
+                    onClick={() => {
+                      const alasan = prompt("Alasan tolak (opsional):") ?? "";
+                      if (confirm(`Tolak bukti pembayaran ${r.nomorOrder}?`)) {
+                        startTransition(async () => {
+                          await tolakBayar(r.id, alasan);
+                        });
+                      }
+                    }}
+                    className="px-3 py-2.5 border-2 border-rose-200 text-rose-600 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-1 disabled:opacity-50"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
             )}
 
