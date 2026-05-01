@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { user as userTable } from "@/db/schema/auth";
 import { requireRole } from "@/lib/permissions";
@@ -59,4 +59,98 @@ export async function unbanUser(id: string) {
     .set({ banned: false, banReason: null, updatedAt: new Date() })
     .where(eq(userTable.id, id));
   revalidatePath("/admin/users");
+}
+
+/**
+ * Edit data user: nama, email, username, telp, alamat.
+ * Password tidak di-edit di sini — pakai /akun (self-service) atau reset password flow.
+ */
+export async function editUser(
+  id: string,
+  patch: {
+    nama?: string;
+    email?: string;
+    username?: string | null;
+    phoneNumber?: string | null;
+  },
+): Promise<{ ok: true } | { error: string }> {
+  await requireRole(["admin"]);
+
+  const target = await db.query.user.findFirst({ where: eq(userTable.id, id) });
+  if (!target) return { error: "User tidak ditemukan" };
+
+  const update: Partial<typeof userTable.$inferInsert> = { updatedAt: new Date() };
+  if (patch.nama !== undefined) {
+    const v = patch.nama.trim();
+    if (!v) return { error: "Nama tidak boleh kosong" };
+    update.name = v;
+  }
+  if (patch.email !== undefined) {
+    const v = patch.email.trim();
+    if (!v) return { error: "Email tidak boleh kosong" };
+    // Cek unik
+    const dup = await db.query.user.findFirst({
+      where: and(eq(userTable.email, v), ne(userTable.id, id)),
+    });
+    if (dup) return { error: "Email sudah dipakai user lain" };
+    update.email = v;
+  }
+  if (patch.username !== undefined) {
+    const v = patch.username?.trim() || null;
+    if (v) {
+      if (!/^[a-z0-9_.]{3,30}$/.test(v.toLowerCase())) {
+        return { error: "Username 3-30 huruf kecil/angka/_/." };
+      }
+      const dup = await db.query.user.findFirst({
+        where: and(eq(userTable.username, v.toLowerCase()), ne(userTable.id, id)),
+      });
+      if (dup) return { error: "Username sudah dipakai" };
+      update.username = v.toLowerCase();
+      update.displayUsername = v;
+    } else {
+      update.username = null;
+      update.displayUsername = null;
+    }
+  }
+  if (patch.phoneNumber !== undefined) {
+    update.phoneNumber = patch.phoneNumber?.trim() || null;
+  }
+
+  await db.update(userTable).set(update).where(eq(userTable.id, id));
+  revalidatePath("/admin/users");
+  return { ok: true };
+}
+
+/**
+ * Hard delete user. Cascade akan menghapus session, account, push subscription.
+ * Pelanggan & order yang link ke user akan ke-set NULL (sesuai schema FK).
+ *
+ * Guard:
+ *  - Tidak bisa hapus diri sendiri (mencegah lock-out)
+ *  - Tidak bisa hapus admin terakhir
+ */
+export async function deleteUser(
+  id: string,
+): Promise<{ ok: true } | { error: string }> {
+  const session = await requireRole(["admin"]);
+  if (id === session.user.id) {
+    return { error: "Tidak bisa hapus akun sendiri. Minta admin lain." };
+  }
+
+  const target = await db.query.user.findFirst({ where: eq(userTable.id, id) });
+  if (!target) return { error: "User tidak ditemukan" };
+
+  // Kalau target adalah admin, pastikan masih ada admin lain
+  if (target.role === "admin") {
+    const otherAdmins = await db.query.user.findMany({
+      where: and(eq(userTable.role, "admin"), ne(userTable.id, id)),
+    });
+    if (otherAdmins.length === 0) {
+      return { error: "Tidak bisa hapus admin terakhir. Buat admin baru dulu." };
+    }
+  }
+
+  await db.delete(userTable).where(eq(userTable.id, id));
+  revalidatePath("/admin/users");
+  return { ok: true };
 }
