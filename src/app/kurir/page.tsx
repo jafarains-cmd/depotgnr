@@ -4,8 +4,9 @@ import { db } from "@/db";
 import { orderHeader } from "@/db/schema/order";
 import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
 import { requireRole } from "@/lib/permissions";
-import { MapPin, Phone, Clock, ChevronRight, Truck, Check } from "lucide-react";
+import { MapPin, Phone, Clock, ChevronRight, Truck, Check, Coins } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
+import { getBonusConfig, summaryBonusKurir } from "@/lib/bonus";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,12 @@ export default async function KurirHomePage() {
 
   const totalSelesaiHariIni = todayDone.reduce((s, t) => s + (t.total ?? 0), 0);
 
+  // Bonus kurir summary (hanya tampil kalau pengaturan tampilkanBonusKeKurir aktif)
+  const bonusCfg = await getBonusConfig();
+  const bonus = bonusCfg.tampilkanKeKurir
+    ? await summaryBonusKurir(session.user.id)
+    : null;
+
   // Active task = order yang lagi diantar atau dijemput
   const activeTask = orders.find((o) =>
     ["dijemput", "diisi", "diantar"].includes(o.status),
@@ -81,6 +88,45 @@ export default async function KurirHomePage() {
           </div>
         </div>
       </div>
+
+      {/* Bonus card (kalau visibility on) */}
+      {bonus && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Coins size={16} className="text-amber-700" />
+            <div className="text-sm font-extrabold text-amber-900">Bonus Saya</div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <div className="text-[10px] text-amber-800 font-semibold uppercase tracking-wide">
+                Hari Ini
+              </div>
+              <div className="text-base font-extrabold text-amber-900">
+                {formatRupiah(bonus.hariIni)}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] text-amber-800 font-semibold uppercase tracking-wide">
+                Belum Dibayar
+              </div>
+              <div className="text-base font-extrabold text-amber-900">
+                {formatRupiah(bonus.pending)}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] text-amber-800 font-semibold uppercase tracking-wide">
+                Sudah Dibayar
+              </div>
+              <div className="text-base font-extrabold text-amber-900">
+                {formatRupiah(bonus.totalDibayar)}
+              </div>
+            </div>
+          </div>
+          <div className="text-[10px] text-amber-800 mt-2">
+            Bonus dibayar bulanan oleh owner depot.
+          </div>
+        </div>
+      )}
 
       {/* Active task */}
       {activeTask && (

@@ -9,6 +9,7 @@ import { uploadBuktiKurir } from "@/lib/drive";
 import { notifPelangganStatus } from "../kasir/order/actions";
 import { earnFromOrderIfEligible } from "@/lib/loyalty";
 import { bestEffort } from "@/lib/best-effort";
+import { recordKurirBonus } from "@/lib/bonus";
 
 export async function mulaiAntar(
   orderId: number,
@@ -170,6 +171,11 @@ export async function konfirmasiDiantar(args: {
 
   bestEffort("notifPelangganStatus(selesai)", notifPelangganStatus(args.orderId, "selesai"));
   bestEffort("earnFromOrderIfEligible(selesai)", earnFromOrderIfEligible(args.orderId));
+  // Bonus kurir hanya kalau auto-lunas (COD) — kalau order online, bonus akan dicatat
+  // saat admin konfirmasi pembayaran di /pembayaran (lihat pembayaran/actions.ts)
+  if (codAutoLunas) {
+    bestEffort("recordKurirBonus(cod)", recordKurirBonus(args.orderId));
+  }
   revalidatePath(`/kurir/${args.orderId}`);
   revalidatePath("/kurir");
   if (codAutoLunas) revalidatePath("/pembayaran");

@@ -103,6 +103,21 @@ const FIELDS: { key: string; label: string; type?: "text" | "textarea"; help?: s
     help: "Satu rekening per baris. Format: BANK | NOMOR | ATAS NAMA. Contoh: BCA | 1234567890 | Depot Air",
   },
   {
+    key: "aktifkanBonusKurir",
+    label: "Aktifkan Bonus Kurir",
+    help: "Isi 1 untuk aktif, 0 untuk nonaktif. Setiap order selesai+lunas, kurir dapat bonus per galon.",
+  },
+  {
+    key: "bonusKurirPerGalon",
+    label: "Bonus Kurir per Galon (Rp)",
+    help: "Bonus untuk kurir per galon yang diantar (default: 500).",
+  },
+  {
+    key: "tampilkanBonusKeKurir",
+    label: "Tampilkan Bonus ke Kurir/Kasir",
+    help: "Isi 1 supaya kurir lihat akumulasi bonus mereka di dashboard. 0 = bonus disembunyikan, hanya admin yang lihat.",
+  },
+  {
     key: "loyaltiPerGalonAntar",
     label: "Loyalti per Galon — Antar (Rp)",
     help: "Saldo yang didapat pelanggan per galon untuk order yang diantar (default: 250).",

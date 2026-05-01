@@ -14,6 +14,7 @@ import { formatRupiah } from "@/lib/utils";
 import { earnFromOrderIfEligible } from "@/lib/loyalty";
 import { sendPushToUser } from "@/lib/push";
 import { bestEffort } from "@/lib/best-effort";
+import { recordKurirBonus } from "@/lib/bonus";
 
 export async function konfirmasiBayar(
   orderId: number,
@@ -36,6 +37,8 @@ export async function konfirmasiBayar(
 
   bestEffort("notifLunas", notifLunas(orderId));
   bestEffort("earnFromOrderIfEligible", earnFromOrderIfEligible(orderId));
+  // Catat bonus kurir kalau order sudah selesai (recordKurirBonus idempoten + cek selesai+lunas)
+  bestEffort("recordKurirBonus", recordKurirBonus(orderId));
 
   revalidatePath("/pembayaran");
   revalidatePath(`/pelanggan/order/${orderId}/bayar`);
