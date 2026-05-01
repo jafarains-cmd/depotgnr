@@ -18,7 +18,7 @@ import { bestEffort } from "@/lib/best-effort";
 export async function konfirmasiBayar(
   orderId: number,
 ): Promise<{ ok: true } | { error: string }> {
-  await requireRole(["admin", "kasir"]);
+  const session = await requireRole(["admin", "kasir"]);
 
   const o = await db.query.orderHeader.findFirst({ where: eq(orderHeader.id, orderId) });
   if (!o) return { error: "Order tidak ditemukan" };
@@ -26,7 +26,12 @@ export async function konfirmasiBayar(
 
   await db
     .update(orderHeader)
-    .set({ statusBayar: "lunas", bayarAt: new Date(), updatedAt: new Date() })
+    .set({
+      statusBayar: "lunas",
+      bayarAt: new Date(),
+      bayarDikonfirmasiOleh: session.user.id,
+      updatedAt: new Date(),
+    })
     .where(eq(orderHeader.id, orderId));
 
   bestEffort("notifLunas", notifLunas(orderId));

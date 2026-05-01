@@ -62,6 +62,10 @@ export const orderHeader = sqliteTable("order", {
     .default("belum"),
   buktiBayarUrl: text("bukti_bayar_url"),
   bayarAt: integer("bayar_at", { mode: "timestamp" }),
+  // Audit trail: siapa staff yang konfirmasi pembayaran
+  bayarDikonfirmasiOleh: text("bayar_dikonfirmasi_oleh").references(() => user.id, {
+    onDelete: "set null",
+  }),
   loyaltiDipakai: integer("loyalti_dipakai").notNull().default(0),
   trackingToken: text("tracking_token"),
   sheetRowId: text("sheet_row_id"),

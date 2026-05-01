@@ -1,0 +1,1 @@
+ALTER TABLE `order` ADD `bayar_dikonfirmasi_oleh` text REFERENCES user(id);

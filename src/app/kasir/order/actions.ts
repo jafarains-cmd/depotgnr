@@ -24,21 +24,47 @@ type Status =
   | "selesai"
   | "batal";
 
+/**
+ * State machine yang sah. Selesai & batal terminal.
+ * Boleh batal kapan saja (kecuali sudah selesai/batal).
+ */
+const VALID_TRANSITIONS: Record<Status, readonly Status[]> = {
+  pending: ["diproses", "dijemput", "batal"],
+  diproses: ["diantar", "batal"], // antar-saja flow
+  dijemput: ["diisi", "batal"], // jemput-antar flow
+  diisi: ["diantar", "batal"],
+  diantar: ["selesai", "batal"],
+  selesai: [],
+  batal: [],
+};
+
 export async function updateOrderStatus(orderId: number, status: Status) {
   const session = await requireRole(["admin", "kasir"]);
+
+  const current = await db.query.orderHeader.findFirst({
+    where: eq(orderHeader.id, orderId),
+  });
+  if (!current) throw new Error("Order tidak ditemukan");
+
+  // Validasi state machine
+  if (current.status === status) return; // idempoten
+  const allowed = VALID_TRANSITIONS[current.status];
+  if (!allowed.includes(status)) {
+    throw new Error(
+      `Transisi tidak sah: ${current.status} → ${status}. Yang diizinkan: ${allowed.join(", ") || "(terminal)"}`,
+    );
+  }
 
   const update: Partial<typeof orderHeader.$inferInsert> = {
     status,
     updatedAt: new Date(),
   };
   // Auto-assign kurir hanya jika belum ada
-  if (status === "diproses" || status === "diantar" || status === "dijemput") {
-    const current = await db.query.orderHeader.findFirst({
-      where: eq(orderHeader.id, orderId),
-    });
-    if (current && !current.kurirUserId) {
-      update.kurirUserId = session.user.id;
-    }
+  if (
+    (status === "diproses" || status === "diantar" || status === "dijemput") &&
+    !current.kurirUserId
+  ) {
+    update.kurirUserId = session.user.id;
   }
 
   // Set timestamps khusus per status

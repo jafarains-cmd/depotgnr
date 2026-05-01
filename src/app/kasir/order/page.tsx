@@ -1,7 +1,8 @@
 import { db } from "@/db";
 import { eq, desc, gte, or, ne, and, inArray } from "drizzle-orm";
-import { orderHeader } from "@/db/schema/order";
+import { orderHeader, orderItem } from "@/db/schema/order";
 import { pelanggan } from "@/db/schema/pelanggan";
+import { produk } from "@/db/schema/produk";
 import { user as userTable } from "@/db/schema/auth";
 import { PageHeader } from "@/components/AppShell";
 import { OrderClient, type OrderRow } from "./OrderClient";
@@ -40,33 +41,40 @@ export default async function OrderKasirPage() {
     )
     .orderBy(desc(orderHeader.createdAt));
 
-  const rows: OrderRow[] = await Promise.all(
-    aktif.map(async (o) => {
-      const items = await db.query.orderItem.findMany({
-        where: (oi, { eq }) => eq(oi.orderId, o.id),
-        with: { },
-      });
-      const itemDetail = await Promise.all(
-        items.map(async (it) => {
-          const p = await db.query.produk.findFirst({
-            where: (pp, { eq }) => eq(pp.id, it.produkId),
-          });
-          return {
-            qty: it.qty,
-            jenis: it.jenis,
-            namaProduk: p?.nama ?? `#${it.produkId}`,
-          };
-        }),
-      );
-      return {
-        ...o,
-        jadwalAntar: o.jadwalAntar?.toISOString() ?? null,
-        createdAt: o.createdAt.toISOString(),
-        diantarAt: o.diantarAt?.toISOString() ?? null,
-        items: itemDetail,
-      };
-    }),
-  );
+  // Single batch query untuk semua items + produk join (no N+1)
+  const orderIds = aktif.map((o) => o.id);
+  const allItems = orderIds.length
+    ? await db
+        .select({
+          orderId: orderItem.orderId,
+          qty: orderItem.qty,
+          jenis: orderItem.jenis,
+          produkId: orderItem.produkId,
+          namaProduk: produk.nama,
+        })
+        .from(orderItem)
+        .leftJoin(produk, eq(orderItem.produkId, produk.id))
+        .where(inArray(orderItem.orderId, orderIds))
+    : [];
+
+  const itemsByOrder = new Map<number, { qty: number; jenis: string; namaProduk: string }[]>();
+  for (const it of allItems) {
+    const arr = itemsByOrder.get(it.orderId) ?? [];
+    arr.push({
+      qty: it.qty,
+      jenis: it.jenis,
+      namaProduk: it.namaProduk ?? `#${it.produkId}`,
+    });
+    itemsByOrder.set(it.orderId, arr);
+  }
+
+  const rows: OrderRow[] = aktif.map((o) => ({
+    ...o,
+    jadwalAntar: o.jadwalAntar?.toISOString() ?? null,
+    createdAt: o.createdAt.toISOString(),
+    diantarAt: o.diantarAt?.toISOString() ?? null,
+    items: itemsByOrder.get(o.id) ?? [],
+  }));
 
   const kurirList = await db
     .select({ id: userTable.id, name: userTable.name })

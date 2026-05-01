@@ -261,7 +261,10 @@ export async function redeemLoyalty(args: {
  * Klaim referral bonus saat pelanggan referee menyelesaikan order/transaksi pertamanya yang lunas.
  * - Referee dapat REFERRAL_BONUS (sebagai welcome reward)
  * - Referrer dapat REFERRAL_BONUS (commission)
- * Idempoten via firstOrderRewardClaimed.
+ *
+ * Idempoten via DB: cek mutasi_loyalti existence (tipe=referral_in untuk pelangganId).
+ * Pakai DB sebagai single source of truth — tidak ada race window.
+ * (firstOrderRewardClaimed flag legacy masih ada di schema tapi tidak di-rely-on lagi.)
  */
 export async function claimReferralBonusIfFirstOrder(
   pelangganId: number,
@@ -270,15 +273,17 @@ export async function claimReferralBonusIfFirstOrder(
 ): Promise<void> {
   const p = await db.query.pelanggan.findFirst({ where: eq(pelanggan.id, pelangganId) });
   if (!p) return;
-  if (p.firstOrderRewardClaimed) return;
-  if (!p.referredBy) {
-    // Tidak ada yang ngajak — tetap mark claimed agar tidak dicek terus
-    await db
-      .update(pelanggan)
-      .set({ firstOrderRewardClaimed: true })
-      .where(eq(pelanggan.id, pelangganId));
-    return;
-  }
+  if (!p.referredBy) return;
+
+  // Cek apakah sudah pernah di-claim (idempotency via DB).
+  // Index `mutasi_loyalti(pelanggan_id, …)` cover query ini.
+  const existingClaim = await db.query.mutasiLoyalti.findFirst({
+    where: and(
+      eq(mutasiLoyalti.pelangganId, pelangganId),
+      eq(mutasiLoyalti.tipe, "referral_in"),
+    ),
+  });
+  if (existingClaim) return;
 
   await db.transaction((tx) => {
     // Referee bonus
@@ -295,7 +300,7 @@ export async function claimReferralBonusIfFirstOrder(
     tx.update(pelanggan)
       .set({
         saldoLoyalti: sql`${pelanggan.saldoLoyalti} + ${REFERRAL_BONUS}`,
-        firstOrderRewardClaimed: true,
+        firstOrderRewardClaimed: true, // legacy, tetap di-set untuk backward-compat
       })
       .where(eq(pelanggan.id, pelangganId))
       .run();
