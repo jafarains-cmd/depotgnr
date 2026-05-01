@@ -5,8 +5,10 @@ import { UsersClient } from "./UsersClient";
 export const dynamic = "force-dynamic";
 
 export default async function UsersPage() {
+  // Pagination: limit 100. Untuk skala lebih besar, tambah search/cursor pagination.
   const list = await db.query.user.findMany({
     orderBy: (u, { desc }) => [desc(u.createdAt)],
+    limit: 100,
   });
 
   return (

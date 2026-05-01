@@ -9,9 +9,16 @@ import { sendTelegram } from "./telegram";
 import { sendPushToUser } from "./push";
 import { bestEffort } from "./best-effort";
 
-export const RATE_ANTAR_PER_GALON = 250;
-export const RATE_DEPOT_PER_GALON = 500;
-export const REFERRAL_BONUS = 5_000;
+// Re-export untuk backward-compat (banyak file import dari sini)
+export {
+  RATE_ANTAR_PER_GALON,
+  RATE_DEPOT_PER_GALON,
+  REFERRAL_BONUS,
+} from "./constants";
+import {
+  RATE_ANTAR_PER_GALON,
+  REFERRAL_BONUS,
+} from "./constants";
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // skip ambiguous I/O/0/1
 

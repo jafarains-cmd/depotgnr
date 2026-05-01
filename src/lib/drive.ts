@@ -59,6 +59,30 @@ export async function uploadAsset(args: {
   });
 }
 
+// Max upload size 5MB (rough — base64 string overhead ~4/3, jadi ~6.7MB string).
+const MAX_BASE64_LENGTH = 7 * 1024 * 1024;
+
+/**
+ * Validasi magic bytes — cegah upload non-image.
+ * JPEG: FF D8 FF · PNG: 89 50 4E 47 · WEBP: RIFF ...... WEBP · GIF: GIF8
+ * Decode 16 byte awal dari base64 saja.
+ */
+function validateImageMagicBytes(base64: string): { ok: true; type: string } | { ok: false; error: string } {
+  try {
+    const head = Buffer.from(base64.slice(0, 24), "base64");
+    if (head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff) return { ok: true, type: "jpeg" };
+    if (head[0] === 0x89 && head[1] === 0x50 && head[2] === 0x4e && head[3] === 0x47) return { ok: true, type: "png" };
+    if (
+      head[0] === 0x52 && head[1] === 0x49 && head[2] === 0x46 && head[3] === 0x46 && // RIFF
+      head[8] === 0x57 && head[9] === 0x45 && head[10] === 0x42 && head[11] === 0x50  // WEBP
+    ) return { ok: true, type: "webp" };
+    if (head[0] === 0x47 && head[1] === 0x49 && head[2] === 0x46 && head[3] === 0x38) return { ok: true, type: "gif" };
+    return { ok: false, error: "File bukan gambar yang valid (JPEG/PNG/WebP/GIF)" };
+  } catch {
+    return { ok: false, error: "Gagal decode file" };
+  }
+}
+
 async function uploadToDrive(args: {
   folderKey: string;
   fallbackFolderKey?: string;
@@ -67,6 +91,14 @@ async function uploadToDrive(args: {
   base64: string;
   mimeType: string;
 }): Promise<UploadResp> {
+  // Size guard
+  if (args.base64.length > MAX_BASE64_LENGTH) {
+    return { ok: false, error: "File terlalu besar (max ~5MB)" };
+  }
+  // Magic byte validation
+  const v = validateImageMagicBytes(args.base64);
+  if (!v.ok) return { ok: false, error: v.error };
+
   const url = await getCfg("appsScriptUrl");
   const token = await getCfg("appsScriptToken");
   let folderId = await getCfg(args.folderKey);
@@ -76,7 +108,9 @@ async function uploadToDrive(args: {
   if (!url || !token) return { ok: false, error: "Apps Script belum diset di Pengaturan" };
   if (!folderId) return { ok: false, error: `${args.folderKey} belum diset di Pengaturan` };
 
-  const filename = `${args.prefix}-${args.refId}-${Date.now()}.${guessExt(args.mimeType)}`;
+  // Trust mime detected dari magic bytes, fallback ke client-provided
+  const mimeType = `image/${v.type}`;
+  const filename = `${args.prefix}-${args.refId}-${Date.now()}.${guessExt(mimeType)}`;
 
   try {
     const res = await fetch(url, {
@@ -87,9 +121,9 @@ async function uploadToDrive(args: {
         op: "uploadFile",
         folderId,
         filename,
-        mimeType: args.mimeType,
+        mimeType,
         base64: args.base64,
-      }) ,
+      }),
       redirect: "follow",
     });
     if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };

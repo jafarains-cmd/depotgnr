@@ -9,6 +9,7 @@ import { requireRole } from "@/lib/permissions";
 import { sendWhatsApp } from "@/lib/whatsapp";
 import { sendTelegram } from "@/lib/telegram";
 import { sendPushToUser } from "@/lib/push";
+import { APP_URL } from "@/lib/constants";
 
 export async function kirimReminder(
   pelangganId: number,
@@ -29,7 +30,7 @@ export async function kirimReminder(
     `Halo ${p.nama}! 💧\n` +
     `Galon Anda mungkin sudah mau habis ya?\n` +
     `Yuk order isi ulang lagi dari ${namaDepot} — kami antar cepat ke rumah.\n\n` +
-    `Order langsung: https://depot.genster.my.id/pelanggan/order-baru`;
+    `Order langsung: ${APP_URL}/pelanggan/order-baru`;
 
   const channels: string[] = [];
 

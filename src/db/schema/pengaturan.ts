@@ -7,19 +7,6 @@ export const pengaturan = sqliteTable("pengaturan", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
-// Antrian sync ke Google Sheets
-export const syncQueue = sqliteTable("sync_queue", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  entity: text("entity", {
-    enum: ["transaksi", "order", "pelanggan", "produk", "stok"],
-  }).notNull(),
-  entityId: text("entity_id").notNull(),
-  action: text("action", { enum: ["upsert", "delete"] }).notNull(),
-  processedAt: integer("processed_at", { mode: "timestamp" }),
-  error: text("error"),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
-});
-
 // State session bot chat (untuk wizard order via Telegram/WA)
 export const chatSession = sqliteTable("chat_session", {
   id: integer("id").primaryKey({ autoIncrement: true }),
