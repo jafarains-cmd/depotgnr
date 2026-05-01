@@ -10,8 +10,8 @@ import { OrderClient, type OrderRow } from "./OrderClient";
 export const dynamic = "force-dynamic";
 
 export default async function OrderKasirPage() {
-  // Tampilkan: semua order belum-selesai + order selesai 48 jam terakhir (untuk lihat bukti antar)
-  const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
+  // Tampilkan: semua order belum-selesai + order selesai 7 hari terakhir
+  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const aktif = await db
     .select({
       id: orderHeader.id,
@@ -37,9 +37,13 @@ export default async function OrderKasirPage() {
       or(
         ne(orderHeader.status, "selesai"),
         and(eq(orderHeader.status, "selesai"), gte(orderHeader.diantarAt, cutoff)),
+        // Fallback: order selesai yang diantarAt-nya null (data lama sebelum field ada)
+        // ditampilkan kalau createdAt masih dalam 7 hari
+        and(eq(orderHeader.status, "selesai"), gte(orderHeader.createdAt, cutoff)),
       ),
     )
-    .orderBy(desc(orderHeader.createdAt));
+    .orderBy(desc(orderHeader.createdAt))
+    .limit(100);
 
   // Single batch query untuk semua items + produk join (no N+1)
   const orderIds = aktif.map((o) => o.id);
