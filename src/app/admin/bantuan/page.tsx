@@ -251,24 +251,167 @@ WHATSAPP_API_URL=https://api.fonnte.com/send`}
 
         <Section id="role" title="Role & Akun">
           <ul className="list-disc pl-5 space-y-1 text-sm">
-            <li><b>Admin</b>: full akses (dashboard, semua menu, pengaturan).</li>
-            <li><b>Kasir</b>: hanya POS, order management, riwayat transaksi.</li>
-            <li><b>Pelanggan</b>: order online, riwayat, profil.</li>
-            <li>Tambah staff baru di <a href="/admin/users" className="text-brand-600 underline">/admin/users</a> → <b>Tambah Admin/Kasir</b>.</li>
+            <li><b>Admin</b>: full akses (dashboard, semua menu, pengaturan, user management).</li>
+            <li><b>Kasir</b>: POS, order management, riwayat transaksi, mode kurir.</li>
+            <li><b>Kurir</b>: hanya halaman /kurir untuk antar order yang di-assign.</li>
+            <li><b>Pelanggan</b>: order online, riwayat, profil, loyalty.</li>
+            <li>
+              Tambah staff baru di{" "}
+              <a href="/admin/users" className="text-brand underline">/admin/users</a> →{" "}
+              <b>Tambah Admin/Kasir/Kurir</b>.
+            </li>
             <li>Pelanggan daftar sendiri di <code>/register</code>.</li>
           </ul>
         </Section>
 
-        <Section id="backup" title="Backup Database">
-          <p className="text-sm">
-            Database SQLite ada di file{" "}
-            <code className="bg-[color:var(--surface2)] px-1 rounded">./data/depot.db</code>. Backup tinggal copy
-            file ini ke lokasi aman secara berkala.
+        <Section
+          id="database"
+          title="Database & Maintenance"
+          summary="SQLite — kapasitas, backup, antisipasi growth."
+        >
+          <h4 className="font-bold text-sm mb-2">📊 Kapasitas SQLite untuk Depot GNR</h4>
+          <p className="text-sm mb-2">
+            Database engine adalah <b>SQLite</b> (file <code className="bg-[color:var(--surface2)] px-1 rounded">/opt/depot-air/data/depot.db</code>).
+            Untuk skala 1 depot UMKM, SQLite sangat mampu menangani volume besar:
           </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs border border-line rounded-md">
+              <thead className="bg-[color:var(--surface2)] text-left">
+                <tr>
+                  <th className="p-2">Volume Order</th>
+                  <th className="p-2">Status</th>
+                  <th className="p-2">Estimasi DB Size 5 Tahun</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                <tr><td className="p-2">&lt; 100 order/hari</td><td className="p-2">🟢 Sangat ringan</td><td className="p-2">~100 MB</td></tr>
+                <tr><td className="p-2">100–500 order/hari</td><td className="p-2">🟢 Aman bertahun-tahun</td><td className="p-2">~400 MB</td></tr>
+                <tr><td className="p-2">500–2.000 order/hari</td><td className="p-2">🟢 OK dengan tuning</td><td className="p-2">~1 GB</td></tr>
+                <tr><td className="p-2">2.000–10.000 order/hari</td><td className="p-2">🟡 Mulai terasa</td><td className="p-2">~5 GB</td></tr>
+                <tr><td className="p-2">&gt;10.000 order/hari concurrent</td><td className="p-2">🔴 Pertimbangkan PG</td><td className="p-2">10+ GB</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-[color:var(--muted)] mt-2">
+            Tuning yang sudah terpasang: WAL mode, busy_timeout=5000, cache 64MB, indexes lengkap.
+            Untuk volume normal UMKM (~50-200 order/hari), SQLite mampu sampai 10+ tahun.
+          </p>
+
+          <h4 className="font-bold text-sm mt-5 mb-2">💾 Backup Rutin</h4>
+          <p className="text-sm mb-2">
+            Backup SQLite super simple: tinggal copy file <code className="bg-[color:var(--surface2)] px-1 rounded">depot.db</code>.
+            Tapi hindari copy saat ada write berlangsung — pakai{" "}
+            <code className="bg-[color:var(--surface2)] px-1 rounded">.backup</code> command yang aman.
+          </p>
+          <p className="text-sm mb-1 font-semibold">Cron rotasi backup (rekomendasi):</p>
+          <CodeBlock
+            language="bash"
+            code={`# /etc/cron.daily/depot-backup  (jadikan executable: chmod +x)
+#!/bin/bash
+BACKUP_DIR=/opt/depot-air/backups
+mkdir -p "$BACKUP_DIR"
+DATE=$(date +%F)
+
+# Backup aman (no lock contention)
+sqlite3 /opt/depot-air/data/depot.db ".backup '$BACKUP_DIR/depot-$DATE.db'"
+
+# Compress & rotate
+gzip "$BACKUP_DIR/depot-$DATE.db"
+
+# Hapus backup harian > 7 hari
+find "$BACKUP_DIR" -name "depot-*.db.gz" -mtime +7 -delete
+
+# Backup mingguan (Minggu) di-keep lebih lama
+if [ "$(date +%u)" = "7" ]; then
+  cp "$BACKUP_DIR/depot-$DATE.db.gz" "$BACKUP_DIR/weekly-$DATE.db.gz"
+fi
+find "$BACKUP_DIR" -name "weekly-*.db.gz" -mtime +90 -delete`}
+          />
+          <p className="text-xs text-[color:var(--muted)] mt-2">
+            Hasil: 7 backup harian + 13 backup mingguan (rolling 90 hari). Total sekitar 200-500 MB.
+          </p>
+
+          <h4 className="font-bold text-sm mt-5 mb-2">🧹 Cleanup Data Lama (Cron)</h4>
+          <p className="text-sm mb-2">
+            Tabel{" "}
+            <code className="bg-[color:var(--surface2)] px-1 rounded">lokasi_kurir</code> tumbuh
+            cepat (push lokasi tiap 30 detik per order yang sedang diantar). Endpoint cleanup
+            otomatis hapus data &gt; 30 hari:
+          </p>
+          <CodeBlock
+            language="bash"
+            code={`# /etc/cron.weekly/depot-cleanup  (chmod +x)
+#!/bin/bash
+curl -fsS -X POST \\
+  -H "x-cron-secret: $CRON_SECRET" \\
+  https://depot.genster.my.id/api/cron/cleanup`}
+          />
+          <p className="text-xs text-[color:var(--muted)] mt-2">
+            Set <code>CRON_SECRET</code> di env aplikasi DAN cron job. Endpoint reject request
+            tanpa secret valid (cegah abuse public).
+          </p>
+
+          <h4 className="font-bold text-sm mt-5 mb-2">📈 Monitoring Mingguan</h4>
+          <p className="text-sm mb-2">Cek growth DB rutin biar tidak kaget:</p>
+          <CodeBlock
+            language="bash"
+            code={`# Ukuran file DB
+du -h /opt/depot-air/data/depot.db
+
+# Jumlah row per tabel utama
+sqlite3 /opt/depot-air/data/depot.db <<EOF
+.headers on
+SELECT 'order' tabel, COUNT(*) jumlah FROM "order"
+UNION ALL SELECT 'transaksi', COUNT(*) FROM transaksi
+UNION ALL SELECT 'mutasi_loyalti', COUNT(*) FROM mutasi_loyalti
+UNION ALL SELECT 'lokasi_kurir', COUNT(*) FROM lokasi_kurir
+UNION ALL SELECT 'pelanggan', COUNT(*) FROM pelanggan;
+EOF
+
+# Health check WAL mode (harus 'wal')
+sqlite3 /opt/depot-air/data/depot.db "PRAGMA journal_mode;"`}
+          />
+
+          <h4 className="font-bold text-sm mt-5 mb-2">⚠️ Tanda SQLite Mulai Kepayahan</h4>
+          <ul className="list-disc pl-5 space-y-1 text-sm">
+            <li><b>Error <code>SQLITE_BUSY</code></b> di <code>/var/log/depot-air.log</code> — write contention, pertimbangkan turunkan beban concurrent atau migrate ke PG.</li>
+            <li><b>Query &gt; 1 detik</b> untuk operasi simple — index kurang atau DB terlalu besar.</li>
+            <li><b>Backup lock &gt; 10 detik</b> — DB sudah terlalu besar untuk online backup.</li>
+            <li><b>DB &gt; 50 GB</b> — sudah waktunya pertimbangkan PostgreSQL.</li>
+          </ul>
+
+          <h4 className="font-bold text-sm mt-5 mb-2">🔄 Optimize Berkala (Opsional)</h4>
+          <p className="text-sm mb-2">
+            Jalankan <code className="bg-[color:var(--surface2)] px-1 rounded">VACUUM</code> 6 bulan sekali untuk reclaim space dari row yang di-delete:
+          </p>
+          <CodeBlock
+            language="bash"
+            code={`# Stop service dulu (VACUUM butuh exclusive lock)
+systemctl stop depot-air
+sqlite3 /opt/depot-air/data/depot.db "VACUUM;"
+systemctl start depot-air
+
+# Atau lebih ringan: ANALYZE (tidak perlu stop service)
+sqlite3 /opt/depot-air/data/depot.db "ANALYZE;"`}
+          />
+          <p className="text-xs text-[color:var(--muted)] mt-2">
+            ANALYZE update statistik index untuk query planner — aman dijalankan kapan saja.
+          </p>
+
+          <h4 className="font-bold text-sm mt-5 mb-2">🔀 Migrasi ke Postgres (Kalau Perlu)</h4>
+          <p className="text-sm">
+            Tunda migrasi ke PostgreSQL sampai ada salah satu trigger:
+          </p>
+          <ul className="list-disc pl-5 space-y-1 text-sm mt-2">
+            <li>Buka cabang ke-2 (multi-tenant arsitektur)</li>
+            <li>Order sustain di atas 2.000/hari concurrent</li>
+            <li>Butuh dashboard BI eksternal (Metabase, Looker, dll) yang konek ke DB</li>
+            <li>Ingin replikasi/HA untuk uptime 99.9%</li>
+          </ul>
           <p className="text-sm mt-2">
-            Untuk produksi, pertimbangkan migrasi ke Postgres dengan ubah{" "}
-            <code className="bg-[color:var(--surface2)] px-1 rounded">drizzle.config.ts</code> dan{" "}
-            <code className="bg-[color:var(--surface2)] px-1 rounded">src/db/index.ts</code>.
+            Migrasi membutuhkan sekitar 6-10 jam kerja: ubah Drizzle config + driver, transform
+            schema (boolean, timestamp, autoincrement → serial), dump SQLite → restore ke PG.
+            Kontak admin development untuk eksekusi.
           </p>
         </Section>
       </div>
