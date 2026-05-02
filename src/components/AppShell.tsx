@@ -7,7 +7,13 @@ import { authClient } from "@/lib/auth-client";
 import { LogOut, Menu, X } from "lucide-react";
 import { DropFill } from "./GallonArt";
 
-export type NavItem = { href: string; label: string; icon?: React.ReactNode };
+export type NavItem = {
+  href: string;
+  label: string;
+  icon?: React.ReactNode;
+  /** Badge count — pill merah di kanan label kalau > 0 */
+  badge?: number;
+};
 
 export function AppShell({
   title,
@@ -112,7 +118,12 @@ export function AppShell({
                 }`}
               >
                 {item.icon}
-                {item.label}
+                <span className="flex-1">{item.label}</span>
+                {item.badge !== undefined && item.badge > 0 && (
+                  <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-rose-500 text-white min-w-[18px] text-center leading-none flex-shrink-0">
+                    {item.badge > 99 ? "99+" : item.badge}
+                  </span>
+                )}
               </Link>
             );
           })}
