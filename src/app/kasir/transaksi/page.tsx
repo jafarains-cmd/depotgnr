@@ -67,48 +67,64 @@ export default async function RiwayatKasirPage({
         </span>
       </div>
       <div className="bg-surface rounded-xl border border-line overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
-            <tr>
-              <th className="p-3">Waktu</th>
-              <th className="p-3">No. Nota</th>
-              <th className="p-3">Pelanggan</th>
-              <th className="p-3">Kasir</th>
-              <th className="p-3">Bayar</th>
-              <th className="p-3 text-right">Total</th>
-              <th className="p-3"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-line">
-            {rows.map((r) => (
-              <tr key={r.id} className="hover:bg-[color:var(--surface2)]">
-                <td className="p-3 text-xs text-[color:var(--muted)]">
-                  {r.createdAt.toLocaleString("id-ID")}
-                </td>
-                <td className="p-3 font-mono text-xs">{r.nomorNota}</td>
-                <td className="p-3">{r.pelangganNama ?? <span className="text-[color:var(--muted)]">walk-in</span>}</td>
-                <td className="p-3">{r.kasir ?? "-"}</td>
-                <td className="p-3 uppercase text-xs">{r.metodeBayar}</td>
-                <td className="p-3 text-right font-medium">{formatRupiah(r.total)}</td>
-                <td className="p-3 text-right">
-                  <Link
-                    href={`/kasir/transaksi/${r.id}`}
-                    className="text-xs text-brand-600 hover:underline"
-                  >
-                    Nota
-                  </Link>
-                </td>
-              </tr>
-            ))}
-            {rows.length === 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
               <tr>
-                <td colSpan={7} className="p-4 md:p-6 text-center text-[color:var(--muted)]">
-                  Belum ada transaksi.
-                </td>
+                <th className="p-3">Waktu</th>
+                <th className="p-3 hidden sm:table-cell">No. Nota</th>
+                <th className="p-3">Pelanggan</th>
+                <th className="p-3 hidden md:table-cell">Kasir</th>
+                <th className="p-3 hidden sm:table-cell">Bayar</th>
+                <th className="p-3 text-right">Total</th>
+                <th className="p-3"></th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {rows.map((r) => (
+                <tr key={r.id} className="hover:bg-[color:var(--surface2)]">
+                  <td className="p-3 text-xs text-[color:var(--muted)]">
+                    {r.createdAt.toLocaleString("id-ID", {
+                      day: "2-digit",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                    {/* di mobile, tampilkan info nota & metode bayar di bawah waktu */}
+                    <div className="sm:hidden text-[10px] mt-0.5 font-mono">{r.nomorNota}</div>
+                    <div className="sm:hidden text-[10px] mt-0.5 uppercase">{r.metodeBayar}</div>
+                  </td>
+                  <td className="p-3 font-mono text-xs hidden sm:table-cell">{r.nomorNota}</td>
+                  <td className="p-3 truncate max-w-[120px]">
+                    {r.pelangganNama ?? (
+                      <span className="text-[color:var(--muted)]">walk-in</span>
+                    )}
+                  </td>
+                  <td className="p-3 hidden md:table-cell">{r.kasir ?? "-"}</td>
+                  <td className="p-3 uppercase text-xs hidden sm:table-cell">{r.metodeBayar}</td>
+                  <td className="p-3 text-right font-medium whitespace-nowrap">
+                    {formatRupiah(r.total)}
+                  </td>
+                  <td className="p-3 text-right">
+                    <Link
+                      href={`/kasir/transaksi/${r.id}`}
+                      className="text-xs text-brand hover:underline"
+                    >
+                      Nota
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+              {rows.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="p-6 text-center text-[color:var(--muted)]">
+                    Belum ada transaksi.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

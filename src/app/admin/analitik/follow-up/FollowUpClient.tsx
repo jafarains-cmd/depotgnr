@@ -155,6 +155,7 @@ export function FollowUpClient({ rows }: { rows: Row[] }) {
       )}
 
       <div className="bg-surface border border-line rounded-2xl overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
             <tr>
@@ -234,6 +235,7 @@ export function FollowUpClient({ rows }: { rows: Row[] }) {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

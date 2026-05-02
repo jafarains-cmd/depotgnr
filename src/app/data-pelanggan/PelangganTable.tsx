@@ -67,23 +67,42 @@ export function PelangganTable({
       )}
 
       <div className="bg-surface rounded-xl border border-line overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
             <tr>
               <th className="p-3">Nama</th>
-              <th className="p-3">Telp</th>
-              <th className="p-3">Alamat</th>
-              <th className="p-3">Tipe</th>
-              <th className="p-3"></th>
+              <th className="p-3 hidden sm:table-cell">Telp</th>
+              <th className="p-3 hidden md:table-cell">Alamat</th>
+              <th className="p-3 hidden sm:table-cell">Tipe</th>
+              <th className="p-3 text-right">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
             {filtered.map((p) => (
               <tr key={p.id} className="hover:bg-[color:var(--surface2)]">
-                <td className="p-3 font-medium">{p.nama}</td>
-                <td className="p-3">{p.telp ?? "-"}</td>
-                <td className="p-3 max-w-xs truncate">{p.alamat ?? "-"}</td>
-                <td className="p-3">
+                <td className="p-3 font-medium">
+                  <div>{p.nama}</div>
+                  {/* show telp & alamat as sub-line on mobile */}
+                  <div className="sm:hidden text-xs text-[color:var(--muted)] mt-0.5 space-y-0.5">
+                    {p.telp && <div>📞 {p.telp}</div>}
+                    {p.alamat && <div className="line-clamp-1">📍 {p.alamat}</div>}
+                    <div>
+                      <span
+                        className={`inline-block px-2 py-0.5 rounded-full text-[10px] mt-1 ${
+                          p.tipe === "langganan"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-[color:var(--surface2)] text-[color:var(--muted)]"
+                        }`}
+                      >
+                        {p.tipe}
+                      </span>
+                    </div>
+                  </div>
+                </td>
+                <td className="p-3 hidden sm:table-cell">{p.telp ?? "-"}</td>
+                <td className="p-3 max-w-xs truncate hidden md:table-cell">{p.alamat ?? "-"}</td>
+                <td className="p-3 hidden sm:table-cell">
                   <span
                     className={`px-2 py-0.5 rounded-full text-xs ${
                       p.tipe === "langganan"
@@ -127,6 +146,7 @@ export function PelangganTable({
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

@@ -53,16 +53,17 @@ export default async function LaporanPage({
     .groupBy(transaksiItem.produkId, transaksiItem.jenis)
     .orderBy(desc(sql<number>`sum(${transaksiItem.subtotal})`));
 
-  // Grafik harian: omzet per tanggal selama 7 hari ke belakang
+  // Grafik harian: omzet per tanggal. createdAt mode 'timestamp' tersimpan sebagai
+  // unix SECONDS di SQLite, jadi langsung pakai 'unixepoch' tanpa /1000.
   const harian = await db
     .select({
-      tanggal: sql<string>`strftime('%Y-%m-%d', ${transaksi.createdAt} / 1000, 'unixepoch', 'localtime')`,
+      tanggal: sql<string>`strftime('%Y-%m-%d', ${transaksi.createdAt}, 'unixepoch', 'localtime')`,
       omzet: sql<number>`coalesce(sum(${transaksi.total}), 0)`,
       jml: sql<number>`count(*)`,
     })
     .from(transaksi)
     .where(where)
-    .groupBy(sql`strftime('%Y-%m-%d', ${transaksi.createdAt} / 1000, 'unixepoch', 'localtime')`)
+    .groupBy(sql`strftime('%Y-%m-%d', ${transaksi.createdAt}, 'unixepoch', 'localtime')`)
     .orderBy(sql`1`);
 
   const maxOmzet = Math.max(...harian.map((h) => h.omzet), 1);
@@ -74,26 +75,28 @@ export default async function LaporanPage({
     <div className="p-4 md:p-6 space-y-6">
       <PageHeader title="Laporan" description="Omzet, transaksi, dan breakdown produk." />
 
-      <form className="bg-surface border border-line rounded-2xl p-4 flex gap-3 items-end text-sm">
-        <div>
+      <form className="bg-surface border border-line rounded-2xl p-4 flex gap-3 items-end text-sm flex-wrap">
+        <div className="flex-1 min-w-[140px]">
           <label className="block text-xs text-[color:var(--muted)] mb-1">Dari</label>
           <input
             type="date"
             name="from"
             defaultValue={fromStr}
-            className="px-3 py-1.5 border border-line rounded-md"
+            className="w-full px-3 py-1.5 border border-line rounded-md"
           />
         </div>
-        <div>
+        <div className="flex-1 min-w-[140px]">
           <label className="block text-xs text-[color:var(--muted)] mb-1">Sampai</label>
           <input
             type="date"
             name="to"
             defaultValue={toStr}
-            className="px-3 py-1.5 border border-line rounded-md"
+            className="w-full px-3 py-1.5 border border-line rounded-md"
           />
         </div>
-        <button className="px-4 py-1.5 bg-brand-600 text-white rounded-md">Terapkan</button>
+        <button className="px-4 py-1.5 bg-brand text-white rounded-md whitespace-nowrap">
+          Terapkan
+        </button>
       </form>
 
       <div className="grid sm:grid-cols-3 gap-3">
@@ -113,16 +116,25 @@ export default async function LaporanPage({
         ) : (
           <div className="space-y-1.5">
             {harian.map((h) => (
-              <div key={h.tanggal} className="flex items-center gap-3 text-xs">
-                <div className="w-24 text-[color:var(--muted)]">{h.tanggal}</div>
-                <div className="flex-1 bg-[color:var(--surface2)] rounded h-6 relative overflow-hidden">
+              <div key={h.tanggal} className="flex items-center gap-2 sm:gap-3 text-xs">
+                <div className="w-16 sm:w-24 text-[color:var(--muted)] truncate">
+                  {new Date(h.tanggal).toLocaleDateString("id-ID", {
+                    day: "2-digit",
+                    month: "short",
+                  })}
+                </div>
+                <div className="flex-1 bg-[color:var(--surface2)] rounded h-6 relative overflow-hidden min-w-0">
                   <div
-                    className="bg-brand-500 h-full"
+                    className="bg-brand h-full"
                     style={{ width: `${(h.omzet / maxOmzet) * 100}%` }}
                   />
                 </div>
-                <div className="w-32 text-right font-medium">{formatRupiah(h.omzet)}</div>
-                <div className="w-12 text-right text-[color:var(--muted)]">{h.jml}×</div>
+                <div className="w-20 sm:w-32 text-right font-medium whitespace-nowrap">
+                  {formatRupiah(h.omzet)}
+                </div>
+                <div className="w-8 sm:w-12 text-right text-[color:var(--muted)]">
+                  {h.jml}×
+                </div>
               </div>
             ))}
           </div>
@@ -131,33 +143,42 @@ export default async function LaporanPage({
 
       <section className="bg-surface border border-line rounded-2xl overflow-hidden">
         <div className="px-4 py-3 border-b border-line font-semibold">Breakdown per Produk</div>
-        <table className="w-full text-sm">
-          <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left text-xs">
-            <tr>
-              <th className="p-3">Produk</th>
-              <th className="p-3">Jenis</th>
-              <th className="p-3 text-right">Qty</th>
-              <th className="p-3 text-right">Subtotal</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-line">
-            {breakdownProduk.map((b, i) => (
-              <tr key={i}>
-                <td className="p-3 font-medium">{b.namaProduk ?? "-"}</td>
-                <td className="p-3">{b.jenis}</td>
-                <td className="p-3 text-right">{b.totalQty}</td>
-                <td className="p-3 text-right font-medium">{formatRupiah(b.totalSubtotal)}</td>
-              </tr>
-            ))}
-            {breakdownProduk.length === 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left text-xs">
               <tr>
-                <td colSpan={4} className="p-4 md:p-6 text-center text-[color:var(--muted)]">
-                  Belum ada data.
-                </td>
+                <th className="p-3">Produk</th>
+                <th className="p-3 hidden sm:table-cell">Jenis</th>
+                <th className="p-3 text-right">Qty</th>
+                <th className="p-3 text-right">Subtotal</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {breakdownProduk.map((b, i) => (
+                <tr key={i}>
+                  <td className="p-3 font-medium">
+                    <div>{b.namaProduk ?? "-"}</div>
+                    <div className="sm:hidden text-[10px] text-[color:var(--muted)] mt-0.5">
+                      {b.jenis}
+                    </div>
+                  </td>
+                  <td className="p-3 hidden sm:table-cell">{b.jenis}</td>
+                  <td className="p-3 text-right">{b.totalQty}</td>
+                  <td className="p-3 text-right font-medium whitespace-nowrap">
+                    {formatRupiah(b.totalSubtotal)}
+                  </td>
+                </tr>
+              ))}
+              {breakdownProduk.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="p-6 text-center text-[color:var(--muted)]">
+                    Belum ada data.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <div className="text-xs text-[color:var(--muted)]">
