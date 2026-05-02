@@ -7,7 +7,8 @@ import { pelanggan } from "@/db/schema/pelanggan";
 import { requireRole } from "@/lib/permissions";
 
 export async function upsertPelanggan(formData: FormData) {
-  await requireRole(["admin"]);
+  // Admin & kasir boleh create/edit
+  await requireRole(["admin", "kasir"]);
   const idRaw = formData.get("id");
   const id = idRaw ? Number(idRaw) : null;
   const latRaw = String(formData.get("koordinatLat") ?? "").trim();
@@ -29,11 +30,11 @@ export async function upsertPelanggan(formData: FormData) {
   } else {
     await db.insert(pelanggan).values(data);
   }
-  revalidatePath("/admin/pelanggan");
+  revalidatePath("/data-pelanggan");
 }
 
 export async function deletePelanggan(id: number) {
   await requireRole(["admin"]);
   await db.delete(pelanggan).where(eq(pelanggan.id, id));
-  revalidatePath("/admin/pelanggan");
+  revalidatePath("/data-pelanggan");
 }

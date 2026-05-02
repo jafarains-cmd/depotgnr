@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/permissions";
 const NAV = [
   { href: "/admin/dashboard", label: "Dashboard", icon: <LayoutDashboard size={16} /> },
   { href: "/admin/produk", label: "Produk", icon: <Package size={16} /> },
-  { href: "/admin/pelanggan", label: "Pelanggan", icon: <Users size={16} /> },
+  { href: "/data-pelanggan", label: "Pelanggan", icon: <Users size={16} /> },
   { href: "/admin/peta", label: "Peta Pelanggan", icon: <Map size={16} /> },
   { href: "/admin/inventory", label: "Inventory", icon: <Boxes size={16} /> },
   { href: "/kasir/transaksi", label: "Transaksi", icon: <Receipt size={16} /> },

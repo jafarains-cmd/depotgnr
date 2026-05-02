@@ -6,7 +6,13 @@ import type { Pelanggan } from "@/db/schema/pelanggan";
 import { upsertPelanggan, deletePelanggan } from "./actions";
 import { LocationPicker } from "./LocationPicker";
 
-export function PelangganTable({ rows }: { rows: Pelanggan[] }) {
+export function PelangganTable({
+  rows,
+  canDelete,
+}: {
+  rows: Pelanggan[];
+  canDelete: boolean;
+}) {
   const [editing, setEditing] = useState<Pelanggan | null>(null);
   const [creating, setCreating] = useState(false);
   const [, startTransition] = useTransition();
@@ -89,19 +95,26 @@ export function PelangganTable({ rows }: { rows: Pelanggan[] }) {
                   </span>
                 </td>
                 <td className="p-3 text-right space-x-2">
-                  <button onClick={() => setEditing(p)} className="text-brand-600">
+                  <button
+                    onClick={() => setEditing(p)}
+                    className="text-brand"
+                    title="Edit"
+                  >
                     <Pencil size={14} />
                   </button>
-                  <button
-                    onClick={() => {
-                      if (confirm(`Hapus ${p.nama}?`)) {
-                        startTransition(() => deletePelanggan(p.id));
-                      }
-                    }}
-                    className="text-red-500"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  {canDelete && (
+                    <button
+                      onClick={() => {
+                        if (confirm(`Hapus ${p.nama}?`)) {
+                          startTransition(() => deletePelanggan(p.id));
+                        }
+                      }}
+                      className="text-red-500"
+                      title="Hapus (admin)"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
