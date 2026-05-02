@@ -15,7 +15,10 @@ export async function countOrderMasuk(): Promise<number> {
 }
 
 /**
- * Hitung pembayaran online yang menunggu verifikasi (bukti sudah masuk).
+ * Hitung pembayaran yang butuh tindakan staff:
+ *  - statusBayar = 'menunggu' (bukti pelanggan sudah masuk, perlu verifikasi)
+ *  - ATAU status='selesai' + statusBayar='belum' (PIUTANG — sudah diantar tapi belum lunas)
+ * Match dengan tab "Menunggu Verifikasi" + "Piutang" di /pembayaran.
  */
 export async function countPembayaranMenunggu(): Promise<number> {
   const [row] = await db
@@ -23,8 +26,8 @@ export async function countPembayaranMenunggu(): Promise<number> {
     .from(orderHeader)
     .where(
       and(
-        eq(orderHeader.statusBayar, "menunggu"),
         ne(orderHeader.status, "batal"),
+        sql`(${orderHeader.statusBayar} = 'menunggu' OR (${orderHeader.status} = 'selesai' AND ${orderHeader.statusBayar} = 'belum'))`,
       ),
     );
   return row.n ?? 0;
