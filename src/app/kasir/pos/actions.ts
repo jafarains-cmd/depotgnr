@@ -5,7 +5,8 @@ import { eq, and } from "drizzle-orm";
 import { db } from "@/db";
 import { transaksi, transaksiItem } from "@/db/schema/transaksi";
 import { stokGalon, mutasiStok } from "@/db/schema/inventory";
-import { orderHeader } from "@/db/schema/order";
+import { orderHeader, orderItem } from "@/db/schema/order";
+import { generateTrackingToken } from "@/lib/tracking";
 import { requireRole } from "@/lib/permissions";
 import { generateNomorNota } from "@/lib/utils";
 import { notifAdminTelegram } from "@/lib/telegram";
@@ -45,6 +46,26 @@ export async function createTransaksi(input: CreateTransaksiInput) {
   const subtotal = input.items.reduce((s, it) => s + it.hargaSatuan * it.qty, 0);
   const redeem = Math.max(0, Math.min(input.redeemLoyalti ?? 0, subtotal - (input.diskon ?? 0)));
   const total = Math.max(0, subtotal - (input.diskon ?? 0) - redeem);
+
+  // Bayar online (transfer/qris) tidak langsung lunas — pelanggan harus upload bukti.
+  // Karena itu kita pakai jalur ORDER walk-in (yang sudah punya flow upload bukti + konfirmasi
+  // di /pembayaran), bukan transaksi.
+  const isPayOnline = input.metodeBayar === "transfer" || input.metodeBayar === "qris";
+  if (isPayOnline) {
+    if (!input.pelangganId) {
+      throw new Error(
+        "Bayar transfer/QRIS butuh pelanggan terdaftar (untuk upload bukti bayar). Pilih pelanggan dulu, atau pakai metode CASH.",
+      );
+    }
+    return createOrderUntukBayarOnline({
+      session,
+      input,
+      total,
+      subtotal,
+    });
+  }
+
+  // === Cash flow (existing) ===
   const nomorNota = generateNomorNota("NOTA");
 
   // Validate redeem (kalau ada) sebelum insert
@@ -94,9 +115,9 @@ export async function createTransaksi(input: CreateTransaksiInput) {
       //               → kita anggap depot punya pool "air siap" = stok terisi.
       //   tukar     : stok terisi -qty, stok kosong +qty (pelanggan kasih kosong, terima terisi)
       //   beli_baru : stok terisi -qty (galon ikut dibawa pelanggan)
-      adjustStok(tx, it.produkId, "terisi", -it.qty, it.jenis, trx.id, session.user.id);
+      adjustStok(tx, it.produkId, "terisi", -it.qty, it.jenis, trx.id, null, session.user.id);
       if (it.jenis === "tukar") {
-        adjustStok(tx, it.produkId, "kosong", +it.qty, it.jenis, trx.id, session.user.id);
+        adjustStok(tx, it.produkId, "kosong", +it.qty, it.jenis, trx.id, null, session.user.id);
       }
     }
 
@@ -149,7 +170,88 @@ export async function createTransaksi(input: CreateTransaksiInput) {
   revalidatePath("/admin/transaksi");
   revalidatePath("/admin/dashboard");
 
-  return { id: trxId as number, nomorNota, total };
+  return { type: "transaksi" as const, id: trxId as number, nomorNota, total };
+}
+
+/**
+ * POS dengan metode transfer/QRIS — buat order walk-in yang menunggu pelanggan upload bukti.
+ * Stok tetap turun langsung (barang sudah diambil pelanggan).
+ * Pelanggan bisa lanjut bayar di /pelanggan/order/[id]/bayar.
+ */
+async function createOrderUntukBayarOnline(args: {
+  session: Awaited<ReturnType<typeof requireRole>>;
+  input: CreateTransaksiInput;
+  total: number;
+  subtotal: number;
+}): Promise<{
+  type: "order";
+  orderId: number;
+  nomorOrder: string;
+  total: number;
+  payUrl: string;
+}> {
+  const { session, input, total } = args;
+  const nomorOrder = generateNomorNota("POS");
+
+  const orderId = db.transaction((tx) => {
+    const [o] = tx
+      .insert(orderHeader)
+      .values({
+        nomorOrder,
+        pelangganId: input.pelangganId,
+        sumber: "walk-in",
+        alamatAntar: "(diambil di depot)",
+        status: "selesai", // Barang sudah diambil pelanggan
+        diantarAt: new Date(),
+        tipePengantaran: "antar-saja",
+        totalEstimasi: total,
+        catatan: input.catatan ?? null,
+        metodeBayar: input.metodeBayar,
+        statusBayar: "belum",
+        trackingToken: generateTrackingToken(),
+        kurirUserId: session.user.id, // catat siapa kasir yang handle
+      })
+      .returning()
+      .all();
+
+    for (const it of input.items) {
+      tx.insert(orderItem)
+        .values({
+          orderId: o.id,
+          produkId: it.produkId,
+          qty: it.qty,
+          jenis: it.jenis,
+          hargaEstimasi: it.hargaSatuan,
+        })
+        .run();
+
+      // Stok turun langsung (barang sudah diambil)
+      adjustStok(tx, it.produkId, "terisi", -it.qty, it.jenis, null, o.id, session.user.id);
+      if (it.jenis === "tukar") {
+        adjustStok(tx, it.produkId, "kosong", +it.qty, it.jenis, null, o.id, session.user.id);
+      }
+    }
+
+    return o.id;
+  });
+
+  bestEffort(
+    "notifAdminTelegram(pos-online)",
+    notifAdminTelegram(
+      `🧾 *${nomorOrder}* (POS · ${input.metodeBayar.toUpperCase()})\nTotal: ${total.toLocaleString("id-ID")}\nMenunggu pelanggan upload bukti bayar.`,
+    ),
+  );
+
+  revalidatePath("/kasir/pos");
+  revalidatePath("/pembayaran");
+
+  return {
+    type: "order",
+    orderId,
+    nomorOrder,
+    total,
+    payUrl: `/pelanggan/order/${orderId}/bayar`,
+  };
 }
 
 function adjustStok(
@@ -158,7 +260,8 @@ function adjustStok(
   status: "kosong" | "terisi" | "rusak",
   delta: number,
   alasanJenis: Jenis,
-  refTrxId: number,
+  refTrxId: number | null,
+  refOrderId: number | null,
   userId: string,
 ) {
   const existing = tx
@@ -182,8 +285,9 @@ function adjustStok(
       produkId,
       status,
       perubahan: delta,
-      alasan: `transaksi:${alasanJenis}`,
+      alasan: refOrderId ? `pos-online:${alasanJenis}` : `transaksi:${alasanJenis}`,
       refTransaksiId: refTrxId,
+      refOrderId,
       userId,
     })
     .run();

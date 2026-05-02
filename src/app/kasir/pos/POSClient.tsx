@@ -33,6 +33,13 @@ export function POSClient({
   const [catatan, setCatatan] = useState("");
   const [pending, startTransition] = useTransition();
   const [lastNota, setLastNota] = useState<{ id: number; nota: string; total: number } | null>(null);
+  const [pendingPayment, setPendingPayment] = useState<{
+    orderId: number;
+    nomorOrder: string;
+    total: number;
+    payUrl: string;
+    metode: string;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const subtotal = useMemo(
@@ -86,7 +93,17 @@ export function POSClient({
           catatan: catatan || undefined,
           refOrderId: preset?.refOrderId,
         });
-        setLastNota({ id: res.id, nota: res.nomorNota, total: res.total });
+        if (res.type === "transaksi") {
+          setLastNota({ id: res.id, nota: res.nomorNota, total: res.total });
+        } else {
+          setPendingPayment({
+            orderId: res.orderId,
+            nomorOrder: res.nomorOrder,
+            total: res.total,
+            payUrl: res.payUrl,
+            metode: metodeBayar,
+          });
+        }
         setCart([]);
         setDiskon(0);
         setCatatan("");
@@ -289,6 +306,60 @@ export function POSClient({
                 className="px-3 py-1.5 bg-brand-600 text-white rounded-md inline-flex items-center gap-1 text-xs"
               >
                 <Printer size={14} /> Buka Nota
+              </a>
+            </div>
+          </div>
+        )}
+
+        {pendingPayment && (
+          <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 text-sm space-y-2">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[10px] font-bold tracking-widest text-amber-800">
+                  MENUNGGU PEMBAYARAN · {pendingPayment.metode.toUpperCase()}
+                </div>
+                <div className="font-extrabold text-amber-900 mt-0.5">
+                  {pendingPayment.nomorOrder}
+                </div>
+                <div className="text-amber-900 mt-1">
+                  Total: <b>{formatRupiah(pendingPayment.total)}</b>
+                </div>
+                <div className="text-xs text-amber-800 mt-2">
+                  Pelanggan upload bukti bayar di link ini. Setelah upload, konfirmasi di
+                  halaman <b>Pembayaran</b>.
+                </div>
+              </div>
+              <button
+                onClick={() => setPendingPayment(null)}
+                className="text-amber-800 hover:text-amber-900 text-xs font-bold"
+              >
+                ✕ Tutup
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <a
+                href={pendingPayment.payUrl}
+                target="_blank"
+                rel="noopener"
+                className="px-3 py-2 bg-brand-600 text-white rounded-md text-xs font-bold"
+              >
+                Buka Halaman Bayar →
+              </a>
+              <button
+                onClick={async () => {
+                  const url = `${window.location.origin}${pendingPayment.payUrl}`;
+                  await navigator.clipboard.writeText(url);
+                  alert("Link tersalin. Kirim ke pelanggan lewat WA.");
+                }}
+                className="px-3 py-2 bg-amber-200 text-amber-900 rounded-md text-xs font-bold"
+              >
+                Salin Link
+              </button>
+              <a
+                href="/pembayaran"
+                className="px-3 py-2 border border-amber-400 text-amber-900 rounded-md text-xs font-bold"
+              >
+                Lihat di /pembayaran
               </a>
             </div>
           </div>
