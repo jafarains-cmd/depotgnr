@@ -1,6 +1,7 @@
 import { eq, and, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { orderHeader } from "@/db/schema/order";
+import { bonusKurir } from "@/db/schema/bonus";
 
 /**
  * Hitung order baru masuk yang belum di-tindak kasir (status pending).
@@ -46,6 +47,18 @@ export async function countPesananBelumTuntas(pelangganId: number): Promise<numb
         sql`(${orderHeader.status} != 'selesai' OR ${orderHeader.statusBayar} IN ('belum', 'menunggu'))`,
       ),
     );
+  return row.n ?? 0;
+}
+
+/**
+ * Hitung jumlah kurir yang masih punya bonus pending (belum dibayar owner).
+ * Distinct kurirUserId. Untuk badge "Bonus Kurir" di sidebar admin.
+ */
+export async function countKurirBonusPending(): Promise<number> {
+  const [row] = await db
+    .select({ n: sql<number>`count(distinct ${bonusKurir.kurirUserId})` })
+    .from(bonusKurir)
+    .where(eq(bonusKurir.status, "pending"));
   return row.n ?? 0;
 }
 
