@@ -30,6 +30,26 @@ export async function countPembayaranMenunggu(): Promise<number> {
 }
 
 /**
+ * Hitung pesanan pelanggan yang belum tuntas — untuk badge tab "Pesanan" di nav pelanggan.
+ * Termasuk:
+ *  - Order yang masih in-progress (status BUKAN selesai/batal), ATAU
+ *  - Order selesai tapi belum lunas (statusBayar belum/menunggu)
+ */
+export async function countPesananBelumTuntas(pelangganId: number): Promise<number> {
+  const [row] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(orderHeader)
+    .where(
+      and(
+        eq(orderHeader.pelangganId, pelangganId),
+        ne(orderHeader.status, "batal"),
+        sql`(${orderHeader.status} != 'selesai' OR ${orderHeader.statusBayar} IN ('belum', 'menunggu'))`,
+      ),
+    );
+  return row.n ?? 0;
+}
+
+/**
  * Hitung order aktif yang ditugaskan ke kurir (atau kasir/admin yang merangkap).
  * Untuk badge "Mode Kurir" di sidebar — counts hanya order yang sedang in-flight.
  */
