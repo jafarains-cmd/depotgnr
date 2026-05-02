@@ -1,18 +1,31 @@
 import Link from "next/link";
 import { db } from "@/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, gte, lte } from "drizzle-orm";
 import { transaksi } from "@/db/schema/transaksi";
 import { user as userTable } from "@/db/schema/auth";
 import { pelanggan } from "@/db/schema/pelanggan";
 import { PageHeader } from "@/components/AppShell";
 import { formatRupiah } from "@/lib/utils";
 import { requireRole } from "@/lib/permissions";
+import { DateRangeFilter } from "@/components/DateRangeFilter";
+import { parseRange } from "@/lib/date-range";
 
 export const dynamic = "force-dynamic";
 
-export default async function RiwayatKasirPage() {
+export default async function RiwayatKasirPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+}) {
   const session = await requireRole(["admin", "kasir"]);
   const role = session.user.role;
+  const sp = await searchParams;
+  const range = parseRange(sp);
+
+  const conds = [];
+  if (role !== "admin") conds.push(eq(transaksi.kasirUserId, session.user.id));
+  if (range.from) conds.push(gte(transaksi.createdAt, range.from));
+  if (range.to) conds.push(lte(transaksi.createdAt, range.to));
 
   const rows = await db
     .select({
@@ -27,16 +40,32 @@ export default async function RiwayatKasirPage() {
     .from(transaksi)
     .leftJoin(userTable, eq(transaksi.kasirUserId, userTable.id))
     .leftJoin(pelanggan, eq(transaksi.pelangganId, pelanggan.id))
-    .where(role === "admin" ? undefined : eq(transaksi.kasirUserId, session.user.id))
+    .where(conds.length > 0 ? and(...conds) : undefined)
     .orderBy(desc(transaksi.createdAt))
-    .limit(100);
+    .limit(200);
+
+  const totalOmzet = rows.reduce((s, r) => s + r.total, 0);
 
   return (
     <div className="p-4 md:p-6">
       <PageHeader
         title="Riwayat Transaksi"
-        description={role === "admin" ? "Semua transaksi (100 terbaru)." : "Transaksi yang Anda buat."}
+        description={role === "admin" ? "Semua transaksi." : "Transaksi yang Anda buat."}
       />
+      <div className="mb-4">
+        <DateRangeFilter
+          active={range.key}
+          customFrom={range.from}
+          customTo={range.to}
+          basePath="/kasir/transaksi"
+        />
+      </div>
+      <div className="mb-3 flex items-center justify-between flex-wrap gap-2 text-sm">
+        <span className="text-[color:var(--muted)]">{rows.length} transaksi</span>
+        <span className="font-bold text-brand">
+          Omzet: {formatRupiah(totalOmzet)}
+        </span>
+      </div>
       <div className="bg-surface rounded-xl border border-line overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">

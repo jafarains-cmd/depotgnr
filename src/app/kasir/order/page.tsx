@@ -1,17 +1,30 @@
 import { db } from "@/db";
-import { eq, desc, gte, or, ne, and, inArray } from "drizzle-orm";
+import { eq, desc, gte, lte, or, ne, and, inArray } from "drizzle-orm";
 import { orderHeader, orderItem } from "@/db/schema/order";
 import { pelanggan } from "@/db/schema/pelanggan";
 import { produk } from "@/db/schema/produk";
 import { user as userTable } from "@/db/schema/auth";
 import { PageHeader } from "@/components/AppShell";
 import { OrderClient, type OrderRow } from "./OrderClient";
+import { DateRangeFilter } from "@/components/DateRangeFilter";
+import { parseRange } from "@/lib/date-range";
 
 export const dynamic = "force-dynamic";
 
-export default async function OrderKasirPage() {
-  // Tampilkan: semua order belum-selesai + order selesai 7 hari terakhir
-  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+export default async function OrderKasirPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+}) {
+  const sp = await searchParams;
+  const range = parseRange(sp);
+
+  // Filter berdasarkan range tanggal user. Default 30 hari terakhir.
+  // "Aktif" (non-selesai) selalu ditampilkan terlepas range kalau di-toggle "Semua".
+  const conds = [];
+  if (range.from) conds.push(gte(orderHeader.createdAt, range.from));
+  if (range.to) conds.push(lte(orderHeader.createdAt, range.to));
+
   const aktif = await db
     .select({
       id: orderHeader.id,
@@ -33,17 +46,9 @@ export default async function OrderKasirPage() {
     })
     .from(orderHeader)
     .leftJoin(pelanggan, eq(orderHeader.pelangganId, pelanggan.id))
-    .where(
-      or(
-        ne(orderHeader.status, "selesai"),
-        and(eq(orderHeader.status, "selesai"), gte(orderHeader.diantarAt, cutoff)),
-        // Fallback: order selesai yang diantarAt-nya null (data lama sebelum field ada)
-        // ditampilkan kalau createdAt masih dalam 7 hari
-        and(eq(orderHeader.status, "selesai"), gte(orderHeader.createdAt, cutoff)),
-      ),
-    )
+    .where(conds.length > 0 ? and(...conds) : undefined)
     .orderBy(desc(orderHeader.createdAt))
-    .limit(100);
+    .limit(200);
 
   // Single batch query untuk semua items + produk join (no N+1)
   const orderIds = aktif.map((o) => o.id);
@@ -95,6 +100,14 @@ export default async function OrderKasirPage() {
         >
           + Order Baru (Walk-in)
         </a>
+      </div>
+      <div className="mb-4">
+        <DateRangeFilter
+          active={range.key}
+          customFrom={range.from}
+          customTo={range.to}
+          basePath="/kasir/order"
+        />
       </div>
       <OrderClient rows={rows} kurirList={kurirList} />
     </div>

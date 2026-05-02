@@ -1,19 +1,28 @@
-import { eq, desc, ne } from "drizzle-orm";
+import { eq, desc, ne, and, gte, lte } from "drizzle-orm";
 import { db } from "@/db";
 import { orderHeader } from "@/db/schema/order";
 import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
 import { requireRole } from "@/lib/permissions";
+import { DateRangeFilter } from "@/components/DateRangeFilter";
+import { parseRange } from "@/lib/date-range";
 import { PembayaranClient, type Row } from "./PembayaranClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function PembayaranPage() {
+export default async function PembayaranPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+}) {
   await requireRole(["admin", "kasir"]);
+  const sp = await searchParams;
+  const range = parseRange(sp);
 
-  // Ambil semua order non-batal (limit 500), lalu filter di JS untuk 3 kelompok:
-  //  - menunggu (perlu verifikasi bukti)
-  //  - lunas (history)
-  //  - piutang: status=selesai + statusBayar=belum
+  // Filter by createdAt order. Untuk pembayaran, ini reasonable (recent orders most relevant).
+  const conds = [ne(orderHeader.status, "batal")];
+  if (range.from) conds.push(gte(orderHeader.createdAt, range.from));
+  if (range.to) conds.push(lte(orderHeader.createdAt, range.to));
+
   const list = await db
     .select({
       id: orderHeader.id,
@@ -31,7 +40,7 @@ export default async function PembayaranPage() {
     })
     .from(orderHeader)
     .leftJoin(pelangganTable, eq(orderHeader.pelangganId, pelangganTable.id))
-    .where(ne(orderHeader.status, "batal"))
+    .where(and(...conds))
     .orderBy(desc(orderHeader.updatedAt))
     .limit(500);
 
@@ -64,6 +73,12 @@ export default async function PembayaranPage() {
           Review bukti pembayaran, tandai lunas piutang, atau lihat history.
         </p>
       </div>
+      <DateRangeFilter
+        active={range.key}
+        customFrom={range.from}
+        customTo={range.to}
+        basePath="/pembayaran"
+      />
       <PembayaranClient rows={rows} />
     </div>
   );
