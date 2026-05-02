@@ -5,8 +5,40 @@ import { headers } from "next/headers";
 import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { user as userTable, account as accountTable } from "@/db/schema/auth";
+import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
 import { auth } from "@/lib/auth";
 import { requireSession } from "@/lib/permissions";
+
+export async function setNamaAction(
+  rawNama: string,
+): Promise<{ ok: true } | { error: string }> {
+  const session = await requireSession();
+  const nama = rawNama.trim();
+  if (nama.length < 2) return { error: "Nama minimal 2 karakter" };
+  if (nama.length > 60) return { error: "Nama maksimal 60 karakter" };
+
+  // Update user.name
+  await db
+    .update(userTable)
+    .set({ name: nama, updatedAt: new Date() })
+    .where(eq(userTable.id, session.user.id));
+
+  // Sinkronisasi ke pelanggan.nama kalau record ada
+  const pel = await db.query.pelanggan.findFirst({
+    where: eq(pelangganTable.userId, session.user.id),
+  });
+  if (pel) {
+    await db
+      .update(pelangganTable)
+      .set({ nama, updatedAt: new Date() })
+      .where(eq(pelangganTable.id, pel.id));
+  }
+
+  revalidatePath("/akun");
+  revalidatePath("/pelanggan/profil");
+  revalidatePath("/pelanggan/beranda");
+  return { ok: true };
+}
 
 export async function setUsernameAction(
   rawUsername: string,

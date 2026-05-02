@@ -53,6 +53,7 @@ export default async function AkunPage() {
         <ThemeSwitcher />
 
         <AkunClient
+          currentNama={u?.name ?? session.user.name ?? ""}
           currentUsername={u?.displayUsername ?? u?.username ?? null}
           hasPassword={hasPassword}
         />
