@@ -4,6 +4,7 @@ import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
+import { PasswordInput } from "@/components/PasswordInput";
 
 type DetectedMode = "email" | "phone" | "username";
 
@@ -120,8 +121,7 @@ function LoginInner() {
         {mode !== "phone" && (
           <div>
             <label className="text-sm font-medium block mb-1">Password</label>
-            <input
-              type="password"
+            <PasswordInput
               required
               autoComplete="current-password"
               value={password}

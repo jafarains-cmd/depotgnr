@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
+import { PasswordInput } from "@/components/PasswordInput";
 
 export default function RegisterPage() {
   return (
@@ -128,18 +129,30 @@ function Field({
   placeholder?: string;
   minLength?: number;
 }) {
+  const cls = "w-full px-3 py-2 border border-line rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500";
   return (
     <div>
       <label className="text-sm font-medium block mb-1">{label}</label>
-      <input
-        type={type}
-        required={required}
-        minLength={minLength}
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 border border-line rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
-      />
+      {type === "password" ? (
+        <PasswordInput
+          required={required}
+          minLength={minLength}
+          value={value}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+          className={cls}
+        />
+      ) : (
+        <input
+          type={type}
+          required={required}
+          minLength={minLength}
+          value={value}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+          className={cls}
+        />
+      )}
     </div>
   );
 }

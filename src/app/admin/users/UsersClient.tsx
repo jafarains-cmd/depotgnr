@@ -10,6 +10,7 @@ import {
   editUser,
   deleteUser,
 } from "./actions";
+import { PasswordInput } from "@/components/PasswordInput";
 
 type Row = {
   id: string;
@@ -293,15 +294,20 @@ function FormField({
   type?: string;
   required?: boolean;
 }) {
+  const cls = "w-full px-2.5 py-1.5 border border-line rounded-md bg-surface";
   return (
     <div>
       <label className="block text-xs font-medium text-[color:var(--muted)] mb-0.5">{label}</label>
-      <input
-        name={name}
-        type={type}
-        required={required}
-        className="w-full px-2.5 py-1.5 border border-line rounded-md bg-surface"
-      />
+      {type === "password" ? (
+        <PasswordInput name={name} required={required} className={cls} />
+      ) : (
+        <input
+          name={name}
+          type={type}
+          required={required}
+          className={cls}
+        />
+      )}
     </div>
   );
 }

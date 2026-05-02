@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { KeyRound, AtSign, Check } from "lucide-react";
 import { setUsernameAction, setPasswordAction } from "./actions";
+import { PasswordInput } from "@/components/PasswordInput";
 
 export function AkunClient({
   currentUsername,
@@ -116,8 +117,7 @@ function PasswordForm({ hasPassword }: { hasPassword: boolean }) {
         className="space-y-2"
       >
         {hasPassword && (
-          <input
-            type="password"
+          <PasswordInput
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
             placeholder="Password lama"
@@ -126,8 +126,7 @@ function PasswordForm({ hasPassword }: { hasPassword: boolean }) {
             autoComplete="current-password"
           />
         )}
-        <input
-          type="password"
+        <PasswordInput
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
           placeholder={hasPassword ? "Password baru (min 6)" : "Password (min 6)"}
@@ -136,8 +135,7 @@ function PasswordForm({ hasPassword }: { hasPassword: boolean }) {
           minLength={6}
           autoComplete="new-password"
         />
-        <input
-          type="password"
+        <PasswordInput
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
           placeholder="Ulangi password"
