@@ -40,6 +40,40 @@ export async function setNamaAction(
   return { ok: true };
 }
 
+export async function setAlamatAction(
+  rawAlamat: string,
+): Promise<{ ok: true } | { error: string }> {
+  const session = await requireSession();
+  const alamat = rawAlamat.trim();
+  if (alamat.length > 500) return { error: "Alamat maksimal 500 karakter" };
+
+  // Pastikan record pelanggan ada (auto-create kalau belum)
+  let pel = await db.query.pelanggan.findFirst({
+    where: eq(pelangganTable.userId, session.user.id),
+  });
+  if (!pel) {
+    const [created] = await db
+      .insert(pelangganTable)
+      .values({
+        userId: session.user.id,
+        nama: session.user.name,
+        alamat: alamat || null,
+      })
+      .returning();
+    pel = created;
+  } else {
+    await db
+      .update(pelangganTable)
+      .set({ alamat: alamat || null, updatedAt: new Date() })
+      .where(eq(pelangganTable.id, pel.id));
+  }
+
+  revalidatePath("/akun");
+  revalidatePath("/pelanggan/profil");
+  revalidatePath("/pelanggan/order-baru");
+  return { ok: true };
+}
+
 export async function setUsernameAction(
   rawUsername: string,
 ): Promise<{ ok: true } | { error: string }> {

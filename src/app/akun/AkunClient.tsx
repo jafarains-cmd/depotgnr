@@ -1,24 +1,84 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { KeyRound, AtSign, Check, User } from "lucide-react";
-import { setUsernameAction, setPasswordAction, setNamaAction } from "./actions";
+import { KeyRound, AtSign, Check, User, MapPin } from "lucide-react";
+import {
+  setUsernameAction,
+  setPasswordAction,
+  setNamaAction,
+  setAlamatAction,
+} from "./actions";
 import { PasswordInput } from "@/components/PasswordInput";
 
 export function AkunClient({
   currentNama,
+  currentAlamat,
   currentUsername,
   hasPassword,
+  showAlamat,
 }: {
   currentNama: string;
+  currentAlamat: string;
   currentUsername: string | null;
   hasPassword: boolean;
+  showAlamat: boolean;
 }) {
   return (
     <div className="space-y-4">
       <NamaForm currentNama={currentNama} />
+      {showAlamat && <AlamatForm currentAlamat={currentAlamat} />}
       <UsernameForm currentUsername={currentUsername} />
       <PasswordForm hasPassword={hasPassword} />
+    </div>
+  );
+}
+
+function AlamatForm({ currentAlamat }: { currentAlamat: string }) {
+  const [alamat, setAlamat] = useState(currentAlamat);
+  const [pending, startTransition] = useTransition();
+  const [msg, setMsg] = useState<{ ok?: boolean; text: string } | null>(null);
+
+  return (
+    <div className="bg-surface border border-line rounded-2xl p-4 space-y-3">
+      <h2 className="font-semibold inline-flex items-center gap-1.5">
+        <MapPin size={16} /> Alamat Pengantaran
+      </h2>
+      <p className="text-sm text-[color:var(--muted)]">
+        Akan terisi otomatis saat order baru. Anda bisa ubah alamat per pesanan.
+      </p>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          setMsg(null);
+          startTransition(async () => {
+            const res = await setAlamatAction(alamat);
+            if ("error" in res) setMsg({ ok: false, text: res.error });
+            else setMsg({ ok: true, text: "Alamat tersimpan" });
+          });
+        }}
+        className="space-y-2"
+      >
+        <textarea
+          value={alamat}
+          onChange={(e) => setAlamat(e.target.value)}
+          placeholder="Jl. Contoh No.123, RT/RW, Kelurahan, Kecamatan"
+          rows={3}
+          className="w-full px-3 py-2 border border-line rounded-md text-sm"
+          maxLength={500}
+        />
+        {msg && (
+          <p className={`text-xs ${msg.ok ? "text-emerald-700" : "text-red-600"}`}>
+            {msg.ok && <Check className="inline" size={12} />} {msg.text}
+          </p>
+        )}
+        <button
+          type="submit"
+          disabled={pending || alamat.trim() === currentAlamat}
+          className="px-4 py-2 bg-brand text-white rounded-md text-sm disabled:opacity-50"
+        >
+          {pending ? "Menyimpan..." : "Simpan Alamat"}
+        </button>
+      </form>
     </div>
   );
 }

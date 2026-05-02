@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { user as userTable, account as accountTable } from "@/db/schema/auth";
+import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
 import { requireSession } from "@/lib/permissions";
 import { AkunClient } from "./AkunClient";
 import { LogoutButton } from "./LogoutButton";
@@ -23,6 +24,13 @@ export default async function AkunPage() {
   const hasPassword = !!cred?.password;
 
   const role = session.user.role ?? "pelanggan";
+  // Alamat hanya relevan untuk pelanggan
+  const isPelanggan = role === "pelanggan";
+  const pel = isPelanggan
+    ? await db.query.pelanggan.findFirst({
+        where: eq(pelangganTable.userId, session.user.id),
+      })
+    : null;
   const homeHref =
     role === "admin" ? "/admin/dashboard" : role === "kasir" ? "/kasir/pos" : "/pelanggan/beranda";
 
@@ -54,8 +62,10 @@ export default async function AkunPage() {
 
         <AkunClient
           currentNama={u?.name ?? session.user.name ?? ""}
+          currentAlamat={pel?.alamat ?? ""}
           currentUsername={u?.displayUsername ?? u?.username ?? null}
           hasPassword={hasPassword}
+          showAlamat={isPelanggan}
         />
       </main>
     </div>
