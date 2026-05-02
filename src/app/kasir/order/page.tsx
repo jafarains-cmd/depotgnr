@@ -86,7 +86,7 @@ export default async function OrderKasirPage() {
     .where(inArray(userTable.role, ["kurir", "admin", "kasir"]));
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
         <PageHeader title="Order Antar" description="Kelola order pengantaran yang masuk." />
         <a

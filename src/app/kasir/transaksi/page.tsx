@@ -32,7 +32,7 @@ export default async function RiwayatKasirPage() {
     .limit(100);
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <PageHeader
         title="Riwayat Transaksi"
         description={role === "admin" ? "Semua transaksi (100 terbaru)." : "Transaksi yang Anda buat."}
@@ -73,7 +73,7 @@ export default async function RiwayatKasirPage() {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={7} className="p-6 text-center text-[color:var(--muted)]">
+                <td colSpan={7} className="p-4 md:p-6 text-center text-[color:var(--muted)]">
                   Belum ada transaksi.
                 </td>
               </tr>

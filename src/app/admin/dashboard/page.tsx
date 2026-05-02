@@ -83,7 +83,7 @@ export default async function DashboardPage() {
       : null;
 
   return (
-    <div className="p-6 max-w-6xl space-y-5">
+    <div className="p-4 md:p-6 max-w-6xl space-y-5">
       {/* Hero card */}
       <div
         className="relative overflow-hidden rounded-3xl p-6 text-white"

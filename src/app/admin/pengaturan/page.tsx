@@ -236,7 +236,7 @@ export default async function PengaturanPage({
   const fields = activeTab.fieldKeys.map((k) => ALL_FIELDS[k]).filter(Boolean);
 
   return (
-    <div className="p-6 max-w-3xl space-y-4">
+    <div className="p-4 md:p-6 max-w-3xl space-y-4">
       <PageHeader
         title="Pengaturan"
         description="Konfigurasi depot, template pesan, dan integrasi."

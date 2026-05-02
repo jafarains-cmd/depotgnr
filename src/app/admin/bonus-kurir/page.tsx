@@ -74,7 +74,7 @@ export default async function BonusKurirPage() {
   const totalPending = kurirSummary.reduce((s, k) => s + k.pendingTotal, 0);
 
   return (
-    <div className="p-6 max-w-5xl">
+    <div className="p-4 md:p-6 max-w-5xl">
       <PageHeader
         title="Bonus Kurir"
         description="Bonus per pengantaran. Tandai 'Dibayar' setelah Anda transfer ke kurir."

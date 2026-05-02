@@ -71,7 +71,7 @@ export default async function LaporanPage({
   const toStr = to.toISOString().slice(0, 10);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
       <PageHeader title="Laporan" description="Omzet, transaksi, dan breakdown produk." />
 
       <form className="bg-surface border border-line rounded-2xl p-4 flex gap-3 items-end text-sm">
@@ -151,7 +151,7 @@ export default async function LaporanPage({
             ))}
             {breakdownProduk.length === 0 && (
               <tr>
-                <td colSpan={4} className="p-6 text-center text-[color:var(--muted)]">
+                <td colSpan={4} className="p-4 md:p-6 text-center text-[color:var(--muted)]">
                   Belum ada data.
                 </td>
               </tr>

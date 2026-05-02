@@ -6,7 +6,7 @@ export default function BantuanPage() {
   const baseUrl = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
 
   return (
-    <div className="p-6 max-w-4xl">
+    <div className="p-4 md:p-6 max-w-4xl">
       <PageHeader
         title="Bantuan & Setup"
         description="Panduan konfigurasi integrasi (Sheets, Telegram, WhatsApp)."

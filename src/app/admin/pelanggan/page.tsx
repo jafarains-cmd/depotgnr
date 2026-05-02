@@ -11,7 +11,7 @@ export default async function PelangganPage() {
     limit: 200,
   });
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <PageHeader title="Pelanggan" description="Data pelanggan walk-in dan langganan." />
       <PelangganTable rows={list} />
     </div>

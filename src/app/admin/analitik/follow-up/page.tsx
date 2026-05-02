@@ -18,7 +18,7 @@ export default async function FollowUpPage() {
   });
 
   return (
-    <div className="p-6 max-w-5xl">
+    <div className="p-4 md:p-6 max-w-5xl">
       <PageHeader
         title="Analitik · Follow-up Pelanggan"
         description="Pelanggan yang prediksi order-nya hari ini ± 2 hari, atau sudah lewat dari pola biasanya. Kirim reminder WA otomatis."

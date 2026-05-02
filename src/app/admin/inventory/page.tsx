@@ -44,7 +44,7 @@ export default async function InventoryPage() {
     .limit(50);
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <PageHeader title="Inventory" description="Stok galon dan mutasi stok." />
       <InventoryClient
         produk={produkList.map((p) => ({

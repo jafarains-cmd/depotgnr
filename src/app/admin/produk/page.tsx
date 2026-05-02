@@ -10,7 +10,7 @@ export default async function ProdukPage() {
   const list = await db.query.produk.findMany({ orderBy: (p, { asc }) => [asc(p.id)] });
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <PageHeader title="Produk" description="Kelola jenis galon, kemasan, dan harga." />
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -40,7 +40,7 @@ export default async function ProdukPage() {
               ))}
               {list.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-6 text-center text-[color:var(--muted)]">
+                  <td colSpan={6} className="p-4 md:p-6 text-center text-[color:var(--muted)]">
                     Belum ada produk.
                   </td>
                 </tr>

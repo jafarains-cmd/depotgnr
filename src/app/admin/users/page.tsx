@@ -12,7 +12,7 @@ export default async function UsersPage() {
   });
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <PageHeader title="User" description="Kelola admin, kasir, dan pelanggan." />
       <UsersClient
         users={list.map((u) => ({

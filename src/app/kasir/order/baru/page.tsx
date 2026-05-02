@@ -15,7 +15,7 @@ export default async function OrderBaruKasirPage() {
   });
 
   return (
-    <div className="p-6 max-w-3xl">
+    <div className="p-4 md:p-6 max-w-3xl">
       <PageHeader
         title="Buat Order (Walk-in)"
         description="Input order pelanggan via telepon/datang langsung. Boleh tanpa akun."

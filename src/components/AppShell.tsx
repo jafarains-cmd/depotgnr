@@ -1,9 +1,10 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
-import { LogOut } from "lucide-react";
+import { LogOut, Menu, X } from "lucide-react";
 import { DropFill } from "./GallonArt";
 
 export type NavItem = { href: string; label: string; icon?: React.ReactNode };
@@ -21,6 +22,12 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [open, setOpen] = useState(false);
+
+  // Auto-close drawer when navigation happens
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
 
   async function handleLogout() {
     await authClient.signOut();
@@ -28,22 +35,69 @@ export function AppShell({
     router.refresh();
   }
 
+  const subtitle = title.replace("· Depot Air", "").trim();
+
   return (
-    <div className="min-h-screen flex bg-[color:var(--surface2)]">
-      <aside className="w-60 bg-surface border-r border-line flex flex-col">
-        <Link href="/" className="flex items-center gap-2.5 p-5 border-b border-line">
-          <span className="w-9 h-9 rounded-xl bg-brand text-white grid place-items-center">
-            <DropFill size={20} color="white" />
-          </span>
-          <div className="min-w-0">
-            <div className="font-extrabold text-[15px] tracking-tight leading-tight truncate">
-              DEPOT GNR
+    <div className="min-h-screen md:flex bg-[color:var(--surface2)]">
+      {/* Mobile top bar — only visible on mobile */}
+      <header className="md:hidden sticky top-0 z-30 bg-surface border-b border-line">
+        <div className="flex items-center justify-between px-4 py-3">
+          <Link href="/" className="flex items-center gap-2">
+            <span className="w-9 h-9 rounded-xl bg-brand text-white grid place-items-center">
+              <DropFill size={18} color="white" />
+            </span>
+            <div>
+              <div className="font-extrabold text-[14px] leading-tight">DEPOT GNR</div>
+              <div className="text-[10px] text-[color:var(--muted)] leading-tight">{subtitle}</div>
             </div>
-            <div className="text-[10px] text-[color:var(--muted)] leading-tight truncate">
-              {title.replace("· Depot Air", "").trim()}
+          </Link>
+          <button
+            onClick={() => setOpen(true)}
+            className="w-10 h-10 rounded-xl bg-[color:var(--surface2)] grid place-items-center"
+            aria-label="Buka menu"
+          >
+            <Menu size={20} />
+          </button>
+        </div>
+      </header>
+
+      {/* Mobile drawer backdrop */}
+      {open && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/40 z-40"
+          onClick={() => setOpen(false)}
+          aria-hidden
+        />
+      )}
+
+      {/* Sidebar — drawer on mobile (slide-in), static on desktop */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-surface border-r border-line flex flex-col transform transition-transform md:static md:w-60 md:max-w-none md:transform-none ${
+          open ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        }`}
+      >
+        <div className="flex items-center justify-between p-5 border-b border-line">
+          <Link href="/" className="flex items-center gap-2.5 min-w-0">
+            <span className="w-9 h-9 rounded-xl bg-brand text-white grid place-items-center flex-shrink-0">
+              <DropFill size={20} color="white" />
+            </span>
+            <div className="min-w-0">
+              <div className="font-extrabold text-[15px] tracking-tight leading-tight truncate">
+                DEPOT GNR
+              </div>
+              <div className="text-[10px] text-[color:var(--muted)] leading-tight truncate">
+                {subtitle}
+              </div>
             </div>
-          </div>
-        </Link>
+          </Link>
+          <button
+            onClick={() => setOpen(false)}
+            className="md:hidden w-9 h-9 rounded-lg grid place-items-center text-[color:var(--muted)] hover:bg-[color:var(--surface2)]"
+            aria-label="Tutup menu"
+          >
+            <X size={18} />
+          </button>
+        </div>
         <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
           {nav.map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
@@ -78,7 +132,8 @@ export function AppShell({
           </button>
         </div>
       </aside>
-      <main className="flex-1 overflow-auto">{children}</main>
+
+      <main className="flex-1 overflow-auto min-w-0">{children}</main>
     </div>
   );
 }
