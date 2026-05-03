@@ -1,6 +1,7 @@
 "use server";
 
 import { eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { transaksi, transaksiItem } from "@/db/schema/transaksi";
 import { produk } from "@/db/schema/produk";
@@ -11,6 +12,9 @@ import { requireRole } from "@/lib/permissions";
 import { sendWhatsApp } from "@/lib/whatsapp";
 import { sendTelegram } from "@/lib/telegram";
 import { formatRupiah } from "@/lib/utils";
+import { reverseLoyaltyForTransaksi } from "@/lib/loyalty";
+import { reverseStokForTransaksi } from "@/lib/inventory";
+import { bestEffort } from "@/lib/best-effort";
 
 async function buildNotaText(trxId: number): Promise<string | null> {
   const t = await db.query.transaksi.findFirst({ where: eq(transaksi.id, trxId) });
@@ -95,6 +99,51 @@ export async function kirimNotaTelegramKePelanggan(
 export async function getNotaText(trxId: number): Promise<string> {
   await requireRole(["admin", "kasir"]);
   return (await buildNotaText(trxId)) ?? "";
+}
+
+const VOID_WINDOW_DAYS = 30;
+
+/**
+ * Batalkan transaksi (admin only). Hanya untuk transaksi yang dibuat dalam
+ * 30 hari terakhir. Reverse loyalty + stok, set voidedAt/voidedBy/voidedAlasan.
+ */
+export async function batalkanTransaksi(
+  trxId: number,
+  alasan: string,
+): Promise<{ ok: true } | { error: string }> {
+  const session = await requireRole(["admin"]);
+  const reason = alasan.trim();
+  if (reason.length < 3) return { error: "Alasan wajib diisi (min 3 karakter)" };
+  if (reason.length > 500) return { error: "Alasan terlalu panjang (max 500 karakter)" };
+
+  const t = await db.query.transaksi.findFirst({ where: eq(transaksi.id, trxId) });
+  if (!t) return { error: "Transaksi tidak ditemukan" };
+  if (t.voidedAt) return { error: "Transaksi ini sudah dibatalkan sebelumnya" };
+
+  const ageMs = Date.now() - t.createdAt.getTime();
+  const ageDays = ageMs / (1000 * 60 * 60 * 24);
+  if (ageDays > VOID_WINDOW_DAYS) {
+    return { error: `Transaksi sudah > ${VOID_WINDOW_DAYS} hari, tidak bisa dibatalkan` };
+  }
+
+  await db
+    .update(transaksi)
+    .set({
+      voidedAt: new Date(),
+      voidedBy: session.user.id,
+      voidedAlasan: reason,
+    })
+    .where(eq(transaksi.id, trxId));
+
+  bestEffort("reverseLoyaltyForTransaksi", reverseLoyaltyForTransaksi(trxId));
+  bestEffort("reverseStokForTransaksi", reverseStokForTransaksi(trxId, session.user.id));
+
+  revalidatePath("/kasir/transaksi");
+  revalidatePath(`/kasir/transaksi/${trxId}`);
+  revalidatePath("/admin/laporan");
+  revalidatePath("/admin/dashboard");
+
+  return { ok: true };
 }
 
 // Suppress unused warning kalau pengaturan diakses lewat object

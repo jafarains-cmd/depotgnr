@@ -1,4 +1,4 @@
-import { sql, eq, isNotNull, and } from "drizzle-orm";
+import { sql, eq, isNotNull, isNull, and } from "drizzle-orm";
 import { db } from "@/db";
 import { pelanggan } from "@/db/schema/pelanggan";
 import { transaksi } from "@/db/schema/transaksi";
@@ -23,7 +23,7 @@ export default async function PetaPage() {
       jumlah: sql<number>`count(*)`,
     })
     .from(transaksi)
-    .where(isNotNull(transaksi.pelangganId))
+    .where(and(isNotNull(transaksi.pelangganId), isNull(transaksi.voidedAt)))
     .groupBy(transaksi.pelangganId);
 
   const trxMap = new Map(

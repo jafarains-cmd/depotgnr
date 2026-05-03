@@ -85,6 +85,13 @@
       "when": 1777724000000,
       "tag": "0011_bonus_kurir",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1777810400000,
+      "tag": "0012_void_transaksi",
+      "breakpoints": true
     }
   ]
 }

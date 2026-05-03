@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { eq, desc, inArray } from "drizzle-orm";
+import { eq, desc, inArray, and, isNull } from "drizzle-orm";
 import { CreditCard, RefreshCw, FileText } from "lucide-react";
 import { db } from "@/db";
 import { orderHeader, orderItem } from "@/db/schema/order";
@@ -64,7 +64,7 @@ export default async function RiwayatPage({
   const trxList = await db
     .select()
     .from(transaksi)
-    .where(eq(transaksi.pelangganId, me.id))
+    .where(and(eq(transaksi.pelangganId, me.id), isNull(transaksi.voidedAt)))
     .orderBy(desc(transaksi.createdAt))
     .limit(20);
 

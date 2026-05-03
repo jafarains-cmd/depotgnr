@@ -13,7 +13,8 @@ import { NotaActions } from "./NotaActions";
 export const dynamic = "force-dynamic";
 
 export default async function NotaPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireRole(["admin", "kasir"]);
+  const session = await requireRole(["admin", "kasir"]);
+  const isAdmin = session.user.role === "admin";
   const { id } = await params;
   const trxId = Number(id);
   if (!trxId) notFound();
@@ -59,10 +60,28 @@ export default async function NotaPage({ params }: { params: Promise<{ id: strin
               trxId={t.id}
               pelangganTelp={pel?.telp ?? null}
               pelangganUserId={pel?.userId ?? null}
+              voided={!!t.voidedAt}
+              canVoid={isAdmin}
+              ageDays={Math.floor((Date.now() - t.createdAt.getTime()) / (1000 * 60 * 60 * 24))}
             />
           </div>
 
-          <div className="nota-paper bg-surface rounded-lg shadow-sm border border-line p-6 font-mono text-sm">
+          {t.voidedAt && (
+            <div className="no-print mb-4 bg-red-50 border-2 border-red-200 rounded-2xl p-4 text-center">
+              <div className="text-red-700 font-extrabold text-lg">TRANSAKSI DIBATALKAN</div>
+              <div className="text-xs text-red-600 mt-1">
+                Dibatalkan {t.voidedAt.toLocaleString("id-ID")}
+                {t.voidedAlasan && ` · Alasan: ${t.voidedAlasan}`}
+              </div>
+            </div>
+          )}
+
+          <div className={`nota-paper bg-surface rounded-lg shadow-sm border border-line p-6 font-mono text-sm ${t.voidedAt ? "opacity-60" : ""}`}>
+            {t.voidedAt && (
+              <div className="text-center text-red-600 font-extrabold tracking-widest text-lg mb-2">
+                BATAL
+              </div>
+            )}
             <div className="text-center border-b border-dashed border-line pb-3 mb-3">
               <div className="font-bold text-base">{cfg.namaDepot || "Depot Air Minum"}</div>
               {cfg.alamatDepot && <div className="text-xs">{cfg.alamatDepot}</div>}

@@ -438,6 +438,55 @@ export async function reverseLoyaltyForOrder(orderId: number): Promise<void> {
 }
 
 /**
+ * Reverse semua mutasi loyalty terkait 1 transaksi (versi transaksi dari
+ * reverseLoyaltyForOrder). Sama logikanya — insert mutasi `adjust` negatif,
+ * decrement saldo dengan `max(0, …)` supaya tidak minus.
+ */
+export async function reverseLoyaltyForTransaksi(transaksiId: number): Promise<void> {
+  // Idempotency
+  const existingReverse = await db.query.mutasiLoyalti.findFirst({
+    where: and(
+      eq(mutasiLoyalti.refTransaksiId, transaksiId),
+      eq(mutasiLoyalti.tipe, "adjust"),
+    ),
+  });
+  if (existingReverse) return;
+
+  const mutasi = await db.query.mutasiLoyalti.findMany({
+    where: eq(mutasiLoyalti.refTransaksiId, transaksiId),
+  });
+  if (mutasi.length === 0) return;
+
+  const byPelanggan = new Map<number, number>();
+  for (const m of mutasi) {
+    if (m.tipe === "adjust") continue;
+    byPelanggan.set(m.pelangganId, (byPelanggan.get(m.pelangganId) ?? 0) + m.jumlah);
+  }
+  if (byPelanggan.size === 0) return;
+
+  await db.transaction((tx) => {
+    for (const [pelangganId, totalJumlah] of byPelanggan) {
+      if (totalJumlah <= 0) continue;
+      tx.insert(mutasiLoyalti)
+        .values({
+          pelangganId,
+          jumlah: -totalJumlah,
+          tipe: "adjust",
+          refTransaksiId: transaksiId,
+          deskripsi: `Pembatalan transaksi #${transaksiId} — reverse loyalty`,
+        })
+        .run();
+      tx.update(pelanggan)
+        .set({
+          saldoLoyalti: sql`max(0, ${pelanggan.saldoLoyalti} - ${totalJumlah})`,
+        })
+        .where(eq(pelanggan.id, pelangganId))
+        .run();
+    }
+  });
+}
+
+/**
  * Resolve kode referral ke pelanggan id. Case-insensitive.
  */
 export async function findPelangganByKode(kode: string): Promise<number | null> {

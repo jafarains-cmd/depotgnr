@@ -17,6 +17,9 @@ export const transaksi = sqliteTable("transaksi", {
   refOrderId: integer("ref_order_id"),
   sheetRowId: text("sheet_row_id"),
   lastSyncedAt: integer("last_synced_at", { mode: "timestamp" }),
+  voidedAt: integer("voided_at", { mode: "timestamp" }),
+  voidedBy: text("voided_by").references(() => user.id, { onDelete: "set null" }),
+  voidedAlasan: text("voided_alasan"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 

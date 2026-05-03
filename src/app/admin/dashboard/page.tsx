@@ -6,7 +6,7 @@ import { orderHeader } from "@/db/schema/order";
 import { stokGalon } from "@/db/schema/inventory";
 import { user as userTable } from "@/db/schema/auth";
 import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
-import { sql, gte, eq, desc, ne, lt, and } from "drizzle-orm";
+import { sql, gte, eq, desc, ne, lt, and, isNull } from "drizzle-orm";
 import { formatRupiah } from "@/lib/utils";
 import { countChurnRisk } from "@/lib/analytics";
 
@@ -30,13 +30,17 @@ export default async function DashboardPage() {
   const [omzetTodayRow] = await db
     .select({ total: sql<number>`coalesce(sum(${transaksi.total}), 0)` })
     .from(transaksi)
-    .where(gte(transaksi.createdAt, startOfDay));
+    .where(and(gte(transaksi.createdAt, startOfDay), isNull(transaksi.voidedAt)));
 
   const [omzetYesterdayRow] = await db
     .select({ total: sql<number>`coalesce(sum(${transaksi.total}), 0)` })
     .from(transaksi)
     .where(
-      and(gte(transaksi.createdAt, startOfYesterday), lt(transaksi.createdAt, startOfDay)),
+      and(
+        gte(transaksi.createdAt, startOfYesterday),
+        lt(transaksi.createdAt, startOfDay),
+        isNull(transaksi.voidedAt),
+      ),
     );
 
   const [orderTodayCount] = await db

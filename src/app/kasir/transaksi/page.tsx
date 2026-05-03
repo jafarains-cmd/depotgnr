@@ -34,6 +34,7 @@ export default async function RiwayatKasirPage({
       total: transaksi.total,
       metodeBayar: transaksi.metodeBayar,
       createdAt: transaksi.createdAt,
+      voidedAt: transaksi.voidedAt,
       kasir: userTable.name,
       pelangganNama: pelanggan.nama,
     })
@@ -44,7 +45,7 @@ export default async function RiwayatKasirPage({
     .orderBy(desc(transaksi.createdAt))
     .limit(200);
 
-  const totalOmzet = rows.reduce((s, r) => s + r.total, 0);
+  const totalOmzet = rows.reduce((s, r) => (r.voidedAt ? s : s + r.total), 0);
 
   return (
     <div className="p-4 md:p-6">
@@ -94,7 +95,14 @@ export default async function RiwayatKasirPage({
                     <div className="sm:hidden text-[10px] mt-0.5 font-mono">{r.nomorNota}</div>
                     <div className="sm:hidden text-[10px] mt-0.5 uppercase">{r.metodeBayar}</div>
                   </td>
-                  <td className="p-3 font-mono text-xs hidden sm:table-cell">{r.nomorNota}</td>
+                  <td className="p-3 font-mono text-xs hidden sm:table-cell">
+                    {r.nomorNota}
+                    {r.voidedAt && (
+                      <span className="ml-1 text-[9px] px-1 py-0.5 bg-red-100 text-red-700 rounded font-bold">
+                        BATAL
+                      </span>
+                    )}
+                  </td>
                   <td className="p-3 truncate max-w-[120px]">
                     {r.pelangganNama ?? (
                       <span className="text-[color:var(--muted)]">walk-in</span>
@@ -102,7 +110,7 @@ export default async function RiwayatKasirPage({
                   </td>
                   <td className="p-3 hidden md:table-cell">{r.kasir ?? "-"}</td>
                   <td className="p-3 uppercase text-xs hidden sm:table-cell">{r.metodeBayar}</td>
-                  <td className="p-3 text-right font-medium whitespace-nowrap">
+                  <td className={`p-3 text-right font-medium whitespace-nowrap ${r.voidedAt ? "line-through text-[color:var(--muted)]" : ""}`}>
                     {formatRupiah(r.total)}
                   </td>
                   <td className="p-3 text-right">

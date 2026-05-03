@@ -1,4 +1,4 @@
-import { sql, gte, lte, and, eq, desc } from "drizzle-orm";
+import { sql, gte, lte, and, eq, desc, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { transaksi, transaksiItem } from "@/db/schema/transaksi";
 import { produk } from "@/db/schema/produk";
@@ -28,7 +28,11 @@ export default async function LaporanPage({
   const from = parseDate(sp.from, sevenDaysAgo);
   const to = parseDate(sp.to, new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59));
 
-  const where = and(gte(transaksi.createdAt, from), lte(transaksi.createdAt, to));
+  const where = and(
+    gte(transaksi.createdAt, from),
+    lte(transaksi.createdAt, to),
+    isNull(transaksi.voidedAt),
+  );
 
   const [ringkasan] = await db
     .select({
