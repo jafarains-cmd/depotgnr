@@ -61,7 +61,7 @@ export function PelangganShell({
   return (
     <div className="min-h-screen bg-[color:var(--surface2)] pb-24 sm:pb-0">
       {!isBeranda && (
-        <header className="bg-surface border-b border-line sticky top-0 z-10">
+        <header className="bg-surface border-b border-line sticky top-0 z-10 print:hidden">
           <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
             <Link href="/pelanggan/beranda" className="inline-flex items-center gap-2">
               <span className="w-8 h-8 rounded-xl bg-brand text-white grid place-items-center">
@@ -108,7 +108,7 @@ export function PelangganShell({
       <main className={isBeranda ? "" : "max-w-3xl mx-auto p-4"}>{children}</main>
 
       {/* Mobile bottom nav */}
-      <nav className="sm:hidden fixed bottom-0 inset-x-0 bg-surface border-t border-line grid grid-cols-5 z-20">
+      <nav className="sm:hidden fixed bottom-0 inset-x-0 bg-surface border-t border-line grid grid-cols-5 z-20 print:hidden">
         {NAV.map((item) => {
           const active =
             pathname === item.href || pathname.startsWith(item.href + "/");

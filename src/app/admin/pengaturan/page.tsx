@@ -16,6 +16,12 @@ const ALL_FIELDS: Record<string, Field> = {
   namaDepot: { key: "namaDepot", label: "Nama Depot" },
   alamatDepot: { key: "alamatDepot", label: "Alamat Depot", type: "textarea" },
   telpDepot: { key: "telpDepot", label: "Telp Depot" },
+  footerNota: {
+    key: "footerNota",
+    label: "Footer Nota",
+    type: "textarea",
+    help: "Teks penutup di bawah nota cetak. Default: 'Terima kasih atas kunjungan Anda 🙏'.",
+  },
 
   heroBadge: {
     key: "heroBadge",
@@ -163,7 +169,7 @@ const TABS: Tab[] = [
     id: "depot",
     label: "Depot",
     icon: <Building2 size={14} />,
-    fieldKeys: ["namaDepot", "alamatDepot", "telpDepot"],
+    fieldKeys: ["namaDepot", "alamatDepot", "telpDepot", "footerNota"],
   },
   {
     id: "tampilan",

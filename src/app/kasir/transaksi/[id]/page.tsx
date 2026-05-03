@@ -110,7 +110,7 @@ export default async function NotaPage({ params }: { params: Promise<{ id: strin
             )}
 
             <div className="text-center text-xs mt-4 pt-3 border-t border-dashed border-line">
-              Terima kasih atas kunjungan Anda 🙏
+              {cfg.footerNota || "Terima kasih atas kunjungan Anda 🙏"}
             </div>
           </div>
         </div>

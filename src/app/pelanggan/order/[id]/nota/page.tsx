@@ -88,6 +88,7 @@ export default async function NotaPelangganPage({
               statusOrder: o.status,
             }}
             catatan={o.catatan}
+            footer={cfg.footerNota || undefined}
           />
         </div>
       </div>

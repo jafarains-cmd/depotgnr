@@ -62,6 +62,6 @@ export async function getOrderNotaText(orderId: number): Promise<string> {
     lines.push(`Catatan: ${o.catatan}`);
   }
   lines.push("─".repeat(28));
-  lines.push("Terima kasih 🙏");
+  lines.push(cfg.footerNota || "Terima kasih 🙏");
   return lines.join("\n");
 }
