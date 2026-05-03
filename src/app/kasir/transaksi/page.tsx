@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { db } from "@/db";
-import { eq, desc, and, gte, lte } from "drizzle-orm";
+import { eq, desc, and, gte, lte, like, or } from "drizzle-orm";
 import { transaksi } from "@/db/schema/transaksi";
 import { user as userTable } from "@/db/schema/auth";
 import { pelanggan } from "@/db/schema/pelanggan";
@@ -15,17 +15,28 @@ export const dynamic = "force-dynamic";
 export default async function RiwayatKasirPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ range?: string; from?: string; to?: string; q?: string }>;
 }) {
   const session = await requireRole(["admin", "kasir"]);
   const role = session.user.role;
   const sp = await searchParams;
   const range = parseRange(sp);
+  const q = (sp.q ?? "").trim();
 
   const conds = [];
   if (role !== "admin") conds.push(eq(transaksi.kasirUserId, session.user.id));
   if (range.from) conds.push(gte(transaksi.createdAt, range.from));
   if (range.to) conds.push(lte(transaksi.createdAt, range.to));
+  if (q) {
+    const pat = `%${q}%`;
+    conds.push(
+      or(
+        like(pelanggan.nama, pat),
+        like(pelanggan.telp, pat),
+        like(transaksi.nomorNota, pat),
+      )!,
+    );
+  }
 
   const rows = await db
     .select({
@@ -53,13 +64,39 @@ export default async function RiwayatKasirPage({
         title="Riwayat Transaksi"
         description={role === "admin" ? "Semua transaksi." : "Transaksi yang Anda buat."}
       />
-      <div className="mb-4">
+      <div className="mb-4 space-y-3">
         <DateRangeFilter
           active={range.key}
           customFrom={range.from}
           customTo={range.to}
           basePath="/kasir/transaksi"
         />
+        <form className="flex gap-2 items-center">
+          {range.key && <input type="hidden" name="range" value={range.key} />}
+          {sp.from && <input type="hidden" name="from" value={sp.from} />}
+          {sp.to && <input type="hidden" name="to" value={sp.to} />}
+          <input
+            type="search"
+            name="q"
+            defaultValue={q}
+            placeholder="Cari nama pelanggan / telp / no nota..."
+            className="flex-1 px-3 py-2 border border-line rounded-md text-sm"
+          />
+          <button
+            type="submit"
+            className="px-4 py-2 bg-brand-600 text-white rounded-md text-sm font-bold"
+          >
+            Cari
+          </button>
+          {q && (
+            <Link
+              href="/kasir/transaksi"
+              className="px-3 py-2 text-sm text-[color:var(--muted)] hover:text-ink"
+            >
+              Reset
+            </Link>
+          )}
+        </form>
       </div>
       <div className="mb-3 flex items-center justify-between flex-wrap gap-2 text-sm">
         <span className="text-[color:var(--muted)]">{rows.length} transaksi</span>
