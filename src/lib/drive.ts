@@ -154,7 +154,3 @@ function guessExt(mime: string): string {
   if (mime.includes("webp")) return "webp";
   return "jpg";
 }
-
-export function isPdfUrl(url: string | null | undefined): boolean {
-  return !!url && url.includes("#mime=pdf");
-}

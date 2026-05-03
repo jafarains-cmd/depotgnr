@@ -21,3 +21,7 @@ export function normalizeDriveUrl(url: string | null | undefined): string {
   const id = m[1];
   return `https://lh3.googleusercontent.com/d/${id}`;
 }
+
+export function isPdfUrl(url: string | null | undefined): boolean {
+  return !!url && url.includes("#mime=pdf");
+}

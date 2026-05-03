@@ -4,8 +4,7 @@ import { useState, useTransition } from "react";
 import { Check, X, ExternalLink, FileText } from "lucide-react";
 import { konfirmasiBayar, tolakBayar } from "./actions";
 import { formatRupiah } from "@/lib/utils";
-import { normalizeDriveUrl } from "@/lib/drive-url";
-import { isPdfUrl } from "@/lib/drive";
+import { normalizeDriveUrl, isPdfUrl } from "@/lib/drive-url";
 
 export type Row = {
   id: number;

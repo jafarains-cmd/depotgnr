@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import { Camera, Check, Copy, Loader2, QrCode, Wallet, Building2, HandCoins, Gift, FileText } from "lucide-react";
 import { pilihMetodeBayar, submitBuktiBayar, pakaiLoyalty } from "./actions";
 import { formatRupiah } from "@/lib/utils";
-import { normalizeDriveUrl } from "@/lib/drive-url";
-import { isPdfUrl } from "@/lib/drive";
+import { normalizeDriveUrl, isPdfUrl } from "@/lib/drive-url";
 
 type Metode = "cash" | "transfer" | "qris" | "dana" | "cod";
 
