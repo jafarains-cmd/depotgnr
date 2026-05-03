@@ -6,11 +6,18 @@ import { requireRole } from "@/lib/permissions";
 
 export default async function KurirLayout({ children }: { children: React.ReactNode }) {
   const session = await requireRole(["admin", "kasir", "kurir"]);
+  const role = session.user.role ?? "kurir";
+  const homeHref =
+    role === "admin"
+      ? "/admin/dashboard"
+      : role === "kasir"
+        ? "/kasir/pos"
+        : "/kurir";
   return (
     <div className="min-h-screen bg-[color:var(--surface2)]">
       <header className="bg-surface border-b border-line sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link href="/kurir" className="inline-flex items-center gap-2">
+          <Link href={homeHref} className="inline-flex items-center gap-2">
             <span className="w-9 h-9 rounded-xl bg-brand text-white grid place-items-center">
               <DropFill size={18} color="white" />
             </span>
