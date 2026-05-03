@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { eq, desc, inArray } from "drizzle-orm";
-import { CreditCard, RefreshCw } from "lucide-react";
+import { CreditCard, RefreshCw, FileText } from "lucide-react";
 import { db } from "@/db";
 import { orderHeader, orderItem } from "@/db/schema/order";
 import { transaksi } from "@/db/schema/transaksi";
@@ -139,6 +139,12 @@ export default async function RiwayatPage({
                     {o.status === "pending" && (
                       <CancelOrderButton orderId={o.id} nomorOrder={o.nomorOrder} />
                     )}
+                    <Link
+                      href={`/pelanggan/order/${o.id}/nota`}
+                      className="text-[11px] px-3 py-1.5 border-2 border-line rounded-full font-bold inline-flex items-center gap-1 hover:border-brand hover:text-brand transition"
+                    >
+                      <FileText size={11} /> Nota
+                    </Link>
                     {(o.statusBayar === "belum" || o.statusBayar === "menunggu") && (
                       <Link
                         href={`/pelanggan/order/${o.id}/bayar`}

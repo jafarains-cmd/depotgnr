@@ -74,6 +74,81 @@ export async function setAlamatAction(
   return { ok: true };
 }
 
+/**
+ * Normalize nomor HP Indonesia: 8xx → 08xx, +62xx → 0xx, 62xx → 0xx.
+ * Strip selain digit & '+'.
+ */
+function normalizeNomorWA(raw: string): string {
+  let s = raw.trim().replace(/[\s-]/g, "");
+  if (s.startsWith("+")) s = s.slice(1);
+  if (s.startsWith("62")) s = "0" + s.slice(2);
+  if (s.startsWith("8")) s = "0" + s;
+  return s.replace(/\D/g, "");
+}
+
+export async function setNomorWAAction(
+  rawNomor: string,
+): Promise<{ ok: true; normalized: string } | { error: string }> {
+  const session = await requireSession();
+  const nomor = normalizeNomorWA(rawNomor);
+
+  if (!nomor) {
+    // kosongkan
+    await db
+      .update(userTable)
+      .set({ phoneNumber: null, updatedAt: new Date() })
+      .where(eq(userTable.id, session.user.id));
+    const pel = await db.query.pelanggan.findFirst({
+      where: eq(pelangganTable.userId, session.user.id),
+    });
+    if (pel) {
+      await db
+        .update(pelangganTable)
+        .set({ telp: null, updatedAt: new Date() })
+        .where(eq(pelangganTable.id, pel.id));
+    }
+    revalidatePath("/akun");
+    return { ok: true, normalized: "" };
+  }
+
+  if (!/^0\d{8,14}$/.test(nomor)) {
+    return { error: "Format nomor tidak valid. Contoh: 08123456789" };
+  }
+
+  // Cek unique exclude diri sendiri
+  const existing = await db.query.user.findFirst({
+    where: and(eq(userTable.phoneNumber, nomor), ne(userTable.id, session.user.id)),
+  });
+  if (existing) return { error: "Nomor sudah dipakai akun lain" };
+
+  await db
+    .update(userTable)
+    .set({ phoneNumber: nomor, updatedAt: new Date() })
+    .where(eq(userTable.id, session.user.id));
+
+  // Sinkronisasi ke pelanggan.telp (auto-create row pelanggan kalau belum ada)
+  const pel = await db.query.pelanggan.findFirst({
+    where: eq(pelangganTable.userId, session.user.id),
+  });
+  if (!pel) {
+    await db.insert(pelangganTable).values({
+      userId: session.user.id,
+      nama: session.user.name,
+      telp: nomor,
+    });
+  } else {
+    await db
+      .update(pelangganTable)
+      .set({ telp: nomor, updatedAt: new Date() })
+      .where(eq(pelangganTable.id, pel.id));
+  }
+
+  revalidatePath("/akun");
+  revalidatePath("/pelanggan/profil");
+  revalidatePath("/data-pelanggan");
+  return { ok: true, normalized: nomor };
+}
+
 export async function setUsernameAction(
   rawUsername: string,
 ): Promise<{ ok: true } | { error: string }> {

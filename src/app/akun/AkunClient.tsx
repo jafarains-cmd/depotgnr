@@ -1,24 +1,27 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { KeyRound, AtSign, Check, User, MapPin } from "lucide-react";
+import { KeyRound, AtSign, Check, User, MapPin, Phone } from "lucide-react";
 import {
   setUsernameAction,
   setPasswordAction,
   setNamaAction,
   setAlamatAction,
+  setNomorWAAction,
 } from "./actions";
 import { PasswordInput } from "@/components/PasswordInput";
 
 export function AkunClient({
   currentNama,
   currentAlamat,
+  currentNomor,
   currentUsername,
   hasPassword,
   showAlamat,
 }: {
   currentNama: string;
   currentAlamat: string;
+  currentNomor: string;
   currentUsername: string | null;
   hasPassword: boolean;
   showAlamat: boolean;
@@ -27,8 +30,63 @@ export function AkunClient({
     <div className="space-y-4">
       <NamaForm currentNama={currentNama} />
       {showAlamat && <AlamatForm currentAlamat={currentAlamat} />}
+      <NomorWAForm currentNomor={currentNomor} />
       <UsernameForm currentUsername={currentUsername} />
       <PasswordForm hasPassword={hasPassword} />
+    </div>
+  );
+}
+
+function NomorWAForm({ currentNomor }: { currentNomor: string }) {
+  const [nomor, setNomor] = useState(currentNomor);
+  const [pending, startTransition] = useTransition();
+  const [msg, setMsg] = useState<{ ok?: boolean; text: string } | null>(null);
+
+  return (
+    <div className="bg-surface border border-line rounded-2xl p-4 space-y-3">
+      <h2 className="font-semibold inline-flex items-center gap-1.5">
+        <Phone size={16} /> Nomor WhatsApp
+      </h2>
+      <p className="text-sm text-[color:var(--muted)]">
+        Untuk menerima notifikasi pesanan & promo via WA. Contoh: 08123456789.
+      </p>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          setMsg(null);
+          startTransition(async () => {
+            const res = await setNomorWAAction(nomor);
+            if ("error" in res) setMsg({ ok: false, text: res.error });
+            else {
+              setNomor(res.normalized);
+              setMsg({ ok: true, text: "Nomor tersimpan" });
+            }
+          });
+        }}
+        className="space-y-2"
+      >
+        <input
+          type="tel"
+          inputMode="numeric"
+          value={nomor}
+          onChange={(e) => setNomor(e.target.value)}
+          placeholder="08123456789"
+          className="w-full px-3 py-2 border border-line rounded-md text-sm"
+          maxLength={20}
+        />
+        {msg && (
+          <p className={`text-xs ${msg.ok ? "text-emerald-700" : "text-red-600"}`}>
+            {msg.ok && <Check className="inline" size={12} />} {msg.text}
+          </p>
+        )}
+        <button
+          type="submit"
+          disabled={pending || nomor.trim() === currentNomor}
+          className="px-4 py-2 bg-brand text-white rounded-md text-sm disabled:opacity-50"
+        >
+          {pending ? "Menyimpan..." : "Simpan Nomor"}
+        </button>
+      </form>
     </div>
   );
 }
