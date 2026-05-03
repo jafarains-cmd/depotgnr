@@ -24,6 +24,7 @@ export type OrderRow = {
   alamatAntar: string | null;
   jadwalAntar: string | null;
   totalEstimasi: number;
+  statusBayar: string;
   catatan: string | null;
   createdAt: string;
   buktiFotoUrl: string | null;
@@ -194,6 +195,14 @@ export function OrderClient({
                     className="flex-1 py-1.5 bg-emerald-600 text-white rounded-md text-xs text-center"
                   >
                     Buat Nota
+                  </Link>
+                )}
+                {o.status !== "batal" && (
+                  <Link
+                    href={`/kasir/order/${o.id}/nota`}
+                    className="px-3 py-1.5 border border-line text-ink rounded-md text-xs text-center hover:border-brand hover:text-brand"
+                  >
+                    {o.statusBayar === "lunas" ? "Nota" : "Invoice"}
                   </Link>
                 )}
                 {o.status !== "selesai" && o.status !== "batal" && (

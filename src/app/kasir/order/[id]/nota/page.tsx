@@ -1,21 +1,21 @@
 import { eq } from "drizzle-orm";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { orderHeader, orderItem } from "@/db/schema/order";
 import { produk } from "@/db/schema/produk";
 import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
-import { requireSession } from "@/lib/permissions";
+import { requireRole } from "@/lib/permissions";
 import { NotaPaper } from "@/components/NotaPaper";
-import { NotaPelangganActions } from "./NotaPelangganActions";
+import { NotaKasirActions } from "./NotaKasirActions";
 
 export const dynamic = "force-dynamic";
 
-export default async function NotaPelangganPage({
+export default async function NotaKasirPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const session = await requireSession();
+  await requireRole(["admin", "kasir"]);
   const { id } = await params;
   const orderId = Number(id);
   if (!orderId) notFound();
@@ -26,9 +26,6 @@ export default async function NotaPelangganPage({
   const pel = o.pelangganId
     ? await db.query.pelanggan.findFirst({ where: eq(pelangganTable.id, o.pelangganId) })
     : null;
-  if (!pel || pel.userId !== session.user.id) {
-    redirect("/pelanggan/riwayat");
-  }
 
   const items = await db
     .select({
@@ -58,7 +55,7 @@ export default async function NotaPelangganPage({
       <div className="min-h-screen py-4 print:py-0">
         <div className="max-w-md mx-auto">
           <div className="no-print mb-4">
-            <NotaPelangganActions orderId={o.id} />
+            <NotaKasirActions />
           </div>
 
           <NotaPaper
@@ -70,7 +67,7 @@ export default async function NotaPelangganPage({
             meta={{
               nomor: o.nomorOrder,
               tanggal: o.createdAt,
-              pelangganNama: pel.nama,
+              pelangganNama: pel?.nama ?? "Walk-in",
             }}
             items={items.map((it) => ({
               namaProduk: it.namaProduk ?? "-",

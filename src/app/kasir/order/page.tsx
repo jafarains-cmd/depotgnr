@@ -41,6 +41,7 @@ export default async function OrderKasirPage({
       tipePengantaran: orderHeader.tipePengantaran,
       diantarAt: orderHeader.diantarAt,
       kurirUserId: orderHeader.kurirUserId,
+      statusBayar: orderHeader.statusBayar,
       pelangganNama: pelanggan.nama,
       pelangganTelp: pelanggan.telp,
     })

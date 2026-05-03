@@ -39,9 +39,21 @@ export type NotaPaperProps = {
  * non-print elements. Wrap dengan div className="nota-paper" supaya match selector.
  */
 export function NotaPaper({ header, meta, items, totals, catatan, footer }: NotaPaperProps) {
+  const isLunas = totals.statusBayar === "lunas";
+  const dokumenLabel = isLunas ? "NOTA" : "INVOICE";
+  const footerText = isLunas
+    ? footer ?? "Terima kasih atas kunjungan Anda 🙏"
+    : "Mohon segera lakukan pembayaran.";
   return (
     <div className="nota-paper bg-surface rounded-lg shadow-sm border border-line p-6 font-mono text-sm">
       <div className="text-center border-b border-dashed border-line pb-3 mb-3">
+        <div
+          className={`text-lg font-extrabold tracking-widest mb-1 ${
+            isLunas ? "text-emerald-600" : "text-amber-600"
+          }`}
+        >
+          {dokumenLabel}
+        </div>
         <div className="font-bold text-base">{header.namaDepot}</div>
         {header.alamatDepot && <div className="text-xs">{header.alamatDepot}</div>}
         {header.telpDepot && <div className="text-xs">Telp: {header.telpDepot}</div>}
@@ -100,7 +112,7 @@ export function NotaPaper({ header, meta, items, totals, catatan, footer }: Nota
       )}
 
       <div className="text-center text-xs mt-4 pt-3 border-t border-dashed border-line">
-        {footer ?? "Terima kasih atas kunjungan Anda 🙏"}
+        {footerText}
       </div>
     </div>
   );

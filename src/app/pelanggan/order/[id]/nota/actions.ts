@@ -21,7 +21,6 @@ export async function getOrderNotaText(orderId: number): Promise<string> {
     ? await db.query.pelanggan.findFirst({ where: eq(pelangganTable.id, o.pelangganId) })
     : null;
   if (!pel || pel.userId !== session.user.id) return "";
-  if (o.statusBayar !== "lunas") return "";
 
   const items = await db
     .select({
