@@ -69,6 +69,24 @@ export async function recordKurirBonus(orderId: number): Promise<void> {
 }
 
 /**
+ * Hapus bonus kurir untuk 1 order saat order dibatalkan. Hanya menghapus
+ * bonus yang masih `pending` — kalau sudah `dibayar`, biarkan utuh (audit
+ * trail tidak bisa di-undo, owner sudah keluar uang).
+ *
+ * Returns true kalau ada yang dihapus, false kalau tidak ada / sudah dibayar.
+ */
+export async function reverseBonusForOrder(orderId: number): Promise<boolean> {
+  const existing = await db.query.bonusKurir.findFirst({
+    where: eq(bonusKurir.orderId, orderId),
+  });
+  if (!existing) return false;
+  if (existing.status === "dibayar") return false;
+
+  await db.delete(bonusKurir).where(eq(bonusKurir.orderId, orderId));
+  return true;
+}
+
+/**
  * Summary bonus per kurir (untuk admin & kurir self-view).
  */
 export async function summaryBonusKurir(kurirUserId: string): Promise<{

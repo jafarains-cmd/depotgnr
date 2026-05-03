@@ -360,6 +360,84 @@ export async function claimReferralBonusIfFirstOrder(
 }
 
 /**
+ * Reverse semua mutasi loyalty terkait 1 order — dipanggil saat order dibatalkan
+ * setelah loyalty sudah pernah di-earn. Bukan delete (audit trail tetap utuh):
+ * insert mutasi `adjust` dengan jumlah negatif sebesar net total, dan decrement
+ * saldoLoyalti pelanggan + stampGalon.
+ *
+ * Idempoten: kalau sudah ada mutasi `adjust` dengan refOrderId yang sama, skip.
+ */
+export async function reverseLoyaltyForOrder(orderId: number): Promise<void> {
+  // Idempotency check
+  const existingReverse = await db.query.mutasiLoyalti.findFirst({
+    where: and(
+      eq(mutasiLoyalti.refOrderId, orderId),
+      eq(mutasiLoyalti.tipe, "adjust"),
+    ),
+  });
+  if (existingReverse) return;
+
+  // Ambil semua mutasi (earn / stamp_reward / referral_in / referral_bonus)
+  // yang punya refOrderId = orderId. Group by pelangganId.
+  const mutasi = await db.query.mutasiLoyalti.findMany({
+    where: eq(mutasiLoyalti.refOrderId, orderId),
+  });
+  if (mutasi.length === 0) return;
+
+  // Hitung galon pada order (untuk decrement stampGalon)
+  const items = await db.query.orderItem.findMany({
+    where: eq(orderItem.orderId, orderId),
+  });
+  const totalGalon = items.reduce((s, it) => s + it.qty, 0);
+
+  // Group jumlah per pelanggan (referral mengenai 2 pelanggan: referee + referrer)
+  const byPelanggan = new Map<number, number>();
+  for (const m of mutasi) {
+    if (m.tipe === "adjust") continue; // jangan reverse mutasi adjust lain
+    byPelanggan.set(m.pelangganId, (byPelanggan.get(m.pelangganId) ?? 0) + m.jumlah);
+  }
+  if (byPelanggan.size === 0) return;
+
+  await db.transaction((tx) => {
+    for (const [pelangganId, totalJumlah] of byPelanggan) {
+      if (totalJumlah <= 0) continue; // hanya reverse net positif
+      tx.insert(mutasiLoyalti)
+        .values({
+          pelangganId,
+          jumlah: -totalJumlah,
+          tipe: "adjust",
+          refOrderId: orderId,
+          deskripsi: `Pembatalan order #${orderId} — reverse loyalty`,
+        })
+        .run();
+      tx.update(pelanggan)
+        .set({
+          saldoLoyalti: sql`max(0, ${pelanggan.saldoLoyalti} - ${totalJumlah})`,
+        })
+        .where(eq(pelanggan.id, pelangganId))
+        .run();
+    }
+    // Decrement stampGalon pada pelanggan order
+    if (totalGalon > 0) {
+      // Ambil pelangganId order
+      const orderRow = tx
+        .select({ pelangganId: orderHeader.pelangganId })
+        .from(orderHeader)
+        .where(eq(orderHeader.id, orderId))
+        .get();
+      if (orderRow?.pelangganId) {
+        tx.update(pelanggan)
+          .set({
+            stampGalon: sql`max(0, ${pelanggan.stampGalon} - ${totalGalon})`,
+          })
+          .where(eq(pelanggan.id, orderRow.pelangganId))
+          .run();
+      }
+    }
+  });
+}
+
+/**
  * Resolve kode referral ke pelanggan id. Case-insensitive.
  */
 export async function findPelangganByKode(kode: string): Promise<number | null> {

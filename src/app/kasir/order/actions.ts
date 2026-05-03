@@ -11,7 +11,8 @@ import { requireRole } from "@/lib/permissions";
 import { sendTelegram, renderTemplate, notifGrupOrder } from "@/lib/telegram";
 import { sendWhatsApp } from "@/lib/whatsapp";
 import { formatRupiah } from "@/lib/utils";
-import { earnFromOrderIfEligible } from "@/lib/loyalty";
+import { earnFromOrderIfEligible, reverseLoyaltyForOrder } from "@/lib/loyalty";
+import { reverseBonusForOrder } from "@/lib/bonus";
 import { sendPushToUser } from "@/lib/push";
 import { bestEffort } from "@/lib/best-effort";
 
@@ -85,6 +86,14 @@ export async function updateOrderStatus(orderId: number, status: Status) {
   // Earn loyalty kalau order selesai & sudah lunas
   if (status === "selesai") {
     bestEffort("earnFromOrderIfEligible", earnFromOrderIfEligible(orderId));
+  }
+
+  // Saat order dibatalkan, reverse loyalty (idempoten — no-op kalau belum
+  // pernah earn) dan hapus bonus kurir pending. Defense-in-depth: state
+  // machine sekarang cegah cancel pasca-selesai, tapi safety net tetap ada.
+  if (status === "batal") {
+    bestEffort("reverseLoyaltyForOrder", reverseLoyaltyForOrder(orderId));
+    bestEffort("reverseBonusForOrder", reverseBonusForOrder(orderId).then(() => {}));
   }
 
   revalidatePath("/kasir/order");
