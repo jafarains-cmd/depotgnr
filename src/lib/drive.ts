@@ -40,6 +40,7 @@ export async function uploadBuktiBayar(args: {
     refId: args.orderNomor,
     base64: args.base64,
     mimeType: args.mimeType,
+    allowPdf: true,
   });
 }
 
@@ -67,7 +68,10 @@ const MAX_BASE64_LENGTH = 7 * 1024 * 1024;
  * JPEG: FF D8 FF · PNG: 89 50 4E 47 · WEBP: RIFF ...... WEBP · GIF: GIF8
  * Decode 16 byte awal dari base64 saja.
  */
-function validateImageMagicBytes(base64: string): { ok: true; type: string } | { ok: false; error: string } {
+function validateUploadMagicBytes(
+  base64: string,
+  allowPdf: boolean,
+): { ok: true; type: string } | { ok: false; error: string } {
   try {
     const head = Buffer.from(base64.slice(0, 24), "base64");
     if (head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff) return { ok: true, type: "jpeg" };
@@ -77,7 +81,12 @@ function validateImageMagicBytes(base64: string): { ok: true; type: string } | {
       head[8] === 0x57 && head[9] === 0x45 && head[10] === 0x42 && head[11] === 0x50  // WEBP
     ) return { ok: true, type: "webp" };
     if (head[0] === 0x47 && head[1] === 0x49 && head[2] === 0x46 && head[3] === 0x38) return { ok: true, type: "gif" };
-    return { ok: false, error: "File bukan gambar yang valid (JPEG/PNG/WebP/GIF)" };
+    if (
+      allowPdf &&
+      head[0] === 0x25 && head[1] === 0x50 && head[2] === 0x44 && head[3] === 0x46 // %PDF
+    ) return { ok: true, type: "pdf" };
+    const allowed = allowPdf ? "JPEG/PNG/WebP/GIF/PDF" : "JPEG/PNG/WebP/GIF";
+    return { ok: false, error: `File bukan ${allowed} yang valid` };
   } catch {
     return { ok: false, error: "Gagal decode file" };
   }
@@ -90,13 +99,14 @@ async function uploadToDrive(args: {
   refId: string;
   base64: string;
   mimeType: string;
+  allowPdf?: boolean;
 }): Promise<UploadResp> {
   // Size guard
   if (args.base64.length > MAX_BASE64_LENGTH) {
     return { ok: false, error: "File terlalu besar (max ~5MB)" };
   }
   // Magic byte validation
-  const v = validateImageMagicBytes(args.base64);
+  const v = validateUploadMagicBytes(args.base64, args.allowPdf ?? false);
   if (!v.ok) return { ok: false, error: v.error };
 
   const url = await getCfg("appsScriptUrl");
@@ -108,8 +118,8 @@ async function uploadToDrive(args: {
   if (!url || !token) return { ok: false, error: "Apps Script belum diset di Pengaturan" };
   if (!folderId) return { ok: false, error: `${args.folderKey} belum diset di Pengaturan` };
 
-  // Trust mime detected dari magic bytes, fallback ke client-provided
-  const mimeType = `image/${v.type}`;
+  // Trust mime detected dari magic bytes
+  const mimeType = v.type === "pdf" ? "application/pdf" : `image/${v.type}`;
   const filename = `${args.prefix}-${args.refId}-${Date.now()}.${guessExt(mimeType)}`;
 
   try {
@@ -127,14 +137,24 @@ async function uploadToDrive(args: {
       redirect: "follow",
     });
     if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
-    return (await res.json()) as UploadResp;
+    const json = (await res.json()) as UploadResp;
+    // Marker untuk PDF supaya display layer tahu render link, bukan <img>
+    if (json.ok && json.url && v.type === "pdf") {
+      return { ...json, url: `${json.url}#mime=pdf` };
+    }
+    return json;
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Network error" };
   }
 }
 
 function guessExt(mime: string): string {
+  if (mime.includes("pdf")) return "pdf";
   if (mime.includes("png")) return "png";
   if (mime.includes("webp")) return "webp";
   return "jpg";
+}
+
+export function isPdfUrl(url: string | null | undefined): boolean {
+  return !!url && url.includes("#mime=pdf");
 }

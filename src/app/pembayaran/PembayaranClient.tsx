@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, X, ExternalLink } from "lucide-react";
+import { Check, X, ExternalLink, FileText } from "lucide-react";
 import { konfirmasiBayar, tolakBayar } from "./actions";
 import { formatRupiah } from "@/lib/utils";
 import { normalizeDriveUrl } from "@/lib/drive-url";
+import { isPdfUrl } from "@/lib/drive";
 
 export type Row = {
   id: number;
@@ -129,14 +130,27 @@ export function PembayaranClient({ rows }: { rows: Row[] }) {
                 <div className="text-[10px] text-[color:var(--muted)] mb-1.5 font-semibold uppercase tracking-wide">
                   Bukti Pembayaran
                 </div>
-                <a href={r.buktiUrl} target="_blank" rel="noreferrer" className="block">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={normalizeDriveUrl(r.buktiUrl)}
-                    alt="Bukti"
-                    className="w-full max-h-64 object-contain rounded-xl border border-line bg-[color:var(--surface2)]"
-                  />
-                </a>
+                {isPdfUrl(r.buktiUrl) ? (
+                  <a
+                    href={r.buktiUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block w-full p-6 rounded-xl border border-line bg-[color:var(--surface2)] text-center hover:border-brand transition"
+                  >
+                    <FileText size={32} className="mx-auto mb-2 text-brand" />
+                    <div className="text-sm font-bold text-ink">Bukti PDF</div>
+                    <div className="text-xs text-[color:var(--muted)]">Klik untuk buka</div>
+                  </a>
+                ) : (
+                  <a href={r.buktiUrl} target="_blank" rel="noreferrer" className="block">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={normalizeDriveUrl(r.buktiUrl)}
+                      alt="Bukti"
+                      className="w-full max-h-64 object-contain rounded-xl border border-line bg-[color:var(--surface2)]"
+                    />
+                  </a>
+                )}
                 <a
                   href={r.buktiUrl}
                   target="_blank"

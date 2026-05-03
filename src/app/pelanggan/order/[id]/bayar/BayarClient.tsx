@@ -2,10 +2,11 @@
 
 import { useState, useTransition, useTransition as useT2 } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Check, Copy, Loader2, QrCode, Wallet, Building2, HandCoins, Gift } from "lucide-react";
+import { Camera, Check, Copy, Loader2, QrCode, Wallet, Building2, HandCoins, Gift, FileText } from "lucide-react";
 import { pilihMetodeBayar, submitBuktiBayar, pakaiLoyalty } from "./actions";
 import { formatRupiah } from "@/lib/utils";
 import { normalizeDriveUrl } from "@/lib/drive-url";
+import { isPdfUrl } from "@/lib/drive";
 
 type Metode = "cash" | "transfer" | "qris" | "dana" | "cod";
 
@@ -198,13 +199,13 @@ export function BayarClient({
             <Camera size={16} /> Upload Bukti Pembayaran
           </div>
           <p className="text-xs text-[color:var(--muted)]">
-            Screenshot bukti transfer / pembayaran dari aplikasi Anda.
+            Screenshot bukti transfer / pembayaran (gambar atau PDF dari m-banking).
           </p>
 
           <label className="block">
             <input
               type="file"
-              accept="image/*"
+              accept="image/*,application/pdf"
               onChange={(e) => {
                 const f = e.target.files?.[0];
                 if (f) handleFile(f);
@@ -212,9 +213,20 @@ export function BayarClient({
               className="hidden"
             />
             <div className="cursor-pointer aspect-video bg-[color:var(--surface2)] border-2 border-dashed border-line rounded-lg flex items-center justify-center overflow-hidden hover:border-brand-400">
-              {preview ? (
+              {preview && file?.type === "application/pdf" ? (
+                <div className="text-center text-ink text-sm py-6">
+                  <FileText size={28} className="mx-auto mb-1 text-brand" />
+                  <div className="font-semibold">{file.name}</div>
+                  <div className="text-xs text-[color:var(--muted)]">PDF siap upload</div>
+                </div>
+              ) : preview ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={preview} alt="Bukti" className="w-full h-full object-cover" />
+              ) : buktiUrl && isPdfUrl(buktiUrl) ? (
+                <div className="text-center text-ink text-sm py-6 opacity-60">
+                  <FileText size={28} className="mx-auto mb-1" />
+                  <div className="font-semibold">Bukti PDF terkirim</div>
+                </div>
               ) : buktiUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={buktiUrl} alt="Bukti" className="w-full h-full object-cover opacity-60" />
