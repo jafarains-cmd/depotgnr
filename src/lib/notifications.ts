@@ -34,10 +34,11 @@ export async function countPembayaranMenunggu(): Promise<number> {
 }
 
 /**
- * Hitung pesanan pelanggan yang masih in-progress — untuk badge tab "Pesanan" di nav pelanggan.
- * Hanya order dengan status BUKAN selesai/batal (pending, diproses, dijemput, diisi, diantar).
- * Order selesai tetap tidak dihitung walau statusBayar belum lunas — pelanggan sudah dapat
- * barangnya, tidak perlu di-nudge dari badge.
+ * Hitung pesanan pelanggan yang masih butuh perhatian — untuk badge tab "Pesanan".
+ * Termasuk:
+ *   - order in-progress (pending, diproses, dijemput, diisi, diantar)
+ *   - order selesai TAPI statusBayar != lunas (piutang yang harus diselesaikan pelanggan)
+ * Order batal selalu di-skip.
  */
 export async function countPesananBelumTuntas(pelangganId: number): Promise<number> {
   const [row] = await db
@@ -47,7 +48,7 @@ export async function countPesananBelumTuntas(pelangganId: number): Promise<numb
       and(
         eq(orderHeader.pelangganId, pelangganId),
         ne(orderHeader.status, "batal"),
-        ne(orderHeader.status, "selesai"),
+        sql`(${orderHeader.status} != 'selesai' OR ${orderHeader.statusBayar} != 'lunas')`,
       ),
     );
   return row.n ?? 0;

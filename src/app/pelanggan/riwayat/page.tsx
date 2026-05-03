@@ -139,12 +139,14 @@ export default async function RiwayatPage({
                     {o.status === "pending" && (
                       <CancelOrderButton orderId={o.id} nomorOrder={o.nomorOrder} />
                     )}
-                    <Link
-                      href={`/pelanggan/order/${o.id}/nota`}
-                      className="text-[11px] px-3 py-1.5 border-2 border-line rounded-full font-bold inline-flex items-center gap-1 hover:border-brand hover:text-brand transition"
-                    >
-                      <FileText size={11} /> Nota
-                    </Link>
+                    {o.statusBayar === "lunas" && (
+                      <Link
+                        href={`/pelanggan/order/${o.id}/nota`}
+                        className="text-[11px] px-3 py-1.5 border-2 border-line rounded-full font-bold inline-flex items-center gap-1 hover:border-brand hover:text-brand transition"
+                      >
+                        <FileText size={11} /> Nota
+                      </Link>
+                    )}
                     {(o.statusBayar === "belum" || o.statusBayar === "menunggu") && (
                       <Link
                         href={`/pelanggan/order/${o.id}/bayar`}

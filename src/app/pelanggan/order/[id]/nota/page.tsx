@@ -29,6 +29,9 @@ export default async function NotaPelangganPage({
   if (!pel || pel.userId !== session.user.id) {
     redirect("/pelanggan/riwayat");
   }
+  if (o.statusBayar !== "lunas") {
+    redirect(`/pelanggan/order/${o.id}/bayar`);
+  }
 
   const items = await db
     .select({
