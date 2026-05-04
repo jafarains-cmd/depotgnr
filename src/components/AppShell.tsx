@@ -53,7 +53,7 @@ export function AppShell({
   return (
     <div className="min-h-screen md:flex bg-[color:var(--surface2)]">
       {/* Mobile top bar — only visible on mobile */}
-      <header className="md:hidden sticky top-0 z-30 bg-surface border-b border-line">
+      <header className="md:hidden sticky top-0 z-30 bg-surface border-b border-line print:hidden">
         <div className="flex items-center justify-between px-4 py-3">
           <Link href="/" className="flex items-center gap-2">
             <span className="w-9 h-9 rounded-xl bg-brand text-white grid place-items-center">
@@ -85,7 +85,7 @@ export function AppShell({
 
       {/* Sidebar — drawer on mobile (slide-in), static on desktop */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-surface border-r border-line flex flex-col transform transition-transform md:static md:w-60 md:max-w-none md:transform-none ${
+        className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-surface border-r border-line flex flex-col transform transition-transform md:static md:w-60 md:max-w-none md:transform-none print:hidden ${
           open ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
