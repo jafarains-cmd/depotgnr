@@ -4,13 +4,19 @@ import { orderHeader } from "@/db/schema/order";
 import { bonusKurir } from "@/db/schema/bonus";
 
 /**
- * Hitung order baru masuk yang belum di-tindak kasir (status pending).
+ * Hitung order yang masih in-flight (belum selesai/batal). Termasuk:
+ *  - pending (baru masuk, belum diproses)
+ *  - diproses, dijemput, diisi, diantar (sudah ditangani kasir/kurir tapi
+ *    belum sampai/selesai — masih perlu monitoring)
+ * Untuk badge "Order Antar" di nav admin/kasir.
  */
 export async function countOrderMasuk(): Promise<number> {
   const [row] = await db
     .select({ n: sql<number>`count(*)` })
     .from(orderHeader)
-    .where(eq(orderHeader.status, "pending"));
+    .where(
+      inArray(orderHeader.status, ["pending", "diproses", "dijemput", "diisi", "diantar"]),
+    );
   return row.n ?? 0;
 }
 
