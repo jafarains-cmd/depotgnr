@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Pencil, Trash2, Plus, X, MapPin } from "lucide-react";
+import Link from "next/link";
+import { Pencil, Trash2, Plus, X, MapPin, Eye } from "lucide-react";
 import type { Pelanggan } from "@/db/schema/pelanggan";
 import { upsertPelanggan, deletePelanggan } from "./actions";
 import { LocationPicker } from "./LocationPicker";
@@ -82,7 +83,12 @@ export function PelangganTable({
             {filtered.map((p) => (
               <tr key={p.id} className="hover:bg-[color:var(--surface2)]">
                 <td className="p-3 font-medium">
-                  <div>{p.nama}</div>
+                  <Link
+                    href={`/data-pelanggan/${p.id}`}
+                    className="hover:text-brand hover:underline"
+                  >
+                    {p.nama}
+                  </Link>
                   {/* show telp & alamat as sub-line on mobile */}
                   <div className="sm:hidden text-xs text-[color:var(--muted)] mt-0.5 space-y-0.5">
                     {p.telp && <div>📞 {p.telp}</div>}
@@ -114,6 +120,13 @@ export function PelangganTable({
                   </span>
                 </td>
                 <td className="p-3 text-right space-x-2">
+                  <Link
+                    href={`/data-pelanggan/${p.id}`}
+                    className="text-[color:var(--muted)] hover:text-brand inline-block"
+                    title="Lihat detail & loyalty"
+                  >
+                    <Eye size={14} />
+                  </Link>
                   <button
                     onClick={() => setEditing(p)}
                     className="text-brand"

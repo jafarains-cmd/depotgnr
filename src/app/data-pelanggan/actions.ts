@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { pelanggan } from "@/db/schema/pelanggan";
+import { pelanggan, mutasiLoyalti } from "@/db/schema/pelanggan";
 import { requireRole } from "@/lib/permissions";
 
 export async function upsertPelanggan(formData: FormData) {
@@ -37,4 +37,54 @@ export async function deletePelanggan(id: number) {
   await requireRole(["admin"]);
   await db.delete(pelanggan).where(eq(pelanggan.id, id));
   revalidatePath("/data-pelanggan");
+}
+
+/**
+ * Adjust manual saldo loyalti pelanggan (admin only).
+ * Insert mutasi tipe `adjust` + update saldo (max 0 supaya tidak minus).
+ */
+export async function adjustLoyaltyManual(
+  pelangganId: number,
+  jumlah: number,
+  alasan: string,
+): Promise<{ ok: true } | { error: string }> {
+  await requireRole(["admin"]);
+  const reason = alasan.trim();
+  if (reason.length < 3) return { error: "Alasan wajib diisi (min 3 karakter)" };
+  if (reason.length > 500) return { error: "Alasan terlalu panjang (max 500 karakter)" };
+  if (!Number.isInteger(jumlah) || jumlah === 0) {
+    return { error: "Jumlah harus angka bulat selain nol" };
+  }
+  if (Math.abs(jumlah) > 10_000_000) {
+    return { error: "Jumlah di luar batas wajar (max ±10.000.000)" };
+  }
+
+  const pel = await db.query.pelanggan.findFirst({ where: eq(pelanggan.id, pelangganId) });
+  if (!pel) return { error: "Pelanggan tidak ditemukan" };
+
+  await db.transaction((tx) => {
+    tx.insert(mutasiLoyalti)
+      .values({
+        pelangganId,
+        jumlah,
+        tipe: "adjust",
+        deskripsi: `Adjust manual: ${reason}`,
+      })
+      .run();
+    if (jumlah > 0) {
+      tx.update(pelanggan)
+        .set({ saldoLoyalti: sql`${pelanggan.saldoLoyalti} + ${jumlah}` })
+        .where(eq(pelanggan.id, pelangganId))
+        .run();
+    } else {
+      tx.update(pelanggan)
+        .set({ saldoLoyalti: sql`max(0, ${pelanggan.saldoLoyalti} + ${jumlah})` })
+        .where(eq(pelanggan.id, pelangganId))
+        .run();
+    }
+  });
+
+  revalidatePath(`/data-pelanggan/${pelangganId}`);
+  revalidatePath("/data-pelanggan");
+  return { ok: true };
 }
