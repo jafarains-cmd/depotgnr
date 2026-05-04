@@ -17,16 +17,21 @@ export default async function KasirLayout({ children }: { children: React.ReactN
 
   const NAV: NavItem[] = [
     { href: "/kasir/pos", label: "POS Kasir", icon: <ShoppingCart size={16} /> },
-    { href: "/kasir/order", label: "Order Antar", icon: <Truck size={16} />, badge: orderMasuk },
+    { href: "/kasir/order", label: "Order Antar", icon: <Truck size={16} />, badgeKey: "orderMasuk" },
     { href: "/kasir/transaksi", label: "Riwayat Transaksi", icon: <Receipt size={16} /> },
     { href: "/data-pelanggan", label: "Pelanggan", icon: <Users size={16} /> },
-    { href: "/pembayaran", label: "Pembayaran", icon: <Wallet size={16} />, badge: pembayaran },
-    { href: "/kurir", label: "Mode Kurir", icon: <Bike size={16} />, badge: kurirAktif },
+    { href: "/pembayaran", label: "Pembayaran", icon: <Wallet size={16} />, badgeKey: "pembayaran" },
+    { href: "/kurir", label: "Mode Kurir", icon: <Bike size={16} />, badgeKey: "kurirAktif" },
     { href: "/akun", label: "Akun Saya", icon: <KeyRound size={16} /> },
   ];
 
   return (
-    <AppShell title="Kasir · Depot Air" nav={NAV} userName={session.user.name}>
+    <AppShell
+      title="Kasir · Depot Air"
+      nav={NAV}
+      userName={session.user.name}
+      initialBadges={{ orderMasuk, pembayaran, kurirAktif }}
+    >
       {children}
     </AppShell>
   );

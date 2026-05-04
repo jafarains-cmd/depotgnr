@@ -6,26 +6,33 @@ import { usePathname, useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { LogOut, Menu, X } from "lucide-react";
 import { DropFill } from "./GallonArt";
+import { useNotifPolling } from "./useNotifPolling";
+import type { NotifCounts } from "@/lib/notif-action";
 
 export type NavItem = {
   href: string;
   label: string;
   icon?: React.ReactNode;
-  /** Badge count — pill merah di kanan label kalau > 0 */
+  /** Badge count statis — render langsung kalau > 0. Pakai badgeKey kalau mau auto-update via polling. */
   badge?: number;
+  /** Key di NotifCounts (mis. "orderMasuk") — kalau diisi, AppShell pakai polling untuk update. */
+  badgeKey?: keyof NotifCounts;
 };
 
 export function AppShell({
   title,
   nav,
   userName,
+  initialBadges,
   children,
 }: {
   title: string;
   nav: NavItem[];
   userName: string;
+  initialBadges?: NotifCounts;
   children: React.ReactNode;
 }) {
+  const liveBadges = useNotifPolling(initialBadges ?? {});
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -107,6 +114,8 @@ export function AppShell({
         <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
           {nav.map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
+            const liveValue = item.badgeKey ? liveBadges[item.badgeKey] : undefined;
+            const badge = liveValue ?? item.badge;
             return (
               <Link
                 key={item.href}
@@ -119,9 +128,9 @@ export function AppShell({
               >
                 {item.icon}
                 <span className="flex-1">{item.label}</span>
-                {item.badge !== undefined && item.badge > 0 && (
+                {badge !== undefined && badge > 0 && (
                   <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-rose-500 text-white min-w-[18px] text-center leading-none flex-shrink-0">
-                    {item.badge > 99 ? "99+" : item.badge}
+                    {badge > 99 ? "99+" : badge}
                   </span>
                 )}
               </Link>

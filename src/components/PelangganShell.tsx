@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Home, Plus, History, User, LogOut, Gift } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { DropFill } from "./GallonArt";
+import { useNotifPolling } from "./useNotifPolling";
 
 type NavBadges = {
   pesanan?: number;
@@ -43,6 +44,7 @@ export function PelangganShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const liveBadges = useNotifPolling(badges ?? {});
 
   async function handleLogout() {
     await authClient.signOut();
@@ -54,8 +56,8 @@ export function PelangganShell({
   const isBeranda = pathname === "/pelanggan/beranda";
 
   function getBadge(key: typeof NAV[number]["badgeKey"]): number {
-    if (!key || !badges) return 0;
-    return badges[key] ?? 0;
+    if (!key) return 0;
+    return liveBadges[key] ?? badges?.[key] ?? 0;
   }
 
   return (

@@ -44,20 +44,25 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/peta", label: "Peta Pelanggan", icon: <Map size={16} /> },
     { href: "/admin/inventory", label: "Inventory", icon: <Boxes size={16} /> },
     { href: "/kasir/transaksi", label: "Transaksi", icon: <Receipt size={16} /> },
-    { href: "/pembayaran", label: "Pembayaran", icon: <Wallet size={16} />, badge: pembayaran },
-    { href: "/admin/bonus-kurir", label: "Bonus Kurir", icon: <Coins size={16} />, badge: bonusPending },
-    { href: "/kasir/order", label: "Order Antar", icon: <Truck size={16} />, badge: orderMasuk },
+    { href: "/pembayaran", label: "Pembayaran", icon: <Wallet size={16} />, badgeKey: "pembayaran" },
+    { href: "/admin/bonus-kurir", label: "Bonus Kurir", icon: <Coins size={16} />, badgeKey: "bonusPending" },
+    { href: "/kasir/order", label: "Order Antar", icon: <Truck size={16} />, badgeKey: "orderMasuk" },
     { href: "/admin/laporan", label: "Laporan", icon: <BarChart3 size={16} /> },
-    { href: "/admin/analitik/follow-up", label: "Follow-up", icon: <TrendingUp size={16} />, badge: followUp },
+    { href: "/admin/analitik/follow-up", label: "Follow-up", icon: <TrendingUp size={16} />, badgeKey: "followUp" },
     { href: "/admin/users", label: "User", icon: <UserCog size={16} /> },
     { href: "/admin/pengaturan", label: "Pengaturan", icon: <Settings size={16} /> },
     { href: "/admin/bantuan", label: "Bantuan", icon: <HelpCircle size={16} /> },
-    { href: "/kurir", label: "Mode Kurir", icon: <Bike size={16} />, badge: kurirAktif },
+    { href: "/kurir", label: "Mode Kurir", icon: <Bike size={16} />, badgeKey: "kurirAktif" },
     { href: "/akun", label: "Akun Saya", icon: <KeyRound size={16} /> },
   ];
 
   return (
-    <AppShell title="Admin · Depot Air" nav={NAV} userName={session.user.name}>
+    <AppShell
+      title="Admin · Depot Air"
+      nav={NAV}
+      userName={session.user.name}
+      initialBadges={{ orderMasuk, pembayaran, kurirAktif, bonusPending, followUp }}
+    >
       {children}
     </AppShell>
   );
