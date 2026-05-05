@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/db";
 import { eq, desc, and, gte, lte, like, or } from "drizzle-orm";
+import { TransaksiRow } from "./TransaksiRow";
 import { transaksi } from "@/db/schema/transaksi";
 import { user as userTable } from "@/db/schema/auth";
 import { pelanggan } from "@/db/schema/pelanggan";
@@ -120,7 +121,7 @@ export default async function RiwayatKasirPage({
             </thead>
             <tbody className="divide-y divide-line">
               {rows.map((r) => (
-                <tr key={r.id} className="hover:bg-[color:var(--surface2)]">
+                <TransaksiRow key={r.id} trxId={r.id}>
                   <td className="p-3 text-xs text-[color:var(--muted)]">
                     {r.createdAt.toLocaleString("id-ID", {
                       day: "2-digit",
@@ -151,14 +152,9 @@ export default async function RiwayatKasirPage({
                     {formatRupiah(r.total)}
                   </td>
                   <td className="p-3 text-right">
-                    <Link
-                      href={`/kasir/transaksi/${r.id}`}
-                      className="text-xs text-brand hover:underline"
-                    >
-                      Nota
-                    </Link>
+                    <span className="text-xs text-brand">Detail →</span>
                   </td>
-                </tr>
+                </TransaksiRow>
               ))}
               {rows.length === 0 && (
                 <tr>

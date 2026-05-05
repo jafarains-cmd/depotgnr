@@ -5,6 +5,7 @@ import { Check, X, ExternalLink, FileText } from "lucide-react";
 import { konfirmasiBayar, tolakBayar } from "./actions";
 import { formatRupiah } from "@/lib/utils";
 import { normalizeDriveUrl, isPdfUrl } from "@/lib/drive-url";
+import { DetailModal } from "@/components/DetailModal";
 
 export type Row = {
   id: number;
@@ -26,6 +27,7 @@ type Tab = "menunggu" | "piutang" | "lunas" | "all";
 export function PembayaranClient({ rows }: { rows: Row[] }) {
   const [filter, setFilter] = useState<Tab>("menunggu");
   const [pending, startTransition] = useTransition();
+  const [detailId, setDetailId] = useState<number | null>(null);
 
   // Piutang = order selesai tapi belum lunas
   function isPiutang(r: Row) {
@@ -88,7 +90,11 @@ export function PembayaranClient({ rows }: { rows: Row[] }) {
                     : "var(--accent)",
             }}
           >
-            <div className="flex justify-between items-start gap-2">
+            <button
+              type="button"
+              onClick={() => setDetailId(r.id)}
+              className="flex justify-between items-start gap-2 w-full text-left hover:opacity-80 transition"
+            >
               <div className="min-w-0">
                 <div className="font-mono text-xs text-[color:var(--muted)]">
                   {r.nomorOrder}
@@ -118,11 +124,12 @@ export function PembayaranClient({ rows }: { rows: Row[] }) {
                     {new Date(r.diantarAt).toLocaleDateString("id-ID", {
                       day: "2-digit",
                       month: "short",
+                      timeZone: "Asia/Makassar",
                     })}
                   </div>
                 )}
               </div>
-            </div>
+            </button>
 
             {r.buktiUrl && (
               <div>
@@ -216,6 +223,10 @@ export function PembayaranClient({ rows }: { rows: Row[] }) {
           </div>
         )}
       </div>
+
+      {detailId !== null && (
+        <DetailModal kind="order" id={detailId} onClose={() => setDetailId(null)} />
+      )}
     </div>
   );
 }

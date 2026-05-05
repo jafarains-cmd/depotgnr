@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Check, User } from "lucide-react";
 import { tandaiBayarBonus } from "./actions";
 import { formatRupiah } from "@/lib/utils";
+import { DetailModal } from "@/components/DetailModal";
 
 export type KurirSummary = {
   kurirUserId: string;
@@ -17,6 +18,7 @@ export type KurirSummary = {
 
 export type BonusRow = {
   id: number;
+  orderId: number;
   kurirNama: string;
   nomorOrder: string;
   jumlahGalon: number;
@@ -36,6 +38,7 @@ export function BonusClient({
 }) {
   const [pending, startTransition] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
+  const [detailOrderId, setDetailOrderId] = useState<number | null>(null);
 
   function bayarKurir(k: KurirSummary) {
     if (k.pendingCount === 0) return;
@@ -137,7 +140,11 @@ export function BonusClient({
             </thead>
             <tbody className="divide-y divide-line">
               {detail.map((d) => (
-                <tr key={d.id}>
+                <tr
+                  key={d.id}
+                  onClick={() => setDetailOrderId(d.orderId)}
+                  className="hover:bg-[color:var(--surface2)] cursor-pointer"
+                >
                   <td className="p-3 text-xs">
                     {new Date(d.createdAt).toLocaleDateString("id-ID", {
                       day: "2-digit",
@@ -147,7 +154,7 @@ export function BonusClient({
                     })}
                   </td>
                   <td className="p-3 text-sm font-medium">{d.kurirNama}</td>
-                  <td className="p-3 text-xs font-mono">{d.nomorOrder}</td>
+                  <td className="p-3 text-xs font-mono text-brand">{d.nomorOrder}</td>
                   <td className="p-3 text-right text-sm">{d.jumlahGalon}</td>
                   <td className="p-3 text-right text-sm font-bold">{formatRupiah(d.total)}</td>
                   <td className="p-3">
@@ -174,6 +181,14 @@ export function BonusClient({
           </table>
         </div>
       </section>
+
+      {detailOrderId !== null && (
+        <DetailModal
+          kind="order"
+          id={detailOrderId}
+          onClose={() => setDetailOrderId(null)}
+        />
+      )}
     </div>
   );
 }

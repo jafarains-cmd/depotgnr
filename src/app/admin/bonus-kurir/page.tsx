@@ -61,6 +61,7 @@ export default async function BonusKurirPage() {
 
   const detailRows: BonusRow[] = detail.map((d) => ({
     id: d.id,
+    orderId: d.orderId,
     kurirNama: d.kurirNama ?? "—",
     nomorOrder: d.nomorOrder ?? `#${d.orderId}`,
     jumlahGalon: d.jumlahGalon,
