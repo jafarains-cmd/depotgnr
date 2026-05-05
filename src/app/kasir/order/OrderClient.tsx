@@ -69,12 +69,31 @@ const STATUS_COLOR: Record<OrderStatus, string> = {
 export function OrderClient({
   rows,
   kurirList,
+  isAdmin = false,
 }: {
   rows: OrderRow[];
   kurirList: { id: string; name: string }[];
+  isAdmin?: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const [filter, setFilter] = useState<OrderStatus | "all">("all");
+  const [assignError, setAssignError] = useState<{ orderId: number; msg: string } | null>(null);
+
+  function handleAssignKurir(orderId: number, newKurirId: string | null, isCompleted: boolean) {
+    if (isCompleted) {
+      const ok = confirm(
+        "Order ini sudah selesai dan bonus sudah tercatat. Reassign akan reverse bonus lama dan catat bonus baru ke kurir baru. Lanjut?",
+      );
+      if (!ok) return;
+    }
+    setAssignError(null);
+    startTransition(async () => {
+      const r = await assignKurir(orderId, newKurirId);
+      if (r && "error" in r) {
+        setAssignError({ orderId, msg: r.error });
+      }
+    });
+  }
 
   const filtered =
     filter === "all"
@@ -157,24 +176,41 @@ export function OrderClient({
                 Estimasi: {formatRupiah(o.totalEstimasi)}
               </div>
 
-              {(o.status === "pending" || o.status === "diproses" || o.status === "diantar") && (
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="text-[color:var(--muted)]">Kurir:</span>
-                  <select
-                    value={o.kurirUserId ?? ""}
-                    onChange={(e) =>
-                      startTransition(() => assignKurir(o.id, e.target.value || null))
-                    }
-                    className="flex-1 px-2 py-1 border border-line rounded text-xs"
-                    disabled={pending}
-                  >
-                    <option value="">— belum di-assign —</option>
-                    {kurirList.map((k) => (
-                      <option key={k.id} value={k.id}>
-                        {k.name}
-                      </option>
-                    ))}
-                  </select>
+              {(o.status === "pending" ||
+                o.status === "diproses" ||
+                o.status === "diantar" ||
+                (o.status === "selesai" && isAdmin)) && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-[color:var(--muted)]">Kurir:</span>
+                    <select
+                      value={o.kurirUserId ?? ""}
+                      onChange={(e) =>
+                        handleAssignKurir(
+                          o.id,
+                          e.target.value || null,
+                          o.status === "selesai",
+                        )
+                      }
+                      className="flex-1 px-2 py-1 border border-line rounded text-xs"
+                      disabled={pending}
+                    >
+                      <option value="">— belum di-assign —</option>
+                      {kurirList.map((k) => (
+                        <option key={k.id} value={k.id}>
+                          {k.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {o.status === "selesai" && (
+                    <div className="text-[10px] text-amber-600">
+                      ⚠ Reassign akan reverse bonus lama & catat bonus baru
+                    </div>
+                  )}
+                  {assignError?.orderId === o.id && (
+                    <div className="text-[11px] text-red-600">{assignError.msg}</div>
+                  )}
                 </div>
               )}
 

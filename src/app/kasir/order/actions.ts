@@ -12,7 +12,8 @@ import { sendTelegram, renderTemplate, notifGrupOrder } from "@/lib/telegram";
 import { sendWhatsApp } from "@/lib/whatsapp";
 import { formatRupiah } from "@/lib/utils";
 import { earnFromOrderIfEligible, reverseLoyaltyForOrder } from "@/lib/loyalty";
-import { reverseBonusForOrder } from "@/lib/bonus";
+import { reverseBonusForOrder, recordKurirBonus } from "@/lib/bonus";
+import { bonusKurir } from "@/db/schema/bonus";
 import { sendPushToUser } from "@/lib/push";
 import { bestEffort } from "@/lib/best-effort";
 import { uploadBuktiKurir } from "@/lib/drive";
@@ -238,14 +239,59 @@ async function notifPelangganOrderSelesai(orderId: number) {
   }
 }
 
-export async function assignKurir(orderId: number, kurirUserId: string | null) {
-  await requireRole(["admin", "kasir"]);
-  await db
-    .update(orderHeader)
-    .set({ kurirUserId, updatedAt: new Date() })
-    .where(eq(orderHeader.id, orderId));
+export async function assignKurir(
+  orderId: number,
+  kurirUserId: string | null,
+): Promise<{ ok: true } | { error: string }> {
+  // Default: kasir & admin boleh ubah kurir.
+  // Kalau order sudah punya bonus tercatat (artinya selesai + lunas), hanya
+  // admin yang boleh reassign — sekaligus reverse bonus lama + record bonus
+  // untuk kurir baru.
+  const order = await db.query.orderHeader.findFirst({
+    where: eq(orderHeader.id, orderId),
+  });
+  if (!order) return { error: "Order tidak ditemukan" };
+
+  const existingBonus = await db.query.bonusKurir.findFirst({
+    where: eq(bonusKurir.orderId, orderId),
+  });
+
+  if (existingBonus) {
+    // Reassign post-completion butuh admin
+    await requireRole(["admin"]);
+
+    if (existingBonus.status === "dibayar") {
+      return {
+        error:
+          "Bonus untuk order ini sudah dibayar ke kurir lama. Tidak bisa direassign — bonus sudah keluar dari kas.",
+      };
+    }
+
+    // Hapus bonus pending lama
+    await db.delete(bonusKurir).where(eq(bonusKurir.orderId, orderId));
+
+    // Update kurir
+    await db
+      .update(orderHeader)
+      .set({ kurirUserId, updatedAt: new Date() })
+      .where(eq(orderHeader.id, orderId));
+
+    // Record bonus baru kalau kurir di-assign (bukan null)
+    if (kurirUserId) {
+      bestEffort("recordKurirBonus(reassign)", recordKurirBonus(orderId));
+    }
+  } else {
+    await requireRole(["admin", "kasir"]);
+    await db
+      .update(orderHeader)
+      .set({ kurirUserId, updatedAt: new Date() })
+      .where(eq(orderHeader.id, orderId));
+  }
+
   revalidatePath("/kasir/order");
   revalidatePath("/admin/order");
+  revalidatePath("/admin/bonus-kurir");
+  return { ok: true };
 }
 
 /**

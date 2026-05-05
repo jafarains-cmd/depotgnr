@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/AppShell";
 import { OrderClient, type OrderRow } from "./OrderClient";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { parseRange } from "@/lib/date-range";
+import { requireRole } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,8 @@ export default async function OrderKasirPage({
 }: {
   searchParams: Promise<{ range?: string; from?: string; to?: string }>;
 }) {
+  const session = await requireRole(["admin", "kasir"]);
+  const isAdmin = session.user.role === "admin";
   const sp = await searchParams;
   const range = parseRange(sp);
 
@@ -112,7 +115,7 @@ export default async function OrderKasirPage({
           basePath="/kasir/order"
         />
       </div>
-      <OrderClient rows={rows} kurirList={kurirList} />
+      <OrderClient rows={rows} kurirList={kurirList} isAdmin={isAdmin} />
     </div>
   );
 }
