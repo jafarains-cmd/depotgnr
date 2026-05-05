@@ -15,6 +15,7 @@ import { earnFromOrderIfEligible, reverseLoyaltyForOrder } from "@/lib/loyalty";
 import { reverseBonusForOrder } from "@/lib/bonus";
 import { sendPushToUser } from "@/lib/push";
 import { bestEffort } from "@/lib/best-effort";
+import { uploadBuktiKurir } from "@/lib/drive";
 
 type Status =
   | "pending"
@@ -73,6 +74,8 @@ export async function updateOrderStatus(orderId: number, status: Status) {
     (update as Record<string, unknown>).dijemputAt = new Date();
   } else if (status === "diisi") {
     (update as Record<string, unknown>).diisiAt = new Date();
+  } else if (status === "selesai") {
+    (update as Record<string, unknown>).selesaiAt = new Date();
   }
 
   await db.update(orderHeader).set(update).where(eq(orderHeader.id, orderId));
@@ -243,4 +246,50 @@ export async function assignKurir(orderId: number, kurirUserId: string | null) {
     .where(eq(orderHeader.id, orderId));
   revalidatePath("/kasir/order");
   revalidatePath("/admin/order");
+}
+
+/**
+ * Upload bukti foto antar oleh admin/kasir — fallback kalau kurir lupa
+ * upload via aplikasi kurir. Tidak overwrite kalau bukti sudah ada
+ * (kecuali admin set replace=true).
+ */
+export async function uploadBuktiAntarStaff(args: {
+  orderId: number;
+  base64: string;
+  mimeType: string;
+  replace?: boolean;
+}): Promise<{ ok: true; url: string } | { error: string }> {
+  await requireRole(["admin", "kasir"]);
+
+  const order = await db.query.orderHeader.findFirst({
+    where: eq(orderHeader.id, args.orderId),
+  });
+  if (!order) return { error: "Order tidak ditemukan" };
+
+  if (order.buktiFotoUrl && !args.replace) {
+    return { error: "Bukti sudah ada. Set replace=true untuk overwrite." };
+  }
+
+  const up = await uploadBuktiKurir({
+    orderNomor: order.nomorOrder,
+    base64: args.base64,
+    mimeType: args.mimeType,
+  });
+  if (!up.ok || !up.url) {
+    return { error: up.error ?? "Gagal upload bukti" };
+  }
+
+  await db
+    .update(orderHeader)
+    .set({
+      buktiFotoUrl: up.url,
+      // Set diantarAt kalau belum ada (mis. order baru di-mark selesai manual)
+      diantarAt: order.diantarAt ?? new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(orderHeader.id, args.orderId));
+
+  revalidatePath("/kasir/order");
+  revalidatePath("/admin/order");
+  return { ok: true, url: up.url };
 }

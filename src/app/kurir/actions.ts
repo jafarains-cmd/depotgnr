@@ -153,11 +153,13 @@ export async function konfirmasiDiantar(args: {
   // Kalau metode bayar = COD, auto-lunas saat kurir konfirmasi diantar.
   // Asumsi: kurir sudah terima cash sebelum tap konfirmasi.
   // Order online (qris/dana/transfer) tetap belum lunas — perlu konfirmasi admin di /pembayaran.
+  const now = new Date();
   const update: Partial<typeof orderHeader.$inferInsert> = {
     status: "selesai",
     buktiFotoUrl: up.url,
-    diantarAt: new Date(),
-    updatedAt: new Date(),
+    diantarAt: now,
+    selesaiAt: now,
+    updatedAt: now,
   };
   let codAutoLunas = false;
   if (o.metodeBayar === "cod" && o.statusBayar !== "lunas") {

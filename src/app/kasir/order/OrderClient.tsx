@@ -5,6 +5,7 @@ import Link from "next/link";
 import { formatRupiah } from "@/lib/utils";
 import { normalizeDriveUrl } from "@/lib/drive-url";
 import { updateOrderStatus, assignKurir } from "./actions";
+import { BuktiAntarUpload } from "./BuktiAntarUpload";
 
 export type OrderStatus =
   | "pending"
@@ -30,6 +31,7 @@ export type OrderRow = {
   buktiFotoUrl: string | null;
   buktiJemputUrl: string | null;
   diantarAt: string | null;
+  selesaiAt: string | null;
   kurirUserId: string | null;
   pelangganNama: string | null;
   pelangganTelp: string | null;
@@ -107,6 +109,26 @@ export function OrderClient({
                     {o.pelangganNama ?? "Tanpa Akun"}{" "}
                     <span className="text-xs text-[color:var(--muted)]">{o.pelangganTelp}</span>
                   </div>
+                  <div className="text-[11px] text-[color:var(--muted)] mt-0.5">
+                    🕒 Order:{" "}
+                    {new Date(o.createdAt).toLocaleString("id-ID", {
+                      day: "2-digit",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                    {o.selesaiAt && (
+                      <>
+                        {" · ✅ Selesai: "}
+                        {new Date(o.selesaiAt).toLocaleString("id-ID", {
+                          day: "2-digit",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </>
+                    )}
+                  </div>
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <span
@@ -156,7 +178,7 @@ export function OrderClient({
                 </div>
               )}
 
-              {o.buktiFotoUrl && (
+              {o.buktiFotoUrl ? (
                 <div className="pt-1">
                   <div className="text-xs text-[color:var(--muted)] mb-1">Bukti pengantaran:</div>
                   <a href={o.buktiFotoUrl} target="_blank" rel="noreferrer">
@@ -176,7 +198,15 @@ export function OrderClient({
                       })}
                     </div>
                   )}
+                  <BuktiAntarUpload orderId={o.id} hasBukti />
                 </div>
+              ) : (
+                (o.status === "diantar" || o.status === "selesai") && (
+                  <div className="pt-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md p-2 space-y-1">
+                    <div>⚠️ Belum ada bukti foto antar.</div>
+                    <BuktiAntarUpload orderId={o.id} hasBukti={false} />
+                  </div>
+                )
               )}
 
               <div className="flex gap-2 pt-2 border-t border-line">

@@ -92,6 +92,13 @@
       "when": 1777810400000,
       "tag": "0012_void_transaksi",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1777896800000,
+      "tag": "0013_order_selesai_at",
+      "breakpoints": true
     }
   ]
 }

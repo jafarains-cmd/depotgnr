@@ -51,6 +51,7 @@ export const orderHeader = sqliteTable("order", {
   dijemputAt: integer("dijemput_at", { mode: "timestamp" }),
   diisiAt: integer("diisi_at", { mode: "timestamp" }),
   diantarAt: integer("diantar_at", { mode: "timestamp" }),
+  selesaiAt: integer("selesai_at", { mode: "timestamp" }),
   // Pembayaran online (Fase 2)
   metodeBayar: text("metode_bayar", {
     enum: ["cash", "transfer", "qris", "dana", "cod"],

@@ -40,6 +40,7 @@ export default async function OrderKasirPage({
       buktiJemputUrl: orderHeader.buktiJemputUrl,
       tipePengantaran: orderHeader.tipePengantaran,
       diantarAt: orderHeader.diantarAt,
+      selesaiAt: orderHeader.selesaiAt,
       kurirUserId: orderHeader.kurirUserId,
       statusBayar: orderHeader.statusBayar,
       pelangganNama: pelanggan.nama,
@@ -83,6 +84,7 @@ export default async function OrderKasirPage({
     jadwalAntar: o.jadwalAntar?.toISOString() ?? null,
     createdAt: o.createdAt.toISOString(),
     diantarAt: o.diantarAt?.toISOString() ?? null,
+    selesaiAt: o.selesaiAt?.toISOString() ?? null,
     items: itemsByOrder.get(o.id) ?? [],
   }));
 
