@@ -135,6 +135,7 @@ export function OrderClient({
                       month: "short",
                       hour: "2-digit",
                       minute: "2-digit",
+                      timeZone: "Asia/Jakarta",
                     })}
                     {o.selesaiAt && (
                       <>
@@ -144,6 +145,7 @@ export function OrderClient({
                           month: "short",
                           hour: "2-digit",
                           minute: "2-digit",
+                          timeZone: "Asia/Jakarta",
                         })}
                       </>
                     )}
@@ -231,6 +233,7 @@ export function OrderClient({
                       {new Date(o.diantarAt).toLocaleString("id-ID", {
                         dateStyle: "short",
                         timeStyle: "short",
+                        timeZone: "Asia/Jakarta",
                       })}
                     </div>
                   )}
