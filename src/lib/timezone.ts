@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
-import { db } from "@/db";
-import { pengaturan } from "@/db/schema/pengaturan";
+// Pure shared utilities — safe to import dari client component.
+// Untuk server-only `getZonaWaktu()` (akses db), import dari
+// '@/lib/timezone-server'.
 
 export const ZONA_OPTIONS = [
   { value: "Asia/Jakarta", label: "WIB — Asia/Jakarta (UTC+7)" },
@@ -9,19 +9,6 @@ export const ZONA_OPTIONS = [
 ];
 
 export const DEFAULT_ZONA = "Asia/Jakarta";
-
-/**
- * Server-side: baca zona waktu dari pengaturan. Fallback ke Asia/Jakarta.
- * Validasi di whitelist supaya tidak terima value sembarang.
- */
-export async function getZonaWaktu(): Promise<string> {
-  const row = await db.query.pengaturan.findFirst({
-    where: eq(pengaturan.key, "zonaWaktu"),
-  });
-  const value = row?.value?.trim() ?? "";
-  if (ZONA_OPTIONS.some((o) => o.value === value)) return value;
-  return DEFAULT_ZONA;
-}
 
 /**
  * Format Date dengan zona waktu eksplisit. Pakai di client component yang

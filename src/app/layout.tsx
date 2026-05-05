@@ -5,7 +5,7 @@ import "./globals.css";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { COOKIE_PALETTE, COOKIE_MODE, isPalette, isMode } from "@/lib/theme";
 import { TimezoneProvider } from "@/components/TimezoneContext";
-import { getZonaWaktu } from "@/lib/timezone";
+import { getZonaWaktu } from "@/lib/timezone-server";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
