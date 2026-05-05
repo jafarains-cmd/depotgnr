@@ -7,10 +7,17 @@ import { PengaturanForm } from "./PengaturanForm";
 import { TelegramWebhook } from "./TelegramWebhook";
 import { SheetsSync } from "./SheetsSync";
 import { QrisUploader } from "./QrisUploader";
+import { ZONA_OPTIONS } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
 
-type Field = { key: string; label: string; type?: "text" | "textarea"; help?: string };
+type Field = {
+  key: string;
+  label: string;
+  type?: "text" | "textarea" | "select";
+  help?: string;
+  options?: { value: string; label: string }[];
+};
 
 const ALL_FIELDS: Record<string, Field> = {
   namaDepot: { key: "namaDepot", label: "Nama Depot" },
@@ -21,6 +28,13 @@ const ALL_FIELDS: Record<string, Field> = {
     label: "Footer Nota",
     type: "textarea",
     help: "Teks penutup di bawah nota cetak. Default: 'Terima kasih atas kunjungan Anda 🙏'.",
+  },
+  zonaWaktu: {
+    key: "zonaWaktu",
+    label: "Zona Waktu",
+    type: "select",
+    options: ZONA_OPTIONS,
+    help: "Zona waktu lokal depot. Dipakai untuk format tanggal/jam di seluruh aplikasi.",
   },
 
   heroBadge: {
@@ -169,7 +183,7 @@ const TABS: Tab[] = [
     id: "depot",
     label: "Depot",
     icon: <Building2 size={14} />,
-    fieldKeys: ["namaDepot", "alamatDepot", "telpDepot", "footerNota"],
+    fieldKeys: ["namaDepot", "alamatDepot", "telpDepot", "footerNota", "zonaWaktu"],
   },
   {
     id: "tampilan",

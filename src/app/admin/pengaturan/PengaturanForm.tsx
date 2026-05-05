@@ -2,7 +2,13 @@
 
 import { useRef, useState, useTransition } from "react";
 
-type Field = { key: string; label: string; type?: "text" | "textarea"; help?: string };
+type Field = {
+  key: string;
+  label: string;
+  type?: "text" | "textarea" | "select";
+  help?: string;
+  options?: { value: string; label: string }[];
+};
 
 export function PengaturanForm({
   fields,
@@ -49,6 +55,18 @@ export function PengaturanForm({
               rows={3}
               className="w-full px-3 py-2 border border-line rounded-md text-sm font-mono"
             />
+          ) : f.type === "select" ? (
+            <select
+              name={f.key}
+              defaultValue={values[f.key] ?? f.options?.[0]?.value ?? ""}
+              className="w-full px-3 py-2 border border-line rounded-md text-sm bg-surface"
+            >
+              {f.options?.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           ) : (
             <input
               name={f.key}

@@ -6,6 +6,7 @@ import { formatRupiah } from "@/lib/utils";
 import { normalizeDriveUrl } from "@/lib/drive-url";
 import { updateOrderStatus, assignKurir } from "./actions";
 import { BuktiAntarUpload } from "./BuktiAntarUpload";
+import { useFormatTanggal } from "@/components/TimezoneContext";
 
 export type OrderStatus =
   | "pending"
@@ -78,6 +79,7 @@ export function OrderClient({
   const [pending, startTransition] = useTransition();
   const [filter, setFilter] = useState<OrderStatus | "all">("all");
   const [assignError, setAssignError] = useState<{ orderId: number; msg: string } | null>(null);
+  const fmt = useFormatTanggal();
 
   function handleAssignKurir(orderId: number, newKurirId: string | null, isCompleted: boolean) {
     if (isCompleted) {
@@ -130,22 +132,20 @@ export function OrderClient({
                   </div>
                   <div className="text-[11px] text-[color:var(--muted)] mt-0.5">
                     🕒 Order:{" "}
-                    {new Date(o.createdAt).toLocaleString("id-ID", {
+                    {fmt(o.createdAt, {
                       day: "2-digit",
                       month: "short",
                       hour: "2-digit",
                       minute: "2-digit",
-                      timeZone: "Asia/Jakarta",
                     })}
                     {o.selesaiAt && (
                       <>
                         {" · ✅ Selesai: "}
-                        {new Date(o.selesaiAt).toLocaleString("id-ID", {
+                        {fmt(o.selesaiAt, {
                           day: "2-digit",
                           month: "short",
                           hour: "2-digit",
                           minute: "2-digit",
-                          timeZone: "Asia/Jakarta",
                         })}
                       </>
                     )}
@@ -230,10 +230,9 @@ export function OrderClient({
                   {o.diantarAt && (
                     <div className="text-xs text-[color:var(--muted)] mt-1">
                       Diantar:{" "}
-                      {new Date(o.diantarAt).toLocaleString("id-ID", {
+                      {fmt(o.diantarAt, {
                         dateStyle: "short",
                         timeStyle: "short",
-                        timeZone: "Asia/Jakarta",
                       })}
                     </div>
                   )}

@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import "./globals.css";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { COOKIE_PALETTE, COOKIE_MODE, isPalette, isMode } from "@/lib/theme";
+import { TimezoneProvider } from "@/components/TimezoneContext";
+import { getZonaWaktu } from "@/lib/timezone";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -34,12 +36,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const modeRaw = c.get(COOKIE_MODE)?.value;
   const palette = isPalette(paletteRaw) ? paletteRaw : "aqua";
   const mode = isMode(modeRaw) ? modeRaw : "light";
+  const zonaWaktu = await getZonaWaktu();
 
   return (
     <html lang="id" data-palette={palette} data-mode={mode} className={jakarta.variable}>
       <body>
         <ServiceWorkerRegister />
-        {children}
+        <TimezoneProvider zona={zonaWaktu}>{children}</TimezoneProvider>
       </body>
     </html>
   );
