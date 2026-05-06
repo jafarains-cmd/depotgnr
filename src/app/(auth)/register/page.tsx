@@ -18,6 +18,7 @@ function RegisterInner() {
   const router = useRouter();
   const params = useSearchParams();
   const [nama, setNama] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [telp, setTelp] = useState("");
@@ -34,21 +35,33 @@ function RegisterInner() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    const usernameTrim = username.trim().toLowerCase();
+    if (!/^[a-z0-9_.]{3,30}$/.test(usernameTrim)) {
+      setError("Username 3-30 karakter, hanya huruf kecil, angka, titik, underscore.");
+      return;
+    }
+
     setLoading(true);
     try {
       const { error } = await authClient.signUp.email({
         email,
         password,
         name: nama,
-      });
+        username: usernameTrim,
+      } as Parameters<typeof authClient.signUp.email>[0]);
       if (error) throw new Error(error.message ?? "Gagal daftar");
 
-      // Simpan profil pelanggan tambahan (telp, alamat, kodeReferral) via API kustom
-      await fetch("/api/pelanggan/profile", {
+      // Simpan profil pelanggan + sync telp ke user.phoneNumber via API kustom
+      const res = await fetch("/api/pelanggan/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nama, telp, alamat, kodeReferral }),
       });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error ?? "Gagal simpan profil");
+      }
 
       router.push("/pelanggan/beranda");
       router.refresh();
@@ -68,9 +81,23 @@ function RegisterInner() {
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <Field label="Nama Lengkap" value={nama} onChange={setNama} required />
+        <Field
+          label="Username"
+          value={username}
+          onChange={(v) => setUsername(v.toLowerCase())}
+          placeholder="3-30 karakter, huruf kecil/angka/_/."
+          required
+          minLength={3}
+        />
         <Field label="Email" type="email" value={email} onChange={setEmail} required />
         <Field label="Password" type="password" value={password} onChange={setPassword} required minLength={6} />
-        <Field label="Nomor WhatsApp" value={telp} onChange={setTelp} placeholder="08xxxxxxxxxx" />
+        <Field
+          label="Nomor WhatsApp"
+          value={telp}
+          onChange={setTelp}
+          placeholder="08xxxxxxxxxx"
+          help="Diisi = otomatis terima notif order via WA"
+        />
         <Field
           label="Kode Referral (opsional)"
           value={kodeReferral}
@@ -120,6 +147,7 @@ function Field({
   required,
   placeholder,
   minLength,
+  help,
 }: {
   label: string;
   value: string;
@@ -128,6 +156,7 @@ function Field({
   required?: boolean;
   placeholder?: string;
   minLength?: number;
+  help?: string;
 }) {
   const cls = "w-full px-3 py-2 border border-line rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500";
   return (
@@ -153,6 +182,7 @@ function Field({
           className={cls}
         />
       )}
+      {help && <p className="text-[11px] text-[color:var(--muted)] mt-1">{help}</p>}
     </div>
   );
 }
