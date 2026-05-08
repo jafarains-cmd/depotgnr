@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, Check, Loader2, Truck, ArrowDownToLine, Droplet } from "lucide-react";
+import { compressImage } from "@/lib/image-compress";
 import {
   konfirmasiDiantar,
   mulaiAntar,
@@ -109,14 +110,19 @@ export function KonfirmasiClient({
             onClick={() => {
               setMsg(null);
               startTransition(async () => {
-                const args: Parameters<typeof konfirmasiJemput>[0] = { orderId };
-                if (file) {
-                  args.buktiBase64 = await fileToBase64(file);
-                  args.mimeType = file.type || "image/jpeg";
+                try {
+                  const args: Parameters<typeof konfirmasiJemput>[0] = { orderId };
+                  if (file) {
+                    const f = await compressImage(file, { maxWidth: 1600, quality: 0.85 });
+                    args.buktiBase64 = await fileToBase64(f);
+                    args.mimeType = f.type || "image/jpeg";
+                  }
+                  const res = await konfirmasiJemput(args);
+                  if ("error" in res) setMsg({ ok: false, text: res.error });
+                  else router.refresh();
+                } catch (e) {
+                  setMsg({ ok: false, text: e instanceof Error ? e.message : "Gagal upload" });
                 }
-                const res = await konfirmasiJemput(args);
-                if ("error" in res) setMsg({ ok: false, text: res.error });
-                else router.refresh();
               });
             }}
             disabled={pending}
@@ -233,17 +239,22 @@ export function KonfirmasiClient({
             }
             setMsg(null);
             startTransition(async () => {
-              const base64 = await fileToBase64(file);
-              const res = await konfirmasiDiantar({
-                orderId,
-                buktiBase64: base64,
-                mimeType: file.type || "image/jpeg",
-              });
-              if ("error" in res) {
-                setMsg({ ok: false, text: res.error });
-              } else {
-                setMsg({ ok: true, text: "Order berhasil diselesaikan" });
-                setTimeout(() => router.push("/kurir"), 1200);
+              try {
+                const f = await compressImage(file, { maxWidth: 1600, quality: 0.85 });
+                const base64 = await fileToBase64(f);
+                const res = await konfirmasiDiantar({
+                  orderId,
+                  buktiBase64: base64,
+                  mimeType: f.type || "image/jpeg",
+                });
+                if ("error" in res) {
+                  setMsg({ ok: false, text: res.error });
+                } else {
+                  setMsg({ ok: true, text: "Order berhasil diselesaikan" });
+                  setTimeout(() => router.push("/kurir"), 1200);
+                }
+              } catch (e) {
+                setMsg({ ok: false, text: e instanceof Error ? e.message : "Gagal upload" });
               }
             });
           }}

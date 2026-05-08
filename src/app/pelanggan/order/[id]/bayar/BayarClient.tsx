@@ -6,6 +6,7 @@ import { Camera, Check, Copy, Loader2, QrCode, Wallet, Building2, HandCoins, Gif
 import { pilihMetodeBayar, submitBuktiBayar, pakaiLoyalty } from "./actions";
 import { formatRupiah } from "@/lib/utils";
 import { normalizeDriveUrl, isPdfUrl } from "@/lib/drive-url";
+import { compressImage } from "@/lib/image-compress";
 
 type Metode = "cash" | "transfer" | "qris" | "dana" | "cod";
 
@@ -66,18 +67,24 @@ export function BayarClient({
     }
     setMsg(null);
     startTransition(async () => {
-      const buf = await file.arrayBuffer();
-      const base64 = arrayBufferToBase64(buf);
-      const res = await submitBuktiBayar({
-        orderId,
-        base64,
-        mimeType: file.type || "image/jpeg",
-      });
-      if ("error" in res) {
-        setMsg({ ok: false, text: res.error });
-      } else {
-        setMsg({ ok: true, text: "Bukti terkirim. Menunggu verifikasi." });
-        setTimeout(() => router.refresh(), 800);
+      try {
+        // Kompres image (skip kalau PDF)
+        const f = await compressImage(file, { maxWidth: 1600, quality: 0.85 });
+        const buf = await f.arrayBuffer();
+        const base64 = arrayBufferToBase64(buf);
+        const res = await submitBuktiBayar({
+          orderId,
+          base64,
+          mimeType: f.type || "image/jpeg",
+        });
+        if ("error" in res) {
+          setMsg({ ok: false, text: res.error });
+        } else {
+          setMsg({ ok: true, text: "Bukti terkirim. Menunggu verifikasi." });
+          setTimeout(() => router.refresh(), 800);
+        }
+      } catch (e) {
+        setMsg({ ok: false, text: e instanceof Error ? e.message : "Gagal upload" });
       }
     });
   }
