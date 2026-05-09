@@ -173,9 +173,14 @@ export function PembayaranClient({ rows }: { rows: Row[] }) {
                 <button
                   disabled={pending}
                   onClick={() => {
-                    const msg = isPiutang(r)
-                      ? `Tandai LUNAS piutang ${r.nomorOrder} (${formatRupiah(r.total)})?`
-                      : `Konfirmasi pembayaran ${r.nomorOrder} sebesar ${formatRupiah(r.total)}?`;
+                    let msg: string;
+                    if (isPiutang(r)) {
+                      msg = r.buktiUrl
+                        ? `⚠ MOHON PERIKSA BUKTI PEMBAYARAN dulu di card ini sebelum menandai lunas.\n\nTandai LUNAS piutang ${r.nomorOrder} (${formatRupiah(r.total)})?`
+                        : `ℹ BELUM ADA BUKTI PEMBAYARAN dari pelanggan.\n\nLanjut tandai LUNAS piutang ${r.nomorOrder} (${formatRupiah(r.total)})? Pastikan pelanggan sudah benar-benar bayar.`;
+                    } else {
+                      msg = `⚠ MOHON PERIKSA BUKTI PEMBAYARAN dulu di card ini sebelum konfirmasi.\n\nKonfirmasi pembayaran ${r.nomorOrder} sebesar ${formatRupiah(r.total)}?`;
+                    }
                     if (confirm(msg)) {
                       startTransition(async () => {
                         await konfirmasiBayar(r.id);
