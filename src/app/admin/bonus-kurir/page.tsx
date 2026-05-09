@@ -8,18 +8,24 @@ import { requireRole } from "@/lib/permissions";
 import { formatRupiah } from "@/lib/utils";
 import { BonusClient, type KurirSummary, type BonusRow } from "./BonusClient";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
-import { parseLimit } from "@/lib/page-size";
+import { Pagination } from "@/components/Pagination";
+import { parseLimit, parsePage, getPagination } from "@/lib/page-size";
 
 export const dynamic = "force-dynamic";
 
 export default async function BonusKurirPage({
   searchParams,
 }: {
-  searchParams: Promise<{ limit?: string }>;
+  searchParams: Promise<{ limit?: string; page?: string }>;
 }) {
   await requireRole(["admin"]);
   const sp = await searchParams;
   const limit = parseLimit(sp.limit);
+  const pageParam = parsePage(sp.page);
+
+  const [countRow] = await db.select({ n: sql<number>`count(*)` }).from(bonusKurir);
+  const total = countRow?.n ?? 0;
+  const { page, totalPages, offset } = getPagination({ total, limit, page: pageParam });
 
   // Aggregate per kurir: pending + paid totals + count
   const summary = await db
@@ -65,7 +71,8 @@ export default async function BonusKurirPage({
     .leftJoin(userTable, eq(bonusKurir.kurirUserId, userTable.id))
     .leftJoin(orderHeader, eq(bonusKurir.orderId, orderHeader.id))
     .orderBy(desc(bonusKurir.createdAt))
-    .limit(limit);
+    .limit(limit)
+    .offset(offset);
 
   const detailRows: BonusRow[] = detail.map((d) => ({
     id: d.id,
@@ -105,6 +112,7 @@ export default async function BonusKurirPage({
       </div>
 
       <BonusClient summary={kurirSummary} detail={detailRows} />
+      <Pagination page={page} totalPages={totalPages} total={total} />
     </div>
   );
 }

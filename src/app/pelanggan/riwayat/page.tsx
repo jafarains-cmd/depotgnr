@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { eq, desc, inArray, and, isNull } from "drizzle-orm";
+import { eq, desc, inArray, and, isNull, sql } from "drizzle-orm";
 import { CreditCard, RefreshCw, FileText } from "lucide-react";
 import { db } from "@/db";
 import { orderHeader, orderItem } from "@/db/schema/order";
@@ -12,7 +12,8 @@ import { GallonArt } from "@/components/GallonArt";
 import { CancelOrderButton } from "../order-baru/CancelOrderButton";
 import { RiwayatFilter } from "./RiwayatFilter";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
-import { parseLimit } from "@/lib/page-size";
+import { Pagination } from "@/components/Pagination";
+import { parseLimit, parsePage, getPagination } from "@/lib/page-size";
 
 export const dynamic = "force-dynamic";
 
@@ -29,20 +30,29 @@ const STATUS_COLOR: Record<string, string> = {
 export default async function RiwayatPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string; limit?: string }>;
+  searchParams: Promise<{ filter?: string; limit?: string; page?: string }>;
 }) {
   const sp = await searchParams;
   const filter = sp.filter ?? "semua";
   const limit = parseLimit(sp.limit);
+  const pageParam = parsePage(sp.page);
   const session = await requireSession();
   const me = await getOrCreatePelanggan(session.user.id, session.user.name);
+
+  const [countRow] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(orderHeader)
+    .where(eq(orderHeader.pelangganId, me.id));
+  const total = countRow?.n ?? 0;
+  const { page, totalPages, offset } = getPagination({ total, limit, page: pageParam });
 
   const orders = await db
     .select()
     .from(orderHeader)
     .where(eq(orderHeader.pelangganId, me.id))
     .orderBy(desc(orderHeader.createdAt))
-    .limit(limit);
+    .limit(limit)
+    .offset(offset);
 
   const orderIds = orders.map((o) => o.id);
   const allItems = orderIds.length
@@ -169,6 +179,8 @@ export default async function RiwayatPage({
           );
         })}
       </div>
+
+      <Pagination page={page} totalPages={totalPages} total={total} />
 
       {trxList.length > 0 && (
         <section className="mt-6">

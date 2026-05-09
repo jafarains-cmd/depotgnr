@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { db } from "@/db";
-import { eq, desc, and, gte, lte, like, or } from "drizzle-orm";
+import { eq, desc, and, gte, lte, like, or, sql } from "drizzle-orm";
 import { TransaksiRow } from "./TransaksiRow";
 import { transaksi } from "@/db/schema/transaksi";
 import { user as userTable } from "@/db/schema/auth";
@@ -11,14 +11,15 @@ import { requireRole } from "@/lib/permissions";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { parseRange } from "@/lib/date-range";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
-import { parseLimit } from "@/lib/page-size";
+import { Pagination } from "@/components/Pagination";
+import { parseLimit, parsePage, getPagination } from "@/lib/page-size";
 
 export const dynamic = "force-dynamic";
 
 export default async function RiwayatKasirPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; from?: string; to?: string; q?: string; limit?: string }>;
+  searchParams: Promise<{ range?: string; from?: string; to?: string; q?: string; limit?: string; page?: string }>;
 }) {
   const session = await requireRole(["admin", "kasir"]);
   const role = session.user.role;
@@ -26,6 +27,7 @@ export default async function RiwayatKasirPage({
   const range = parseRange(sp);
   const q = (sp.q ?? "").trim();
   const limit = parseLimit(sp.limit);
+  const pageParam = parsePage(sp.page);
 
   const conds = [];
   if (role !== "admin") conds.push(eq(transaksi.kasirUserId, session.user.id));
@@ -42,6 +44,17 @@ export default async function RiwayatKasirPage({
     );
   }
 
+  const whereClause = conds.length > 0 ? and(...conds) : undefined;
+
+  // Total count untuk pagination
+  const [countRow] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(transaksi)
+    .leftJoin(pelanggan, eq(transaksi.pelangganId, pelanggan.id))
+    .where(whereClause);
+  const total = countRow?.n ?? 0;
+  const { page, totalPages, offset } = getPagination({ total, limit, page: pageParam });
+
   const rows = await db
     .select({
       id: transaksi.id,
@@ -56,9 +69,10 @@ export default async function RiwayatKasirPage({
     .from(transaksi)
     .leftJoin(userTable, eq(transaksi.kasirUserId, userTable.id))
     .leftJoin(pelanggan, eq(transaksi.pelangganId, pelanggan.id))
-    .where(conds.length > 0 ? and(...conds) : undefined)
+    .where(whereClause)
     .orderBy(desc(transaksi.createdAt))
-    .limit(limit);
+    .limit(limit)
+    .offset(offset);
 
   const totalOmzet = rows.reduce((s, r) => (r.voidedAt ? s : s + r.total), 0);
 
@@ -104,11 +118,11 @@ export default async function RiwayatKasirPage({
       </div>
       <div className="mb-3 flex items-center justify-between flex-wrap gap-2 text-sm">
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-[color:var(--muted)]">{rows.length} transaksi</span>
+          <span className="text-[color:var(--muted)]">{total} transaksi</span>
           <PageSizeSelect value={limit} />
         </div>
         <span className="font-bold text-brand">
-          Omzet: {formatRupiah(totalOmzet)}
+          Omzet (halaman ini): {formatRupiah(totalOmzet)}
         </span>
       </div>
       <div className="bg-surface rounded-xl border border-line overflow-hidden">
@@ -173,6 +187,7 @@ export default async function RiwayatKasirPage({
           </table>
         </div>
       </div>
+      <Pagination page={page} totalPages={totalPages} total={total} />
     </div>
   );
 }

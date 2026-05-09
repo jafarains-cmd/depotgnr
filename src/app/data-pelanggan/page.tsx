@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { Trophy } from "lucide-react";
-import { desc, gt } from "drizzle-orm";
+import { desc, gt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
 import { requireRole } from "@/lib/permissions";
 import { formatRupiah } from "@/lib/utils";
 import { PelangganTable } from "./PelangganTable";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
-import { parseLimit } from "@/lib/page-size";
+import { Pagination } from "@/components/Pagination";
+import { parseLimit, parsePage, getPagination } from "@/lib/page-size";
 
 export const dynamic = "force-dynamic";
 
@@ -16,15 +17,24 @@ const RANK_BG = ["bg-amber-400", "bg-slate-300", "bg-orange-400"];
 export default async function PelangganDataPage({
   searchParams,
 }: {
-  searchParams: Promise<{ limit?: string }>;
+  searchParams: Promise<{ limit?: string; page?: string }>;
 }) {
   const session = await requireRole(["admin", "kasir"]);
   const sp = await searchParams;
   const limit = parseLimit(sp.limit);
+  const pageParam = parsePage(sp.page);
+
+  const [countRow] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(pelangganTable);
+  const total = countRow?.n ?? 0;
+  const { page, totalPages, offset } = getPagination({ total, limit, page: pageParam });
+
   const [list, top] = await Promise.all([
     db.query.pelanggan.findMany({
       orderBy: (p, { desc }) => [desc(p.createdAt)],
       limit,
+      offset,
     }),
     db
       .select({
@@ -81,6 +91,7 @@ export default async function PelangganDataPage({
       )}
 
       <PelangganTable rows={list} canDelete={session.user.role === "admin"} />
+      <Pagination page={page} totalPages={totalPages} total={total} />
     </div>
   );
 }

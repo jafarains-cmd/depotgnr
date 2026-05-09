@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { stokGalon, mutasiStok } from "@/db/schema/inventory";
 import { produk } from "@/db/schema/produk";
@@ -6,17 +6,23 @@ import { user as userTable } from "@/db/schema/auth";
 import { PageHeader } from "@/components/AppShell";
 import { InventoryClient } from "./InventoryClient";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
-import { parseLimit } from "@/lib/page-size";
+import { Pagination } from "@/components/Pagination";
+import { parseLimit, parsePage, getPagination } from "@/lib/page-size";
 
 export const dynamic = "force-dynamic";
 
 export default async function InventoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ limit?: string }>;
+  searchParams: Promise<{ limit?: string; page?: string }>;
 }) {
   const sp = await searchParams;
   const limit = parseLimit(sp.limit);
+  const pageParam = parsePage(sp.page);
+
+  const [countRow] = await db.select({ n: sql<number>`count(*)` }).from(mutasiStok);
+  const total = countRow?.n ?? 0;
+  const { page, totalPages, offset } = getPagination({ total, limit, page: pageParam });
   const produkList = await db.query.produk.findMany({
     orderBy: (p, { asc }) => [asc(p.id)],
   });
@@ -49,7 +55,8 @@ export default async function InventoryPage({
     .leftJoin(produk, eq(mutasiStok.produkId, produk.id))
     .leftJoin(userTable, eq(mutasiStok.userId, userTable.id))
     .orderBy(desc(mutasiStok.createdAt))
-    .limit(limit);
+    .limit(limit)
+    .offset(offset);
 
   return (
     <div className="p-4 md:p-6">
@@ -70,6 +77,7 @@ export default async function InventoryPage({
           createdAt: m.createdAt.toISOString(),
         }))}
       />
+      <Pagination page={page} totalPages={totalPages} total={total} />
     </div>
   );
 }

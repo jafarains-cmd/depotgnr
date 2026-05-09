@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { eq, desc, gte, lte, or, ne, and, inArray } from "drizzle-orm";
+import { eq, desc, gte, lte, or, ne, and, inArray, sql } from "drizzle-orm";
 import { orderHeader, orderItem } from "@/db/schema/order";
 import { pelanggan } from "@/db/schema/pelanggan";
 import { produk } from "@/db/schema/produk";
@@ -10,26 +10,36 @@ import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { parseRange } from "@/lib/date-range";
 import { requireRole } from "@/lib/permissions";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
-import { parseLimit } from "@/lib/page-size";
+import { Pagination } from "@/components/Pagination";
+import { parseLimit, parsePage, getPagination } from "@/lib/page-size";
 
 export const dynamic = "force-dynamic";
 
 export default async function OrderKasirPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; from?: string; to?: string; limit?: string }>;
+  searchParams: Promise<{ range?: string; from?: string; to?: string; limit?: string; page?: string }>;
 }) {
   const session = await requireRole(["admin", "kasir"]);
   const isAdmin = session.user.role === "admin";
   const sp = await searchParams;
   const range = parseRange(sp);
   const limit = parseLimit(sp.limit);
+  const pageParam = parsePage(sp.page);
 
   // Filter berdasarkan range tanggal user. Default 30 hari terakhir.
   // "Aktif" (non-selesai) selalu ditampilkan terlepas range kalau di-toggle "Semua".
   const conds = [];
   if (range.from) conds.push(gte(orderHeader.createdAt, range.from));
   if (range.to) conds.push(lte(orderHeader.createdAt, range.to));
+
+  const whereClause = conds.length > 0 ? and(...conds) : undefined;
+  const [countRow] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(orderHeader)
+    .where(whereClause);
+  const total = countRow?.n ?? 0;
+  const { page, totalPages, offset } = getPagination({ total, limit, page: pageParam });
 
   const aktif = await db
     .select({
@@ -54,9 +64,10 @@ export default async function OrderKasirPage({
     })
     .from(orderHeader)
     .leftJoin(pelanggan, eq(orderHeader.pelangganId, pelanggan.id))
-    .where(conds.length > 0 ? and(...conds) : undefined)
+    .where(whereClause)
     .orderBy(desc(orderHeader.createdAt))
-    .limit(limit);
+    .limit(limit)
+    .offset(offset);
 
   // Single batch query untuk semua items + produk join (no N+1)
   const orderIds = aktif.map((o) => o.id);
@@ -120,6 +131,7 @@ export default async function OrderKasirPage({
         <PageSizeSelect value={limit} />
       </div>
       <OrderClient rows={rows} kurirList={kurirList} isAdmin={isAdmin} />
+      <Pagination page={page} totalPages={totalPages} total={total} />
     </div>
   );
 }

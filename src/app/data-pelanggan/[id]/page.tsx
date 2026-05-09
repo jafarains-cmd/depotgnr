@@ -8,7 +8,8 @@ import { requireRole } from "@/lib/permissions";
 import { formatRupiah } from "@/lib/utils";
 import { LoyaltyAdjustForm } from "./LoyaltyAdjustForm";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
-import { parseLimit } from "@/lib/page-size";
+import { Pagination } from "@/components/Pagination";
+import { parseLimit, parsePage, getPagination } from "@/lib/page-size";
 
 export const dynamic = "force-dynamic";
 
@@ -26,13 +27,14 @@ export default async function PelangganDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ limit?: string }>;
+  searchParams: Promise<{ limit?: string; page?: string }>;
 }) {
   const session = await requireRole(["admin", "kasir"]);
   const isAdmin = session.user.role === "admin";
   const { id } = await params;
   const sp = await searchParams;
   const limit = parseLimit(sp.limit);
+  const pageParam = parsePage(sp.page);
   const pelangganId = Number(id);
   if (!pelangganId) notFound();
 
@@ -41,12 +43,24 @@ export default async function PelangganDetailPage({
   });
   if (!pel) notFound();
 
+  const [countRow] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(mutasiLoyalti)
+    .where(eq(mutasiLoyalti.pelangganId, pelangganId));
+  const totalMutasi = countRow?.n ?? 0;
+  const { page, totalPages, offset } = getPagination({
+    total: totalMutasi,
+    limit,
+    page: pageParam,
+  });
+
   const mutasi = await db
     .select()
     .from(mutasiLoyalti)
     .where(eq(mutasiLoyalti.pelangganId, pelangganId))
     .orderBy(desc(mutasiLoyalti.createdAt))
-    .limit(limit);
+    .limit(limit)
+    .offset(offset);
 
   const [earnRow] = await db
     .select({ total: sql<number>`coalesce(sum(${mutasiLoyalti.jumlah}), 0)` })
@@ -178,6 +192,7 @@ export default async function PelangganDetailPage({
           </table>
         )}
       </div>
+      <Pagination page={page} totalPages={totalPages} total={totalMutasi} />
     </div>
   );
 }

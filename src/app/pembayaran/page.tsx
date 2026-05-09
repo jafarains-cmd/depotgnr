@@ -1,4 +1,4 @@
-import { eq, desc, ne, and, gte, lte } from "drizzle-orm";
+import { eq, desc, ne, and, gte, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { orderHeader } from "@/db/schema/order";
 import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
@@ -7,24 +7,38 @@ import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { parseRange } from "@/lib/date-range";
 import { PembayaranClient, type Row } from "./PembayaranClient";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
-import { parseLimit } from "@/lib/page-size";
+import { Pagination } from "@/components/Pagination";
+import { parseLimit, parsePage, getPagination } from "@/lib/page-size";
 
 export const dynamic = "force-dynamic";
 
 export default async function PembayaranPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; from?: string; to?: string; limit?: string }>;
+  searchParams: Promise<{ range?: string; from?: string; to?: string; limit?: string; page?: string }>;
 }) {
   await requireRole(["admin", "kasir"]);
   const sp = await searchParams;
   const range = parseRange(sp);
   const limit = parseLimit(sp.limit);
+  const pageParam = parsePage(sp.page);
 
-  // Filter by createdAt order. Untuk pembayaran, ini reasonable (recent orders most relevant).
-  const conds = [ne(orderHeader.status, "batal")];
+  // Filter ke SQL supaya pagination akurat: status != batal, dan
+  // (statusBayar in [menunggu, lunas] OR (status=selesai AND statusBayar=belum))
+  const conds = [
+    ne(orderHeader.status, "batal"),
+    sql`(${orderHeader.statusBayar} = 'menunggu' OR ${orderHeader.statusBayar} = 'lunas' OR (${orderHeader.status} = 'selesai' AND ${orderHeader.statusBayar} = 'belum'))`,
+  ];
   if (range.from) conds.push(gte(orderHeader.createdAt, range.from));
   if (range.to) conds.push(lte(orderHeader.createdAt, range.to));
+
+  const whereClause = and(...conds);
+  const [countRow] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(orderHeader)
+    .where(whereClause);
+  const total = countRow?.n ?? 0;
+  const { page, totalPages, offset } = getPagination({ total, limit, page: pageParam });
 
   const list = await db
     .select({
@@ -43,17 +57,12 @@ export default async function PembayaranPage({
     })
     .from(orderHeader)
     .leftJoin(pelangganTable, eq(orderHeader.pelangganId, pelangganTable.id))
-    .where(and(...conds))
+    .where(whereClause)
     .orderBy(desc(orderHeader.updatedAt))
-    .limit(limit);
+    .limit(limit)
+    .offset(offset);
 
-  const filtered = list.filter((r) => {
-    if (r.statusBayar === "menunggu" || r.statusBayar === "lunas") return true;
-    if (r.statusOrder === "selesai" && r.statusBayar === "belum") return true;
-    return false;
-  });
-
-  const rows: Row[] = filtered.map((r) => ({
+  const rows: Row[] = list.map((r) => ({
     id: r.id,
     nomorOrder: r.nomorOrder,
     total: r.totalEstimasi,
@@ -86,6 +95,7 @@ export default async function PembayaranPage({
         <PageSizeSelect value={limit} />
       </div>
       <PembayaranClient rows={rows} />
+      <Pagination page={page} totalPages={totalPages} total={total} />
     </div>
   );
 }
