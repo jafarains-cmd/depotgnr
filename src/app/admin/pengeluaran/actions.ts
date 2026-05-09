@@ -7,26 +7,6 @@ import { pengeluaran } from "@/db/schema/pengeluaran";
 import { requireRole } from "@/lib/permissions";
 import { uploadAsset } from "@/lib/drive";
 
-export const KATEGORI_OPTIONS = [
-  "listrik",
-  "air-pdam",
-  "sewa",
-  "gaji",
-  "sparepart",
-  "filter",
-  "segel",
-  "tutup-galon",
-  "label",
-  "bensin",
-  "transport",
-  "promosi",
-  "konsumsi",
-  "perbaikan",
-  "lain-lain",
-] as const;
-
-export type Kategori = (typeof KATEGORI_OPTIONS)[number];
-
 type SaveInput = {
   id?: number;
   tanggal: string; // ISO date string YYYY-MM-DD

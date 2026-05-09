@@ -11,7 +11,7 @@ import { PageSizeSelect } from "@/components/PageSizeSelect";
 import { Pagination } from "@/components/Pagination";
 import { parseLimit, parsePage, getPagination } from "@/lib/page-size";
 import { PengeluaranClient } from "./PengeluaranClient";
-import { KATEGORI_OPTIONS } from "./actions";
+import { KATEGORI_OPTIONS } from "./kategori";
 
 export const dynamic = "force-dynamic";
 
