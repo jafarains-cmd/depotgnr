@@ -15,6 +15,7 @@ import { earnFromOrderIfEligible } from "@/lib/loyalty";
 import { sendPushToUser } from "@/lib/push";
 import { bestEffort } from "@/lib/best-effort";
 import { recordKurirBonus } from "@/lib/bonus";
+import { syncTransaksiFromOrder } from "@/lib/transaksi-sync";
 
 export async function konfirmasiBayar(
   orderId: number,
@@ -39,6 +40,8 @@ export async function konfirmasiBayar(
   bestEffort("earnFromOrderIfEligible", earnFromOrderIfEligible(orderId));
   // Catat bonus kurir kalau order sudah selesai (recordKurirBonus idempoten + cek selesai+lunas)
   bestEffort("recordKurirBonus", recordKurirBonus(orderId));
+  // Sync ke tabel transaksi supaya muncul di laporan/dashboard omzet
+  bestEffort("syncTransaksiFromOrder", syncTransaksiFromOrder(orderId));
 
   revalidatePath("/pembayaran");
   revalidatePath(`/pelanggan/order/${orderId}/bayar`);

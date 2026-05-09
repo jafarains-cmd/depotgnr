@@ -14,6 +14,7 @@ import { formatRupiah } from "@/lib/utils";
 import { earnFromOrderIfEligible, reverseLoyaltyForOrder } from "@/lib/loyalty";
 import { reverseBonusForOrder, recordKurirBonus } from "@/lib/bonus";
 import { bonusKurir } from "@/db/schema/bonus";
+import { syncTransaksiFromOrder, voidTransaksiFromOrder } from "@/lib/transaksi-sync";
 import { sendPushToUser } from "@/lib/push";
 import { bestEffort } from "@/lib/best-effort";
 import { uploadBuktiKurir } from "@/lib/drive";
@@ -90,6 +91,8 @@ export async function updateOrderStatus(orderId: number, status: Status) {
   // Earn loyalty kalau order selesai & sudah lunas
   if (status === "selesai") {
     bestEffort("earnFromOrderIfEligible", earnFromOrderIfEligible(orderId));
+    // Sync ke transaksi kalau juga sudah lunas (idempoten — skip kalau bukan)
+    bestEffort("syncTransaksiFromOrder", syncTransaksiFromOrder(orderId));
   }
 
   // Saat order dibatalkan, reverse loyalty (idempoten — no-op kalau belum
@@ -98,6 +101,11 @@ export async function updateOrderStatus(orderId: number, status: Status) {
   if (status === "batal") {
     bestEffort("reverseLoyaltyForOrder", reverseLoyaltyForOrder(orderId));
     bestEffort("reverseBonusForOrder", reverseBonusForOrder(orderId).then(() => {}));
+    // Void transaksi kalau pernah ter-sync (mis. order lunas tapi nanti dibatalkan)
+    bestEffort(
+      "voidTransaksiFromOrder",
+      voidTransaksiFromOrder(orderId, session.user.id, "Order dibatalkan"),
+    );
   }
 
   revalidatePath("/kasir/order");

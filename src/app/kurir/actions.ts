@@ -10,6 +10,7 @@ import { notifPelangganStatus } from "../kasir/order/actions";
 import { earnFromOrderIfEligible } from "@/lib/loyalty";
 import { bestEffort } from "@/lib/best-effort";
 import { recordKurirBonus } from "@/lib/bonus";
+import { syncTransaksiFromOrder } from "@/lib/transaksi-sync";
 
 export async function mulaiAntar(
   orderId: number,
@@ -177,6 +178,7 @@ export async function konfirmasiDiantar(args: {
   // saat admin konfirmasi pembayaran di /pembayaran (lihat pembayaran/actions.ts)
   if (codAutoLunas) {
     bestEffort("recordKurirBonus(cod)", recordKurirBonus(args.orderId));
+    bestEffort("syncTransaksiFromOrder(cod)", syncTransaksiFromOrder(args.orderId));
   }
   revalidatePath(`/kurir/${args.orderId}`);
   revalidatePath("/kurir");
