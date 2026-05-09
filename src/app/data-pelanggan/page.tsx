@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Trophy } from "lucide-react";
 import { desc, gt, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
+import { pelanggan as pelangganTable, galonPelanggan } from "@/db/schema/pelanggan";
 import { requireRole } from "@/lib/permissions";
 import { formatRupiah } from "@/lib/utils";
 import { PelangganTable } from "./PelangganTable";
@@ -30,7 +30,7 @@ export default async function PelangganDataPage({
   const total = countRow?.n ?? 0;
   const { page, totalPages, offset } = getPagination({ total, limit, page: pageParam });
 
-  const [list, top] = await Promise.all([
+  const [list, top, titipanTotals] = await Promise.all([
     db.query.pelanggan.findMany({
       orderBy: (p, { desc }) => [desc(p.createdAt)],
       limit,
@@ -46,7 +46,16 @@ export default async function PelangganDataPage({
       .where(gt(pelangganTable.saldoLoyalti, 0))
       .orderBy(desc(pelangganTable.saldoLoyalti))
       .limit(10),
+    db
+      .select({
+        pelangganId: galonPelanggan.pelangganId,
+        total: sql<number>`coalesce(sum(${galonPelanggan.jumlahDititip}), 0)`,
+      })
+      .from(galonPelanggan)
+      .groupBy(galonPelanggan.pelangganId),
   ]);
+
+  const titipanMap = new Map(titipanTotals.map((t) => [t.pelangganId, t.total]));
 
   return (
     <div>
@@ -90,7 +99,10 @@ export default async function PelangganDataPage({
         </div>
       )}
 
-      <PelangganTable rows={list} canDelete={session.user.role === "admin"} />
+      <PelangganTable
+        rows={list.map((p) => ({ ...p, titipanTotal: titipanMap.get(p.id) ?? 0 }))}
+        canDelete={session.user.role === "admin"}
+      />
       <Pagination page={page} totalPages={totalPages} total={total} />
     </div>
   );

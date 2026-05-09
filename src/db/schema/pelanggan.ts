@@ -57,15 +57,55 @@ export const mutasiLoyalti = sqliteTable(
   }),
 );
 
-export const galonPelanggan = sqliteTable("galon_pelanggan", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  pelangganId: integer("pelanggan_id")
-    .notNull()
-    .references(() => pelanggan.id, { onDelete: "cascade" }),
-  produkId: integer("produk_id").notNull(),
-  jumlahDititip: integer("jumlah_dititip").notNull().default(0),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
-});
+export const galonPelanggan = sqliteTable(
+  "galon_pelanggan",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    pelangganId: integer("pelanggan_id")
+      .notNull()
+      .references(() => pelanggan.id, { onDelete: "cascade" }),
+    produkId: integer("produk_id").notNull(),
+    jumlahDititip: integer("jumlah_dititip").notNull().default(0),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  },
+  (t) => ({
+    pelangganProdukIdx: index("galon_pelanggan_pelanggan_produk_idx").on(
+      t.pelangganId,
+      t.produkId,
+    ),
+  }),
+);
+
+/**
+ * History tiap perubahan titipan galon (masuk/keluar). Untuk audit trail
+ * supaya admin tahu siapa adjust kapan dan kenapa.
+ */
+export const mutasiTitipan = sqliteTable(
+  "mutasi_titipan",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    pelangganId: integer("pelanggan_id")
+      .notNull()
+      .references(() => pelanggan.id, { onDelete: "cascade" }),
+    produkId: integer("produk_id").notNull(),
+    perubahan: integer("perubahan").notNull(), // positif=masuk titip, negatif=kembalikan
+    alasan: text("alasan").notNull(),
+    refOrderId: integer("ref_order_id"),
+    catatan: text("catatan"),
+    userId: text("user_id"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => ({
+    pelangganDateIdx: index("mutasi_titipan_pelanggan_date_idx").on(
+      t.pelangganId,
+      t.createdAt,
+    ),
+  }),
+);
 
 export type Pelanggan = typeof pelanggan.$inferSelect;
 export type NewPelanggan = typeof pelanggan.$inferInsert;
+export type GalonPelanggan = typeof galonPelanggan.$inferSelect;
+export type MutasiTitipan = typeof mutasiTitipan.$inferSelect;

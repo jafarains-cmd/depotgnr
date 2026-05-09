@@ -1,9 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import { db } from "@/db";
-import { pelanggan, mutasiLoyalti } from "@/db/schema/pelanggan";
+import {
+  pelanggan,
+  mutasiLoyalti,
+  galonPelanggan,
+  mutasiTitipan,
+} from "@/db/schema/pelanggan";
 import { requireRole } from "@/lib/permissions";
 
 export async function upsertPelanggan(formData: FormData) {
@@ -87,4 +92,66 @@ export async function adjustLoyaltyManual(
   revalidatePath(`/data-pelanggan/${pelangganId}`);
   revalidatePath("/data-pelanggan");
   return { ok: true };
+}
+
+/**
+ * Catat mutasi galon titipan: pelanggan titip galon ke depot (perubahan +)
+ * atau ambil/dikembalikan (perubahan -). Update galon_pelanggan + insert
+ * mutasi_titipan untuk audit trail.
+ */
+export async function catatMutasiTitipan(args: {
+  pelangganId: number;
+  produkId: number;
+  perubahan: number; // positif=titip masuk, negatif=ambil/kembali
+  alasan: string;
+  catatan?: string;
+}): Promise<{ ok: true; jumlahBaru: number } | { error: string }> {
+  const session = await requireRole(["admin", "kasir"]);
+  if (!Number.isInteger(args.perubahan) || args.perubahan === 0) {
+    return { error: "Jumlah harus angka bulat selain nol" };
+  }
+  const alasan = args.alasan.trim();
+  if (!alasan) return { error: "Alasan wajib diisi" };
+
+  // Cek pelanggan & ambil current jumlah
+  const existing = await db.query.galonPelanggan.findFirst({
+    where: and(
+      eq(galonPelanggan.pelangganId, args.pelangganId),
+      eq(galonPelanggan.produkId, args.produkId),
+    ),
+  });
+
+  const currentJumlah = existing?.jumlahDititip ?? 0;
+  const jumlahBaru = Math.max(0, currentJumlah + args.perubahan);
+
+  await db.transaction((tx) => {
+    if (existing) {
+      tx.update(galonPelanggan)
+        .set({ jumlahDititip: jumlahBaru, updatedAt: new Date() })
+        .where(eq(galonPelanggan.id, existing.id))
+        .run();
+    } else {
+      tx.insert(galonPelanggan)
+        .values({
+          pelangganId: args.pelangganId,
+          produkId: args.produkId,
+          jumlahDititip: jumlahBaru,
+        })
+        .run();
+    }
+    tx.insert(mutasiTitipan)
+      .values({
+        pelangganId: args.pelangganId,
+        produkId: args.produkId,
+        perubahan: args.perubahan,
+        alasan,
+        catatan: args.catatan?.trim() || null,
+        userId: session.user.id,
+      })
+      .run();
+  });
+
+  revalidatePath(`/data-pelanggan/${args.pelangganId}`);
+  revalidatePath("/data-pelanggan");
+  return { ok: true, jumlahBaru };
 }

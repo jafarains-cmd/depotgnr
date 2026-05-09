@@ -3,8 +3,16 @@ import { notFound } from "next/navigation";
 import { eq, desc, and, sql } from "drizzle-orm";
 import { ArrowLeft, Coins, Star, TrendingUp, TrendingDown } from "lucide-react";
 import { db } from "@/db";
-import { pelanggan as pelangganTable, mutasiLoyalti } from "@/db/schema/pelanggan";
+import {
+  pelanggan as pelangganTable,
+  mutasiLoyalti,
+  galonPelanggan,
+  mutasiTitipan,
+} from "@/db/schema/pelanggan";
+import { produk as produkTable } from "@/db/schema/produk";
+import { user as userTableSchema } from "@/db/schema/auth";
 import { requireRole } from "@/lib/permissions";
+import { TitipanSection } from "./TitipanSection";
 import { formatRupiah } from "@/lib/utils";
 import { LoyaltyAdjustForm } from "./LoyaltyAdjustForm";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
@@ -61,6 +69,39 @@ export default async function PelangganDetailPage({
     .orderBy(desc(mutasiLoyalti.createdAt))
     .limit(limit)
     .offset(offset);
+
+  // Galon titipan + produk list + history mutasi titipan
+  const titipanRows = await db
+    .select({
+      produkId: galonPelanggan.produkId,
+      jumlahDititip: galonPelanggan.jumlahDititip,
+      produkNama: produkTable.nama,
+    })
+    .from(galonPelanggan)
+    .leftJoin(produkTable, eq(galonPelanggan.produkId, produkTable.id))
+    .where(eq(galonPelanggan.pelangganId, pelangganId));
+
+  const semuaProduk = await db
+    .select({ id: produkTable.id, nama: produkTable.nama })
+    .from(produkTable);
+
+  const titipanMutasi = await db
+    .select({
+      id: mutasiTitipan.id,
+      produkId: mutasiTitipan.produkId,
+      produkNama: produkTable.nama,
+      perubahan: mutasiTitipan.perubahan,
+      alasan: mutasiTitipan.alasan,
+      catatan: mutasiTitipan.catatan,
+      createdAt: mutasiTitipan.createdAt,
+      userName: userTableSchema.name,
+    })
+    .from(mutasiTitipan)
+    .leftJoin(produkTable, eq(mutasiTitipan.produkId, produkTable.id))
+    .leftJoin(userTableSchema, eq(mutasiTitipan.userId, userTableSchema.id))
+    .where(eq(mutasiTitipan.pelangganId, pelangganId))
+    .orderBy(desc(mutasiTitipan.createdAt))
+    .limit(30);
 
   const [earnRow] = await db
     .select({ total: sql<number>`coalesce(sum(${mutasiLoyalti.jumlah}), 0)` })
@@ -133,6 +174,27 @@ export default async function PelangganDetailPage({
       </div>
 
       {isAdmin && <LoyaltyAdjustForm pelangganId={pel.id} />}
+
+      <TitipanSection
+        pelangganId={pel.id}
+        pelangganNama={pel.nama}
+        titipan={titipanRows.map((t) => ({
+          produkId: t.produkId,
+          produkNama: t.produkNama ?? `#${t.produkId}`,
+          jumlahDititip: t.jumlahDititip,
+        }))}
+        semuaProduk={semuaProduk}
+        recentMutasi={titipanMutasi.map((m) => ({
+          id: m.id,
+          produkId: m.produkId,
+          produkNama: m.produkNama ?? `#${m.produkId}`,
+          perubahan: m.perubahan,
+          alasan: m.alasan,
+          catatan: m.catatan,
+          createdAt: m.createdAt.toISOString(),
+          userName: m.userName,
+        }))}
+      />
 
       <div className="flex items-center justify-end">
         <PageSizeSelect value={limit} />

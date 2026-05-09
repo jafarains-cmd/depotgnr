@@ -2,16 +2,18 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Pencil, Trash2, Plus, X, MapPin, Eye } from "lucide-react";
+import { Pencil, Trash2, Plus, X, MapPin, Eye, Package } from "lucide-react";
 import type { Pelanggan } from "@/db/schema/pelanggan";
 import { upsertPelanggan, deletePelanggan } from "./actions";
 import { LocationPicker } from "./LocationPicker";
+
+type RowWithTitipan = Pelanggan & { titipanTotal?: number };
 
 export function PelangganTable({
   rows,
   canDelete,
 }: {
-  rows: Pelanggan[];
+  rows: RowWithTitipan[];
   canDelete: boolean;
 }) {
   const [editing, setEditing] = useState<Pelanggan | null>(null);
@@ -76,6 +78,7 @@ export function PelangganTable({
               <th className="p-3 hidden sm:table-cell">Telp</th>
               <th className="p-3 hidden md:table-cell">Alamat</th>
               <th className="p-3 hidden sm:table-cell">Tipe</th>
+              <th className="p-3 hidden md:table-cell text-right">Titipan</th>
               <th className="p-3 text-right">Aksi</th>
             </tr>
           </thead>
@@ -119,6 +122,16 @@ export function PelangganTable({
                     {p.tipe}
                   </span>
                 </td>
+                <td className="p-3 hidden md:table-cell text-right">
+                  {(p.titipanTotal ?? 0) > 0 ? (
+                    <span className="text-xs font-bold text-brand inline-flex items-center gap-1">
+                      <Package size={11} />
+                      {p.titipanTotal}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-[color:var(--muted)]">—</span>
+                  )}
+                </td>
                 <td className="p-3 text-right space-x-2">
                   <Link
                     href={`/data-pelanggan/${p.id}`}
@@ -152,7 +165,7 @@ export function PelangganTable({
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={5} className="p-6 text-center text-[color:var(--muted)]">
+                <td colSpan={6} className="p-6 text-center text-[color:var(--muted)]">
                   Tidak ada data.
                 </td>
               </tr>
