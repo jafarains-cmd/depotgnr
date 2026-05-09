@@ -7,6 +7,8 @@ import { stokGalon } from "@/db/schema/inventory";
 import { user as userTable } from "@/db/schema/auth";
 import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
 import { pengeluaran } from "@/db/schema/pengeluaran";
+import { filter } from "@/db/schema/filter";
+import { computeFilterStatus } from "@/lib/filter-status";
 import { sql, gte, eq, desc, ne, lt, and, isNull } from "drizzle-orm";
 import { formatRupiah } from "@/lib/utils";
 import { countChurnRisk } from "@/lib/analytics";
@@ -110,6 +112,25 @@ export default async function DashboardPage() {
 
   const churnStats = await countChurnRisk().catch(() => ({ due: 0, overdue: 0, churn: 0 }));
   const totalActionable = churnStats.due + churnStats.overdue + churnStats.churn;
+
+  // Filter pemeliharaan — count overdue & due_soon (cuma yang aktif)
+  const filterRows = await db.query.filter.findMany({ where: eq(filter.aktif, true) });
+  const filterAlerts = filterRows.reduce(
+    (acc, f) => {
+      const s = computeFilterStatus({
+        gantiTerakhir: f.gantiTerakhir,
+        intervalHari: f.intervalHari,
+      });
+      if (s.status === "overdue") acc.overdue.push({ nama: f.nama, daysLeft: s.daysLeft });
+      else if (s.status === "due_soon")
+        acc.dueSoon.push({ nama: f.nama, daysLeft: s.daysLeft });
+      return acc;
+    },
+    {
+      overdue: [] as { nama: string; daysLeft: number | null }[],
+      dueSoon: [] as { nama: string; daysLeft: number | null }[],
+    },
+  );
 
   const omzet = omzetTodayRow.total;
   const pengeluaranToday = pengeluaranTodayRow.total;
@@ -303,6 +324,51 @@ export default async function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Filter pemeliharaan alert */}
+      {(filterAlerts.overdue.length > 0 || filterAlerts.dueSoon.length > 0) && (
+        <Link
+          href="/admin/pemeliharaan"
+          className={`block rounded-2xl p-4 border transition ${
+            filterAlerts.overdue.length > 0
+              ? "bg-rose-50 border-rose-200 hover:border-rose-400"
+              : "bg-amber-50 border-amber-200 hover:border-amber-400"
+          }`}
+        >
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="min-w-0">
+              <div
+                className={`font-bold inline-flex items-center gap-1.5 ${
+                  filterAlerts.overdue.length > 0 ? "text-rose-900" : "text-amber-900"
+                }`}
+              >
+                <AlertTriangle size={16} />
+                Pemeliharaan Filter
+              </div>
+              <div className="text-xs mt-1 space-y-0.5">
+                {filterAlerts.overdue.map((f) => (
+                  <div key={`o-${f.nama}`} className="text-rose-800">
+                    🔴 <strong>{f.nama}</strong> — lewat{" "}
+                    {Math.abs(f.daysLeft ?? 0)} hari
+                  </div>
+                ))}
+                {filterAlerts.dueSoon.map((f) => (
+                  <div key={`d-${f.nama}`} className="text-amber-800">
+                    🟡 <strong>{f.nama}</strong> — {f.daysLeft} hari lagi
+                  </div>
+                ))}
+              </div>
+            </div>
+            <span
+              className={`text-xs font-bold inline-flex items-center gap-1 whitespace-nowrap ${
+                filterAlerts.overdue.length > 0 ? "text-rose-900" : "text-amber-900"
+              }`}
+            >
+              Buka →
+            </span>
+          </div>
+        </Link>
+      )}
 
       {/* Churn alert */}
       {totalActionable > 0 && (

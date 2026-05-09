@@ -17,6 +17,7 @@ import {
   Coins,
   Banknote,
   Cloud,
+  Wrench,
 } from "lucide-react";
 import { AppShell, type NavItem } from "@/components/AppShell";
 import { requireRole } from "@/lib/permissions";
@@ -45,6 +46,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/data-pelanggan", label: "Pelanggan", icon: <Users size={16} /> },
     { href: "/admin/peta", label: "Peta Pelanggan", icon: <Map size={16} /> },
     { href: "/admin/inventory", label: "Inventory", icon: <Boxes size={16} /> },
+    { href: "/admin/pemeliharaan", label: "Pemeliharaan", icon: <Wrench size={16} /> },
     { href: "/kasir/transaksi", label: "Transaksi", icon: <Receipt size={16} /> },
     { href: "/pembayaran", label: "Pembayaran", icon: <Wallet size={16} />, badgeKey: "pembayaran" },
     { href: "/admin/bonus-kurir", label: "Bonus Kurir", icon: <Coins size={16} />, badgeKey: "bonusPending" },
