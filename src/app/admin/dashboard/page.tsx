@@ -24,9 +24,13 @@ const STATUS_COLOR: Record<string, { bar: string; bg: string; fg: string; label:
 };
 
 export default async function DashboardPage() {
-  const startOfDay = new Date();
+  const now = new Date();
+  const startOfDay = new Date(now);
   startOfDay.setHours(0, 0, 0, 0);
   const startOfYesterday = new Date(startOfDay.getTime() - 24 * 60 * 60 * 1000);
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const endOfLastMonth = startOfMonth;
 
   const [omzetTodayRow] = await db
     .select({ total: sql<number>`coalesce(sum(${transaksi.total}), 0)` })
@@ -48,6 +52,27 @@ export default async function DashboardPage() {
     .select({ total: sql<number>`coalesce(sum(${pengeluaran.jumlah}), 0)` })
     .from(pengeluaran)
     .where(gte(pengeluaran.tanggal, startOfDay));
+
+  const [omzetThisMonthRow] = await db
+    .select({ total: sql<number>`coalesce(sum(${transaksi.total}), 0)` })
+    .from(transaksi)
+    .where(and(gte(transaksi.createdAt, startOfMonth), isNull(transaksi.voidedAt)));
+
+  const [omzetLastMonthRow] = await db
+    .select({ total: sql<number>`coalesce(sum(${transaksi.total}), 0)` })
+    .from(transaksi)
+    .where(
+      and(
+        gte(transaksi.createdAt, startOfLastMonth),
+        lt(transaksi.createdAt, endOfLastMonth),
+        isNull(transaksi.voidedAt),
+      ),
+    );
+
+  const [pengeluaranThisMonthRow] = await db
+    .select({ total: sql<number>`coalesce(sum(${pengeluaran.jumlah}), 0)` })
+    .from(pengeluaran)
+    .where(gte(pengeluaran.tanggal, startOfMonth));
 
   const [orderTodayCount] = await db
     .select({ count: sql<number>`count(*)` })
@@ -92,6 +117,15 @@ export default async function DashboardPage() {
   const omzetDelta =
     omzetYesterdayRow.total > 0
       ? Math.round(((omzet - omzetYesterdayRow.total) / omzetYesterdayRow.total) * 100)
+      : null;
+
+  const omzetThisMonth = omzetThisMonthRow.total;
+  const omzetLastMonth = omzetLastMonthRow.total;
+  const pengeluaranThisMonth = pengeluaranThisMonthRow.total;
+  const profitThisMonth = omzetThisMonth - pengeluaranThisMonth;
+  const omzetMonthDelta =
+    omzetLastMonth > 0
+      ? Math.round(((omzetThisMonth - omzetLastMonth) / omzetLastMonth) * 100)
       : null;
 
   return (
@@ -139,55 +173,133 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Profit/Rugi hari ini */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
-          <div className="text-[10px] font-bold tracking-widest text-emerald-700">
-            OMZET HARI INI
+      {/* Hari ini */}
+      <div>
+        <div className="text-[11px] font-bold tracking-widest text-[color:var(--muted)] mb-2">
+          HARI INI · {now.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" })}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
+            <div className="text-[10px] font-bold tracking-widest text-emerald-700">
+              OMZET
+            </div>
+            <div className="text-2xl font-extrabold text-emerald-900 mt-1">
+              {formatRupiah(omzet)}
+            </div>
           </div>
-          <div className="text-2xl font-extrabold text-emerald-900 mt-1">
-            {formatRupiah(omzet)}
+          <Link
+            href="/admin/pengeluaran"
+            className="bg-rose-50 border border-rose-200 rounded-2xl p-4 hover:border-rose-300 transition"
+          >
+            <div className="text-[10px] font-bold tracking-widest text-rose-700">
+              PENGELUARAN
+            </div>
+            <div className="text-2xl font-extrabold text-rose-900 mt-1">
+              {formatRupiah(pengeluaranToday)}
+            </div>
+            <div className="text-[11px] text-rose-700 mt-1">Klik untuk kelola →</div>
+          </Link>
+          <div
+            className={`border rounded-2xl p-4 ${
+              profitBersih >= 0
+                ? "bg-brand-soft border-brand"
+                : "bg-amber-50 border-amber-300"
+            }`}
+          >
+            <div
+              className={`text-[10px] font-bold tracking-widest ${
+                profitBersih >= 0 ? "text-brand" : "text-amber-700"
+              }`}
+            >
+              PROFIT BERSIH
+            </div>
+            <div
+              className={`text-2xl font-extrabold mt-1 ${
+                profitBersih >= 0 ? "text-brand" : "text-amber-900"
+              }`}
+            >
+              {formatRupiah(profitBersih)}
+            </div>
+            <div
+              className={`text-[11px] mt-1 ${
+                profitBersih >= 0 ? "text-brand" : "text-amber-700"
+              }`}
+            >
+              Omzet − Pengeluaran
+            </div>
           </div>
         </div>
-        <Link
-          href="/admin/pengeluaran"
-          className="bg-rose-50 border border-rose-200 rounded-2xl p-4 hover:border-rose-300 transition"
-        >
-          <div className="text-[10px] font-bold tracking-widest text-rose-700">
-            PENGELUARAN HARI INI
+      </div>
+
+      {/* Bulan ini */}
+      <div>
+        <div className="text-[11px] font-bold tracking-widest text-[color:var(--muted)] mb-2">
+          BULAN INI ·{" "}
+          {now.toLocaleDateString("id-ID", { month: "long", year: "numeric" })}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
+            <div className="text-[10px] font-bold tracking-widest text-emerald-700">
+              OMZET
+            </div>
+            <div className="text-2xl font-extrabold text-emerald-900 mt-1">
+              {formatRupiah(omzetThisMonth)}
+            </div>
+            {omzetMonthDelta !== null && (
+              <div
+                className={`text-[11px] mt-1 ${
+                  omzetMonthDelta >= 0 ? "text-emerald-700" : "text-rose-600"
+                }`}
+              >
+                {omzetMonthDelta >= 0 ? "↑" : "↓"} {Math.abs(omzetMonthDelta)}% vs bulan lalu
+              </div>
+            )}
+            {omzetMonthDelta === null && omzetLastMonth === 0 && (
+              <div className="text-[11px] text-emerald-700 mt-1">Bulan lalu: Rp 0</div>
+            )}
           </div>
-          <div className="text-2xl font-extrabold text-rose-900 mt-1">
-            {formatRupiah(pengeluaranToday)}
-          </div>
-          <div className="text-[11px] text-rose-700 mt-1">Klik untuk kelola →</div>
-        </Link>
-        <div
-          className={`border rounded-2xl p-4 ${
-            profitBersih >= 0
-              ? "bg-brand-soft border-brand"
-              : "bg-amber-50 border-amber-300"
-          }`}
-        >
+          <Link
+            href="/admin/pengeluaran"
+            className="bg-rose-50 border border-rose-200 rounded-2xl p-4 hover:border-rose-300 transition"
+          >
+            <div className="text-[10px] font-bold tracking-widest text-rose-700">
+              PENGELUARAN
+            </div>
+            <div className="text-2xl font-extrabold text-rose-900 mt-1">
+              {formatRupiah(pengeluaranThisMonth)}
+            </div>
+            <div className="text-[11px] text-rose-700 mt-1">
+              Listrik, gaji, sparepart, dll
+            </div>
+          </Link>
           <div
-            className={`text-[10px] font-bold tracking-widest ${
-              profitBersih >= 0 ? "text-brand" : "text-amber-700"
+            className={`border rounded-2xl p-4 ${
+              profitThisMonth >= 0
+                ? "bg-brand-soft border-brand"
+                : "bg-amber-50 border-amber-300"
             }`}
           >
-            PROFIT BERSIH
-          </div>
-          <div
-            className={`text-2xl font-extrabold mt-1 ${
-              profitBersih >= 0 ? "text-brand" : "text-amber-900"
-            }`}
-          >
-            {formatRupiah(profitBersih)}
-          </div>
-          <div
-            className={`text-[11px] mt-1 ${
-              profitBersih >= 0 ? "text-brand" : "text-amber-700"
-            }`}
-          >
-            Omzet − Pengeluaran
+            <div
+              className={`text-[10px] font-bold tracking-widest ${
+                profitThisMonth >= 0 ? "text-brand" : "text-amber-700"
+              }`}
+            >
+              PROFIT BERSIH
+            </div>
+            <div
+              className={`text-2xl font-extrabold mt-1 ${
+                profitThisMonth >= 0 ? "text-brand" : "text-amber-900"
+              }`}
+            >
+              {formatRupiah(profitThisMonth)}
+            </div>
+            <div
+              className={`text-[11px] mt-1 ${
+                profitThisMonth >= 0 ? "text-brand" : "text-amber-700"
+              }`}
+            >
+              {profitThisMonth >= 0 ? "Untung 🎉" : "Rugi — review pengeluaran"}
+            </div>
           </div>
         </div>
       </div>
