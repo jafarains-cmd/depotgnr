@@ -16,6 +16,7 @@ import {
   TrendingUp,
   Coins,
   Banknote,
+  Cloud,
 } from "lucide-react";
 import { AppShell, type NavItem } from "@/components/AppShell";
 import { requireRole } from "@/lib/permissions";
@@ -52,6 +53,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/laporan", label: "Laporan", icon: <BarChart3 size={16} /> },
     { href: "/admin/analitik/follow-up", label: "Follow-up", icon: <TrendingUp size={16} />, badgeKey: "followUp" },
     { href: "/admin/users", label: "User", icon: <UserCog size={16} /> },
+    { href: "/admin/backup", label: "Backup", icon: <Cloud size={16} /> },
     { href: "/admin/pengaturan", label: "Pengaturan", icon: <Settings size={16} /> },
     { href: "/admin/bantuan", label: "Bantuan", icon: <HelpCircle size={16} /> },
     { href: "/kurir", label: "Mode Kurir", icon: <Bike size={16} />, badgeKey: "kurirAktif" },
