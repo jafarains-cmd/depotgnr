@@ -9,18 +9,21 @@ import { OrderClient, type OrderRow } from "./OrderClient";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { parseRange } from "@/lib/date-range";
 import { requireRole } from "@/lib/permissions";
+import { PageSizeSelect } from "@/components/PageSizeSelect";
+import { parseLimit } from "@/lib/page-size";
 
 export const dynamic = "force-dynamic";
 
 export default async function OrderKasirPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ range?: string; from?: string; to?: string; limit?: string }>;
 }) {
   const session = await requireRole(["admin", "kasir"]);
   const isAdmin = session.user.role === "admin";
   const sp = await searchParams;
   const range = parseRange(sp);
+  const limit = parseLimit(sp.limit);
 
   // Filter berdasarkan range tanggal user. Default 30 hari terakhir.
   // "Aktif" (non-selesai) selalu ditampilkan terlepas range kalau di-toggle "Semua".
@@ -53,7 +56,7 @@ export default async function OrderKasirPage({
     .leftJoin(pelanggan, eq(orderHeader.pelangganId, pelanggan.id))
     .where(conds.length > 0 ? and(...conds) : undefined)
     .orderBy(desc(orderHeader.createdAt))
-    .limit(200);
+    .limit(limit);
 
   // Single batch query untuk semua items + produk join (no N+1)
   const orderIds = aktif.map((o) => o.id);
@@ -107,13 +110,14 @@ export default async function OrderKasirPage({
           + Order Baru (Walk-in)
         </a>
       </div>
-      <div className="mb-4">
+      <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
         <DateRangeFilter
           active={range.key}
           customFrom={range.from}
           customTo={range.to}
           basePath="/kasir/order"
         />
+        <PageSizeSelect value={limit} />
       </div>
       <OrderClient rows={rows} kurirList={kurirList} isAdmin={isAdmin} />
     </div>

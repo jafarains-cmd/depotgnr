@@ -6,17 +6,20 @@ import { requireRole } from "@/lib/permissions";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { parseRange } from "@/lib/date-range";
 import { PembayaranClient, type Row } from "./PembayaranClient";
+import { PageSizeSelect } from "@/components/PageSizeSelect";
+import { parseLimit } from "@/lib/page-size";
 
 export const dynamic = "force-dynamic";
 
 export default async function PembayaranPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ range?: string; from?: string; to?: string; limit?: string }>;
 }) {
   await requireRole(["admin", "kasir"]);
   const sp = await searchParams;
   const range = parseRange(sp);
+  const limit = parseLimit(sp.limit);
 
   // Filter by createdAt order. Untuk pembayaran, ini reasonable (recent orders most relevant).
   const conds = [ne(orderHeader.status, "batal")];
@@ -42,7 +45,7 @@ export default async function PembayaranPage({
     .leftJoin(pelangganTable, eq(orderHeader.pelangganId, pelangganTable.id))
     .where(and(...conds))
     .orderBy(desc(orderHeader.updatedAt))
-    .limit(500);
+    .limit(limit);
 
   const filtered = list.filter((r) => {
     if (r.statusBayar === "menunggu" || r.statusBayar === "lunas") return true;
@@ -73,12 +76,15 @@ export default async function PembayaranPage({
           Review bukti pembayaran, tandai lunas piutang, atau lihat history.
         </p>
       </div>
-      <DateRangeFilter
-        active={range.key}
-        customFrom={range.from}
-        customTo={range.to}
-        basePath="/pembayaran"
-      />
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <DateRangeFilter
+          active={range.key}
+          customFrom={range.from}
+          customTo={range.to}
+          basePath="/pembayaran"
+        />
+        <PageSizeSelect value={limit} />
+      </div>
       <PembayaranClient rows={rows} />
     </div>
   );

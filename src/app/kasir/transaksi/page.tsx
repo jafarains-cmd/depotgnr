@@ -10,19 +10,22 @@ import { formatRupiah } from "@/lib/utils";
 import { requireRole } from "@/lib/permissions";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { parseRange } from "@/lib/date-range";
+import { PageSizeSelect } from "@/components/PageSizeSelect";
+import { parseLimit } from "@/lib/page-size";
 
 export const dynamic = "force-dynamic";
 
 export default async function RiwayatKasirPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; from?: string; to?: string; q?: string }>;
+  searchParams: Promise<{ range?: string; from?: string; to?: string; q?: string; limit?: string }>;
 }) {
   const session = await requireRole(["admin", "kasir"]);
   const role = session.user.role;
   const sp = await searchParams;
   const range = parseRange(sp);
   const q = (sp.q ?? "").trim();
+  const limit = parseLimit(sp.limit);
 
   const conds = [];
   if (role !== "admin") conds.push(eq(transaksi.kasirUserId, session.user.id));
@@ -55,7 +58,7 @@ export default async function RiwayatKasirPage({
     .leftJoin(pelanggan, eq(transaksi.pelangganId, pelanggan.id))
     .where(conds.length > 0 ? and(...conds) : undefined)
     .orderBy(desc(transaksi.createdAt))
-    .limit(200);
+    .limit(limit);
 
   const totalOmzet = rows.reduce((s, r) => (r.voidedAt ? s : s + r.total), 0);
 
@@ -100,7 +103,10 @@ export default async function RiwayatKasirPage({
         </form>
       </div>
       <div className="mb-3 flex items-center justify-between flex-wrap gap-2 text-sm">
-        <span className="text-[color:var(--muted)]">{rows.length} transaksi</span>
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-[color:var(--muted)]">{rows.length} transaksi</span>
+          <PageSizeSelect value={limit} />
+        </div>
         <span className="font-bold text-brand">
           Omzet: {formatRupiah(totalOmzet)}
         </span>

@@ -6,17 +6,25 @@ import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
 import { requireRole } from "@/lib/permissions";
 import { formatRupiah } from "@/lib/utils";
 import { PelangganTable } from "./PelangganTable";
+import { PageSizeSelect } from "@/components/PageSizeSelect";
+import { parseLimit } from "@/lib/page-size";
 
 export const dynamic = "force-dynamic";
 
 const RANK_BG = ["bg-amber-400", "bg-slate-300", "bg-orange-400"];
 
-export default async function PelangganDataPage() {
+export default async function PelangganDataPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ limit?: string }>;
+}) {
   const session = await requireRole(["admin", "kasir"]);
+  const sp = await searchParams;
+  const limit = parseLimit(sp.limit);
   const [list, top] = await Promise.all([
     db.query.pelanggan.findMany({
       orderBy: (p, { desc }) => [desc(p.createdAt)],
-      limit: 200,
+      limit,
     }),
     db
       .select({
@@ -32,11 +40,14 @@ export default async function PelangganDataPage() {
 
   return (
     <div>
-      <div className="mb-4">
-        <h1 className="text-xl font-bold">Data Pelanggan</h1>
-        <p className="text-sm text-[color:var(--muted)]">
-          Walk-in dan langganan. Klik nama untuk lihat detail saldo loyalty & history.
-        </p>
+      <div className="mb-4 flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-xl font-bold">Data Pelanggan</h1>
+          <p className="text-sm text-[color:var(--muted)]">
+            Walk-in dan langganan. Klik nama untuk lihat detail saldo loyalty & history.
+          </p>
+        </div>
+        <PageSizeSelect value={limit} />
       </div>
 
       {top.length > 0 && (

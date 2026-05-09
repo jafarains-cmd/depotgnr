@@ -5,10 +5,18 @@ import { produk } from "@/db/schema/produk";
 import { user as userTable } from "@/db/schema/auth";
 import { PageHeader } from "@/components/AppShell";
 import { InventoryClient } from "./InventoryClient";
+import { PageSizeSelect } from "@/components/PageSizeSelect";
+import { parseLimit } from "@/lib/page-size";
 
 export const dynamic = "force-dynamic";
 
-export default async function InventoryPage() {
+export default async function InventoryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ limit?: string }>;
+}) {
+  const sp = await searchParams;
+  const limit = parseLimit(sp.limit);
   const produkList = await db.query.produk.findMany({
     orderBy: (p, { asc }) => [asc(p.id)],
   });
@@ -41,11 +49,14 @@ export default async function InventoryPage() {
     .leftJoin(produk, eq(mutasiStok.produkId, produk.id))
     .leftJoin(userTable, eq(mutasiStok.userId, userTable.id))
     .orderBy(desc(mutasiStok.createdAt))
-    .limit(50);
+    .limit(limit);
 
   return (
     <div className="p-4 md:p-6">
-      <PageHeader title="Inventory" description="Stok galon dan mutasi stok." />
+      <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
+        <PageHeader title="Inventory" description="Stok galon dan mutasi stok." />
+        <PageSizeSelect value={limit} />
+      </div>
       <InventoryClient
         produk={produkList.map((p) => ({
           id: p.id,
