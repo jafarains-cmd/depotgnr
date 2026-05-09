@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { Building2, Megaphone, CreditCard, Gift, Bell, Plug } from "lucide-react";
+import { Building2, Megaphone, CreditCard, Gift, Bell, Plug, Cloud, CheckCircle, AlertTriangle, ExternalLink } from "lucide-react";
+import { desc } from "drizzle-orm";
 import { db } from "@/db";
+import { backupLog } from "@/db/schema/backup";
 import { PageHeader } from "@/components/AppShell";
 import { savePengaturan } from "./actions";
 import { PengaturanForm } from "./PengaturanForm";
@@ -104,6 +106,11 @@ const ALL_FIELDS: Record<string, Field> = {
     key: "driveFolderBuktiBayar",
     label: "Drive Folder ID — Bukti Pembayaran",
     help: "Folder Drive terpisah (boleh sama dengan bukti antar).",
+  },
+  driveFolderBackup: {
+    key: "driveFolderBackup",
+    label: "Drive Folder ID — Backup Database",
+    help: "Folder khusus untuk backup database harian (.db.gz). Kalau kosong, fallback ke folder Bukti Pembayaran.",
   },
 
   qrisFotoUrl: {
@@ -238,6 +245,7 @@ const TABS: Tab[] = [
       "appsScriptToken",
       "driveFolderBuktiKurir",
       "driveFolderBuktiBayar",
+      "driveFolderBackup",
     ],
   },
 ];
@@ -253,6 +261,13 @@ export default async function PengaturanPage({
   const all = await db.query.pengaturan.findMany();
   const map = Object.fromEntries(all.map((r) => [r.key, r.value ?? ""]));
 
+  // Status backup terakhir
+  const [lastBackup] = await db
+    .select()
+    .from(backupLog)
+    .orderBy(desc(backupLog.ranAt))
+    .limit(1);
+
   const fields = activeTab.fieldKeys.map((k) => ALL_FIELDS[k]).filter(Boolean);
 
   return (
@@ -261,6 +276,9 @@ export default async function PengaturanPage({
         title="Pengaturan"
         description="Konfigurasi depot, template pesan, dan integrasi."
       />
+
+      {/* Status backup */}
+      <BackupStatusBanner backup={lastBackup} />
 
       {/* Tab nav */}
       <div className="flex gap-1.5 flex-wrap border-b border-line pb-2 -mx-1">
@@ -292,6 +310,123 @@ export default async function PengaturanPage({
 
       {activeTab.id === "notifikasi" && <TelegramWebhook />}
       {activeTab.id === "integrasi" && <SheetsSync />}
+    </div>
+  );
+}
+
+function BackupStatusBanner({
+  backup,
+}: {
+  backup:
+    | {
+        status: "success" | "failed";
+        ranAt: Date;
+        sizeBytes: number | null;
+        fileUrl: string | null;
+        error: string | null;
+        triggeredBy: "manual" | "cron";
+      }
+    | undefined;
+}) {
+  if (!backup) {
+    return (
+      <Link
+        href="/admin/backup"
+        className="block bg-amber-50 border border-amber-200 rounded-2xl p-4 hover:border-amber-400 transition"
+      >
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <div className="font-bold text-amber-900 inline-flex items-center gap-1.5">
+              <AlertTriangle size={16} /> Belum ada backup database
+            </div>
+            <p className="text-xs text-amber-800 mt-1">
+              Database belum pernah di-backup. Klik untuk backup manual atau setup
+              cron timer.
+            </p>
+          </div>
+          <span className="text-xs text-amber-900 font-bold inline-flex items-center gap-1">
+            Buka Backup <ExternalLink size={11} />
+          </span>
+        </div>
+      </Link>
+    );
+  }
+
+  const sukses = backup.status === "success";
+  const sizeMb = backup.sizeBytes
+    ? (backup.sizeBytes / 1024 / 1024).toFixed(2)
+    : "-";
+  const ageHours = Math.floor((Date.now() - backup.ranAt.getTime()) / 3600000);
+  const stale = ageHours > 30; // > ~1 hari + buffer
+
+  return (
+    <div
+      className={`rounded-2xl p-4 border ${
+        sukses && !stale
+          ? "bg-emerald-50 border-emerald-200"
+          : sukses && stale
+            ? "bg-amber-50 border-amber-200"
+            : "bg-rose-50 border-rose-200"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
+          <div
+            className={`font-bold inline-flex items-center gap-1.5 ${
+              sukses ? (stale ? "text-amber-900" : "text-emerald-900") : "text-rose-900"
+            }`}
+          >
+            {sukses ? <CheckCircle size={16} /> : <AlertTriangle size={16} />}
+            {sukses
+              ? stale
+                ? "Backup terakhir > 30 jam lalu"
+                : "Backup database aktif"
+              : "Backup database GAGAL"}
+          </div>
+          <div
+            className={`text-xs mt-1 ${
+              sukses ? (stale ? "text-amber-800" : "text-emerald-800") : "text-rose-800"
+            }`}
+          >
+            {sukses ? (
+              <>
+                <Cloud size={11} className="inline mr-1" />
+                Terakhir berhasil di-upload ke Google Drive:{" "}
+                <strong>
+                  {backup.ranAt.toLocaleString("id-ID", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                </strong>{" "}
+                · {sizeMb} MB · trigger {backup.triggeredBy}
+              </>
+            ) : (
+              <>
+                Error: {backup.error ?? "tidak diketahui"}. Cek pengaturan
+                Apps Script & folder Drive di tab Integrasi.
+              </>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {backup.fileUrl && (
+            <a
+              href={backup.fileUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-brand font-bold inline-flex items-center gap-1 hover:underline whitespace-nowrap"
+            >
+              File <ExternalLink size={11} />
+            </a>
+          )}
+          <Link
+            href="/admin/backup"
+            className="text-xs font-bold inline-flex items-center gap-1 px-3 py-1.5 bg-surface border border-line rounded-md hover:border-brand whitespace-nowrap"
+          >
+            History →
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }
