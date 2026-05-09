@@ -2,6 +2,7 @@ import { sql, gte, lte, and, eq, desc, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { transaksi, transaksiItem } from "@/db/schema/transaksi";
 import { produk } from "@/db/schema/produk";
+import { pengeluaran } from "@/db/schema/pengeluaran";
 import { PageHeader } from "@/components/AppShell";
 import { formatRupiah } from "@/lib/utils";
 
@@ -41,6 +42,29 @@ export default async function LaporanPage({
     })
     .from(transaksi)
     .where(where);
+
+  // Pengeluaran dalam range yang sama
+  const wherePengeluaran = and(
+    gte(pengeluaran.tanggal, from),
+    lte(pengeluaran.tanggal, to),
+  );
+  const [ringkasanPengeluaran] = await db
+    .select({
+      total: sql<number>`coalesce(sum(${pengeluaran.jumlah}), 0)`,
+      jumlah: sql<number>`count(*)`,
+    })
+    .from(pengeluaran)
+    .where(wherePengeluaran);
+
+  const breakdownPengeluaran = await db
+    .select({
+      kategori: pengeluaran.kategori,
+      total: sql<number>`coalesce(sum(${pengeluaran.jumlah}), 0)`,
+    })
+    .from(pengeluaran)
+    .where(wherePengeluaran)
+    .groupBy(pengeluaran.kategori)
+    .orderBy(desc(sql<number>`sum(${pengeluaran.jumlah})`));
 
   const breakdownProduk = await db
     .select({
@@ -105,6 +129,22 @@ export default async function LaporanPage({
 
       <div className="grid sm:grid-cols-3 gap-3">
         <Card label="Total Omzet" value={formatRupiah(ringkasan.totalOmzet)} color="bg-emerald-50 text-emerald-700" />
+        <Card
+          label="Total Pengeluaran"
+          value={formatRupiah(ringkasanPengeluaran.total)}
+          color="bg-rose-50 text-rose-700"
+        />
+        <Card
+          label="Profit Bersih"
+          value={formatRupiah(ringkasan.totalOmzet - ringkasanPengeluaran.total)}
+          color={
+            ringkasan.totalOmzet - ringkasanPengeluaran.total >= 0
+              ? "bg-brand-soft text-brand"
+              : "bg-amber-50 text-amber-800"
+          }
+        />
+      </div>
+      <div className="grid sm:grid-cols-2 gap-3">
         <Card label="Jumlah Transaksi" value={ringkasan.jumlahTransaksi.toString()} color="bg-blue-50 text-blue-700" />
         <Card
           label="Rata-rata / Transaksi"
@@ -112,6 +152,36 @@ export default async function LaporanPage({
           color="bg-[color:var(--surface2)] text-ink"
         />
       </div>
+
+      {breakdownPengeluaran.length > 0 && (
+        <section className="bg-surface border border-line rounded-2xl p-4">
+          <h2 className="font-semibold mb-3">Breakdown Pengeluaran per Kategori</h2>
+          <div className="space-y-2">
+            {breakdownPengeluaran.map((b) => {
+              const pct = Math.round(
+                (b.total / Math.max(1, ringkasanPengeluaran.total)) * 100,
+              );
+              return (
+                <div key={b.kategori} className="flex items-center gap-3 text-xs">
+                  <div className="w-28 capitalize truncate">{b.kategori.replace(/-/g, " ")}</div>
+                  <div className="flex-1 h-5 bg-[color:var(--surface2)] rounded relative overflow-hidden">
+                    <div
+                      className="h-full bg-rose-400 rounded"
+                      style={{ width: `${pct}%` }}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-end pr-2 font-mono font-bold">
+                      {pct}%
+                    </div>
+                  </div>
+                  <div className="w-24 text-right font-mono font-bold whitespace-nowrap">
+                    {formatRupiah(b.total)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <section className="bg-surface border border-line rounded-2xl p-4">
         <h2 className="font-semibold mb-3">Omzet Harian</h2>

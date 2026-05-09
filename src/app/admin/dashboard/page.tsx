@@ -6,6 +6,7 @@ import { orderHeader } from "@/db/schema/order";
 import { stokGalon } from "@/db/schema/inventory";
 import { user as userTable } from "@/db/schema/auth";
 import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
+import { pengeluaran } from "@/db/schema/pengeluaran";
 import { sql, gte, eq, desc, ne, lt, and, isNull } from "drizzle-orm";
 import { formatRupiah } from "@/lib/utils";
 import { countChurnRisk } from "@/lib/analytics";
@@ -42,6 +43,11 @@ export default async function DashboardPage() {
         isNull(transaksi.voidedAt),
       ),
     );
+
+  const [pengeluaranTodayRow] = await db
+    .select({ total: sql<number>`coalesce(sum(${pengeluaran.jumlah}), 0)` })
+    .from(pengeluaran)
+    .where(gte(pengeluaran.tanggal, startOfDay));
 
   const [orderTodayCount] = await db
     .select({ count: sql<number>`count(*)` })
@@ -81,6 +87,8 @@ export default async function DashboardPage() {
   const totalActionable = churnStats.due + churnStats.overdue + churnStats.churn;
 
   const omzet = omzetTodayRow.total;
+  const pengeluaranToday = pengeluaranTodayRow.total;
+  const profitBersih = omzet - pengeluaranToday;
   const omzetDelta =
     omzetYesterdayRow.total > 0
       ? Math.round(((omzet - omzetYesterdayRow.total) / omzetYesterdayRow.total) * 100)
@@ -127,6 +135,59 @@ export default async function DashboardPage() {
               <MiniStat label="Pelanggan" value={pelangganCount.count} icon={<Users size={14} />} />
               <MiniStat label="Total User" value={usersRow.count} icon={<TrendingUp size={14} />} />
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Profit/Rugi hari ini */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
+          <div className="text-[10px] font-bold tracking-widest text-emerald-700">
+            OMZET HARI INI
+          </div>
+          <div className="text-2xl font-extrabold text-emerald-900 mt-1">
+            {formatRupiah(omzet)}
+          </div>
+        </div>
+        <Link
+          href="/admin/pengeluaran"
+          className="bg-rose-50 border border-rose-200 rounded-2xl p-4 hover:border-rose-300 transition"
+        >
+          <div className="text-[10px] font-bold tracking-widest text-rose-700">
+            PENGELUARAN HARI INI
+          </div>
+          <div className="text-2xl font-extrabold text-rose-900 mt-1">
+            {formatRupiah(pengeluaranToday)}
+          </div>
+          <div className="text-[11px] text-rose-700 mt-1">Klik untuk kelola →</div>
+        </Link>
+        <div
+          className={`border rounded-2xl p-4 ${
+            profitBersih >= 0
+              ? "bg-brand-soft border-brand"
+              : "bg-amber-50 border-amber-300"
+          }`}
+        >
+          <div
+            className={`text-[10px] font-bold tracking-widest ${
+              profitBersih >= 0 ? "text-brand" : "text-amber-700"
+            }`}
+          >
+            PROFIT BERSIH
+          </div>
+          <div
+            className={`text-2xl font-extrabold mt-1 ${
+              profitBersih >= 0 ? "text-brand" : "text-amber-900"
+            }`}
+          >
+            {formatRupiah(profitBersih)}
+          </div>
+          <div
+            className={`text-[11px] mt-1 ${
+              profitBersih >= 0 ? "text-brand" : "text-amber-700"
+            }`}
+          >
+            Omzet − Pengeluaran
           </div>
         </div>
       </div>

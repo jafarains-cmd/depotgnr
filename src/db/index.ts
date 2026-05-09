@@ -12,6 +12,7 @@ import * as transaksiSchema from "./schema/transaksi";
 import * as orderSchema from "./schema/order";
 import * as pengaturanSchema from "./schema/pengaturan";
 import * as bonusSchema from "./schema/bonus";
+import * as pengeluaranSchema from "./schema/pengeluaran";
 
 const dbPath = process.env.DATABASE_URL ?? "./data/depot.db";
 mkdirSync(dirname(dbPath), { recursive: true });
@@ -40,6 +41,7 @@ export const schema = {
   ...orderSchema,
   ...pengaturanSchema,
   ...bonusSchema,
+  ...pengeluaranSchema,
 };
 
 export const db = drizzle(sqlite, { schema });

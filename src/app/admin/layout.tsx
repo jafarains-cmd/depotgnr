@@ -15,6 +15,7 @@ import {
   Wallet,
   TrendingUp,
   Coins,
+  Banknote,
 } from "lucide-react";
 import { AppShell, type NavItem } from "@/components/AppShell";
 import { requireRole } from "@/lib/permissions";
@@ -47,6 +48,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/pembayaran", label: "Pembayaran", icon: <Wallet size={16} />, badgeKey: "pembayaran" },
     { href: "/admin/bonus-kurir", label: "Bonus Kurir", icon: <Coins size={16} />, badgeKey: "bonusPending" },
     { href: "/kasir/order", label: "Order Antar", icon: <Truck size={16} />, badgeKey: "orderMasuk" },
+    { href: "/admin/pengeluaran", label: "Pengeluaran", icon: <Banknote size={16} /> },
     { href: "/admin/laporan", label: "Laporan", icon: <BarChart3 size={16} /> },
     { href: "/admin/analitik/follow-up", label: "Follow-up", icon: <TrendingUp size={16} />, badgeKey: "followUp" },
     { href: "/admin/users", label: "User", icon: <UserCog size={16} /> },

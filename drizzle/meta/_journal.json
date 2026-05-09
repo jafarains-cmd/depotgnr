@@ -99,6 +99,13 @@
       "when": 1777896800000,
       "tag": "0013_order_selesai_at",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1777983200000,
+      "tag": "0014_pengeluaran",
+      "breakpoints": true
     }
   ]
 }
