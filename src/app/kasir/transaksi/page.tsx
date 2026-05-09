@@ -46,13 +46,17 @@ export default async function RiwayatKasirPage({
 
   const whereClause = conds.length > 0 ? and(...conds) : undefined;
 
-  // Total count untuk pagination
-  const [countRow] = await db
-    .select({ n: sql<number>`count(*)` })
+  // Total count + sum omzet (exclude voided) untuk filter saat ini
+  const [aggRow] = await db
+    .select({
+      n: sql<number>`count(*)`,
+      omzet: sql<number>`coalesce(sum(case when ${transaksi.voidedAt} is null then ${transaksi.total} else 0 end), 0)`,
+    })
     .from(transaksi)
     .leftJoin(pelanggan, eq(transaksi.pelangganId, pelanggan.id))
     .where(whereClause);
-  const total = countRow?.n ?? 0;
+  const total = aggRow?.n ?? 0;
+  const totalOmzet = aggRow?.omzet ?? 0;
   const { page, totalPages, offset } = getPagination({ total, limit, page: pageParam });
 
   const rows = await db
@@ -73,8 +77,6 @@ export default async function RiwayatKasirPage({
     .orderBy(desc(transaksi.createdAt))
     .limit(limit)
     .offset(offset);
-
-  const totalOmzet = rows.reduce((s, r) => (r.voidedAt ? s : s + r.total), 0);
 
   return (
     <div className="p-4 md:p-6">
@@ -122,7 +124,7 @@ export default async function RiwayatKasirPage({
           <PageSizeSelect value={limit} />
         </div>
         <span className="font-bold text-brand">
-          Omzet (halaman ini): {formatRupiah(totalOmzet)}
+          Omzet: {formatRupiah(totalOmzet)}
         </span>
       </div>
       <div className="bg-surface rounded-xl border border-line overflow-hidden">
