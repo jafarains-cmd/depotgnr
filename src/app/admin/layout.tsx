@@ -18,6 +18,7 @@ import {
   Banknote,
   Cloud,
   Wrench,
+  MessageSquareWarning,
 } from "lucide-react";
 import { AppShell, type NavItem } from "@/components/AppShell";
 import { requireRole } from "@/lib/permissions";
@@ -26,18 +27,21 @@ import {
   countPembayaranMenunggu,
   countKurirAktif,
   countKurirBonusPending,
+  countKomplainBaru,
 } from "@/lib/notifications";
 import { countChurnRisk } from "@/lib/analytics";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await requireRole(["admin"]);
-  const [orderMasuk, pembayaran, kurirAktif, bonusPending, churn] = await Promise.all([
-    countOrderMasuk(),
-    countPembayaranMenunggu(),
-    countKurirAktif(session.user.id),
-    countKurirBonusPending(),
-    countChurnRisk().catch(() => ({ due: 0, overdue: 0, churn: 0 })),
-  ]);
+  const [orderMasuk, pembayaran, kurirAktif, bonusPending, churn, komplainBaru] =
+    await Promise.all([
+      countOrderMasuk(),
+      countPembayaranMenunggu(),
+      countKurirAktif(session.user.id),
+      countKurirBonusPending(),
+      countChurnRisk().catch(() => ({ due: 0, overdue: 0, churn: 0 })),
+      countKomplainBaru(),
+    ]);
   const followUp = churn.due + churn.overdue + churn.churn;
 
   const NAV: NavItem[] = [
@@ -55,6 +59,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/pengeluaran", label: "Pengeluaran", icon: <Banknote size={16} /> },
     { href: "/admin/laporan", label: "Laporan", icon: <BarChart3 size={16} /> },
     { href: "/admin/analitik/follow-up", label: "Follow-up", icon: <TrendingUp size={16} />, badgeKey: "followUp" },
+    { href: "/admin/komplain", label: "Komplain", icon: <MessageSquareWarning size={16} />, badgeKey: "komplain" },
     { href: "/admin/users", label: "User", icon: <UserCog size={16} /> },
     { href: "/admin/backup", label: "Backup", icon: <Cloud size={16} /> },
     { href: "/admin/pengaturan", label: "Pengaturan", icon: <Settings size={16} /> },
@@ -68,7 +73,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       title="Admin · Depot Air"
       nav={NAV}
       userName={session.user.name}
-      initialBadges={{ orderMasuk, pembayaran, kurirAktif, bonusPending, followUp }}
+      initialBadges={{
+        orderMasuk,
+        pembayaran,
+        kurirAktif,
+        bonusPending,
+        followUp,
+        komplain: komplainBaru,
+      }}
     >
       {children}
     </AppShell>

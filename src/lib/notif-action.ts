@@ -10,6 +10,8 @@ import {
   countKurirAktif,
   countKurirBonusPending,
   countPesananBelumTuntas,
+  countKomplainBaru,
+  countKomplainPelangganActive,
 } from "./notifications";
 import { countChurnRisk } from "./analytics";
 
@@ -20,6 +22,7 @@ export type NotifCounts = {
   bonusPending?: number;
   followUp?: number;
   pesanan?: number;
+  komplain?: number;
 };
 
 /**
@@ -32,19 +35,22 @@ export async function getNotifCountsForCurrentUser(): Promise<NotifCounts> {
   const role = session.user.role ?? "pelanggan";
 
   if (role === "admin") {
-    const [orderMasuk, pembayaran, kurirAktif, bonusPending, churn] = await Promise.all([
-      countOrderMasuk(),
-      countPembayaranMenunggu(),
-      countKurirAktif(session.user.id),
-      countKurirBonusPending(),
-      countChurnRisk().catch(() => ({ due: 0, overdue: 0, churn: 0 })),
-    ]);
+    const [orderMasuk, pembayaran, kurirAktif, bonusPending, churn, komplainBaru] =
+      await Promise.all([
+        countOrderMasuk(),
+        countPembayaranMenunggu(),
+        countKurirAktif(session.user.id),
+        countKurirBonusPending(),
+        countChurnRisk().catch(() => ({ due: 0, overdue: 0, churn: 0 })),
+        countKomplainBaru(),
+      ]);
     return {
       orderMasuk,
       pembayaran,
       kurirAktif,
       bonusPending,
       followUp: churn.due + churn.overdue + churn.churn,
+      komplain: komplainBaru,
     };
   }
 
@@ -67,6 +73,9 @@ export async function getNotifCountsForCurrentUser(): Promise<NotifCounts> {
     where: eq(pelangganTable.userId, session.user.id),
   });
   if (!pel) return {};
-  const pesanan = await countPesananBelumTuntas(pel.id);
-  return { pesanan };
+  const [pesanan, komplainActive] = await Promise.all([
+    countPesananBelumTuntas(pel.id),
+    countKomplainPelangganActive(pel.id),
+  ]);
+  return { pesanan, komplain: komplainActive };
 }

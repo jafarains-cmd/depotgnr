@@ -2,6 +2,7 @@ import { eq, and, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { orderHeader } from "@/db/schema/order";
 import { bonusKurir } from "@/db/schema/bonus";
+import { komplain } from "@/db/schema/komplain";
 
 /**
  * Hitung order yang masih in-flight (belum selesai/batal). Termasuk:
@@ -84,6 +85,34 @@ export async function countKurirAktif(userId: string): Promise<number> {
       and(
         eq(orderHeader.kurirUserId, userId),
         inArray(orderHeader.status, ["diproses", "dijemput", "diisi", "diantar"]),
+      ),
+    );
+  return row.n ?? 0;
+}
+
+/**
+ * Hitung komplain status=baru (perlu admin tindak lanjut).
+ */
+export async function countKomplainBaru(): Promise<number> {
+  const [row] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(komplain)
+    .where(eq(komplain.status, "baru"));
+  return row.n ?? 0;
+}
+
+/**
+ * Hitung komplain pelanggan yang punya update terbaru tapi belum di-tutup
+ * (status diproses, atau baru tunggu tanggapan).
+ */
+export async function countKomplainPelangganActive(pelangganId: number): Promise<number> {
+  const [row] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(komplain)
+    .where(
+      and(
+        eq(komplain.pelangganId, pelangganId),
+        inArray(komplain.status, ["baru", "diproses"]),
       ),
     );
   return row.n ?? 0;

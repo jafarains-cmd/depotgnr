@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Settings, Gift, ChevronRight, MapPin, AtSign, Phone, Mail, Send } from "lucide-react";
+import { Settings, Gift, ChevronRight, MapPin, AtSign, Phone, Mail, Send, MessageSquareWarning } from "lucide-react";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { user as userTable } from "@/db/schema/auth";
@@ -55,6 +55,25 @@ export default async function ProfilPage() {
           </div>
         </div>
         <ChevronRight size={20} className="opacity-80" />
+      </Link>
+
+      {/* Komplain link */}
+      <Link
+        href="/pelanggan/komplain"
+        className="mt-3 flex items-center justify-between bg-surface border border-line rounded-2xl p-3 hover:border-brand transition"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-amber-50 grid place-items-center">
+            <MessageSquareWarning size={16} className="text-amber-600" />
+          </div>
+          <div>
+            <div className="text-sm font-bold">Komplain & Retur</div>
+            <div className="text-[11px] text-[color:var(--muted)]">
+              Laporkan masalah produk atau order
+            </div>
+          </div>
+        </div>
+        <ChevronRight size={16} className="text-[color:var(--muted)]" />
       </Link>
 
       {/* Info detail */}
