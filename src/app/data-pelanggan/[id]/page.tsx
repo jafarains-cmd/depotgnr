@@ -7,6 +7,8 @@ import { pelanggan as pelangganTable, mutasiLoyalti } from "@/db/schema/pelangga
 import { requireRole } from "@/lib/permissions";
 import { formatRupiah } from "@/lib/utils";
 import { LoyaltyAdjustForm } from "./LoyaltyAdjustForm";
+import { PageSizeSelect } from "@/components/PageSizeSelect";
+import { parseLimit } from "@/lib/page-size";
 
 export const dynamic = "force-dynamic";
 
@@ -21,12 +23,16 @@ const TIPE_LABEL: Record<string, { label: string; color: string }> = {
 
 export default async function PelangganDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ limit?: string }>;
 }) {
   const session = await requireRole(["admin", "kasir"]);
   const isAdmin = session.user.role === "admin";
   const { id } = await params;
+  const sp = await searchParams;
+  const limit = parseLimit(sp.limit);
   const pelangganId = Number(id);
   if (!pelangganId) notFound();
 
@@ -40,7 +46,7 @@ export default async function PelangganDetailPage({
     .from(mutasiLoyalti)
     .where(eq(mutasiLoyalti.pelangganId, pelangganId))
     .orderBy(desc(mutasiLoyalti.createdAt))
-    .limit(100);
+    .limit(limit);
 
   const [earnRow] = await db
     .select({ total: sql<number>`coalesce(sum(${mutasiLoyalti.jumlah}), 0)` })
@@ -114,11 +120,15 @@ export default async function PelangganDetailPage({
 
       {isAdmin && <LoyaltyAdjustForm pelangganId={pel.id} />}
 
+      <div className="flex items-center justify-end">
+        <PageSizeSelect value={limit} />
+      </div>
+
       <div className="bg-surface border border-line rounded-2xl overflow-hidden">
         <div className="px-4 py-3 border-b border-line">
           <h2 className="font-bold">History Loyalty</h2>
           <p className="text-xs text-[color:var(--muted)]">
-            100 mutasi terbaru · earn dari order, redeem saat bayar, atau adjust manual admin
+            {limit} mutasi terbaru · earn dari order, redeem saat bayar, atau adjust manual admin
           </p>
         </div>
         {mutasi.length === 0 ? (

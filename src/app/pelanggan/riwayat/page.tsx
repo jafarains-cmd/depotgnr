@@ -11,6 +11,8 @@ import { formatRupiah } from "@/lib/utils";
 import { GallonArt } from "@/components/GallonArt";
 import { CancelOrderButton } from "../order-baru/CancelOrderButton";
 import { RiwayatFilter } from "./RiwayatFilter";
+import { PageSizeSelect } from "@/components/PageSizeSelect";
+import { parseLimit } from "@/lib/page-size";
 
 export const dynamic = "force-dynamic";
 
@@ -27,9 +29,11 @@ const STATUS_COLOR: Record<string, string> = {
 export default async function RiwayatPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string }>;
+  searchParams: Promise<{ filter?: string; limit?: string }>;
 }) {
-  const { filter = "semua" } = await searchParams;
+  const sp = await searchParams;
+  const filter = sp.filter ?? "semua";
+  const limit = parseLimit(sp.limit);
   const session = await requireSession();
   const me = await getOrCreatePelanggan(session.user.id, session.user.name);
 
@@ -38,7 +42,7 @@ export default async function RiwayatPage({
     .from(orderHeader)
     .where(eq(orderHeader.pelangganId, me.id))
     .orderBy(desc(orderHeader.createdAt))
-    .limit(50);
+    .limit(limit);
 
   const orderIds = orders.map((o) => o.id);
   const allItems = orderIds.length
@@ -78,7 +82,10 @@ export default async function RiwayatPage({
   return (
     <div>
       <div className="bg-surface border-b border-line -mx-4 sm:mx-0 sm:rounded-t-2xl px-4 sm:px-5 pt-3 pb-3">
-        <h1 className="text-2xl font-extrabold tracking-tight">Riwayat Pesanan</h1>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <h1 className="text-2xl font-extrabold tracking-tight">Riwayat Pesanan</h1>
+          <PageSizeSelect value={limit} />
+        </div>
         <RiwayatFilter active={filter} />
       </div>
 

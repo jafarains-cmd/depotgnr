@@ -7,11 +7,19 @@ import { PageHeader } from "@/components/AppShell";
 import { requireRole } from "@/lib/permissions";
 import { formatRupiah } from "@/lib/utils";
 import { BonusClient, type KurirSummary, type BonusRow } from "./BonusClient";
+import { PageSizeSelect } from "@/components/PageSizeSelect";
+import { parseLimit } from "@/lib/page-size";
 
 export const dynamic = "force-dynamic";
 
-export default async function BonusKurirPage() {
+export default async function BonusKurirPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ limit?: string }>;
+}) {
   await requireRole(["admin"]);
+  const sp = await searchParams;
+  const limit = parseLimit(sp.limit);
 
   // Aggregate per kurir: pending + paid totals + count
   const summary = await db
@@ -57,7 +65,7 @@ export default async function BonusKurirPage() {
     .leftJoin(userTable, eq(bonusKurir.kurirUserId, userTable.id))
     .leftJoin(orderHeader, eq(bonusKurir.orderId, orderHeader.id))
     .orderBy(desc(bonusKurir.createdAt))
-    .limit(100);
+    .limit(limit);
 
   const detailRows: BonusRow[] = detail.map((d) => ({
     id: d.id,
@@ -76,10 +84,13 @@ export default async function BonusKurirPage() {
 
   return (
     <div className="p-4 md:p-6 max-w-5xl">
-      <PageHeader
-        title="Bonus Kurir"
-        description="Bonus per pengantaran. Tandai 'Dibayar' setelah Anda transfer ke kurir."
-      />
+      <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
+        <PageHeader
+          title="Bonus Kurir"
+          description="Bonus per pengantaran. Tandai 'Dibayar' setelah Anda transfer ke kurir."
+        />
+        <PageSizeSelect value={limit} />
+      </div>
 
       <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4">
         <div className="text-xs font-bold tracking-widest text-amber-800">
