@@ -152,23 +152,60 @@ async function uploadBackupFile(args: {
   if (!url || !token) return { ok: false, error: "Apps Script belum diset di Pengaturan" };
   if (!folderId) return { ok: false, error: "Drive folder belum diset di Pengaturan" };
 
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        token,
-        op: "uploadFile",
-        folderId,
-        filename: args.filename,
-        mimeType: args.mimeType,
-        base64: args.base64,
-      }),
-      redirect: "follow",
-    });
-    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
-    return (await res.json()) as { ok: boolean; url?: string; fileId?: string };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Network error" };
+  const body = JSON.stringify({
+    token,
+    op: "uploadFile",
+    folderId,
+    filename: args.filename,
+    mimeType: args.mimeType,
+    base64: args.base64,
+  });
+
+  // Retry sekali kalau fetch failed (transient network glitch).
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        redirect: "follow",
+        // 5 menit timeout — Apps Script max execution 6 min
+        signal: AbortSignal.timeout(5 * 60 * 1000),
+      });
+      if (!res.ok) {
+        return {
+          ok: false,
+          error: `HTTP ${res.status} dari Apps Script — cek URL & deployment`,
+        };
+      }
+      const json = (await res.json()) as {
+        ok?: boolean;
+        url?: string;
+        fileId?: string;
+        error?: string;
+      };
+      if (json.ok === false) {
+        return {
+          ok: false,
+          error: `Apps Script reject: ${json.error ?? "unknown"}`,
+        };
+      }
+      return { ok: true, url: json.url, fileId: json.fileId };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Network error";
+      const cause =
+        e instanceof Error && "cause" in e && e.cause
+          ? ` (${(e.cause as { code?: string }).code ?? String(e.cause).slice(0, 80)})`
+          : "";
+      if (attempt === 2) {
+        return {
+          ok: false,
+          error: `Gagal upload: ${msg}${cause}. Cek koneksi server ke script.google.com & URL Apps Script masih aktif.`,
+        };
+      }
+      // Tunggu 2 detik sebelum retry
+      await new Promise((r) => setTimeout(r, 2000));
+    }
   }
+  return { ok: false, error: "Unreachable" };
 }
