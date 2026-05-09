@@ -72,14 +72,11 @@ fi
 log "npm run build..."
 run_as_user "npm run build"
 
-# 4. Cek migration baru
-NEW_MIGRATIONS=$(run_as_user "git diff --name-only --diff-filter=A $HEAD_BEFORE $HEAD_AFTER -- 'drizzle/*.sql' | head -1")
-if [[ -n "$NEW_MIGRATIONS" ]]; then
-  log "Migration baru terdeteksi → npm run db:migrate..."
-  run_as_user "npm run db:migrate"
-else
-  log "Tidak ada migration baru."
-fi
+# 4. Always migrate (idempotent — drizzle-kit skip yang sudah applied).
+# Lebih aman daripada cek diff: kalau build pertama gagal lalu commit fix
+# kedua tanpa SQL baru, migrate tetap perlu jalan.
+log "npm run db:migrate (idempotent)..."
+run_as_user "npm run db:migrate"
 
 # 5. Restart service
 log "Restart $SERVICE..."
