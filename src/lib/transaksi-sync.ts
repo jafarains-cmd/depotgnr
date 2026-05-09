@@ -38,6 +38,9 @@ export async function syncTransaksiFromOrder(orderId: number): Promise<void> {
   const total = Math.max(0, subtotal - diskon);
 
   const nomorNota = generateNomorNota("NOTA");
+  // Pakai timestamp asli order (urutan: selesaiAt → bayarAt → diantarAt → createdAt)
+  // supaya laporan harian/grafik mencerminkan tanggal kejadian sebenarnya.
+  const createdAt = o.selesaiAt ?? o.bayarAt ?? o.diantarAt ?? o.createdAt;
 
   // Map metode order → transaksi enum (transaksi cuma support cash/transfer/qris)
   // COD/DANA → fallback ke 'cash' / 'transfer'
@@ -64,6 +67,7 @@ export async function syncTransaksiFromOrder(orderId: number): Promise<void> {
         status: "lunas",
         catatan: `Auto-sync dari order ${o.nomorOrder}`,
         refOrderId: orderId,
+        createdAt,
       })
       .returning({ id: transaksi.id })
       .all();
