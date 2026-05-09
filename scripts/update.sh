@@ -54,6 +54,10 @@ HEAD_AFTER=$(run_as_user "git rev-parse HEAD")
 
 if [[ "$HEAD_BEFORE" == "$HEAD_AFTER" ]]; then
   log "Sudah versi terbaru ($HEAD_AFTER). Skip build & restart."
+  # Tetap jalankan migrate sebagai safety net (idempotent) — kasus
+  # kalau prior run skip migrate karena diff window tidak include SQL.
+  log "Run db:migrate sebagai safety net..."
+  run_as_user "npm run db:migrate" || true
   exit 0
 fi
 
