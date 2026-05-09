@@ -9,6 +9,7 @@ import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
 import { pengeluaran } from "@/db/schema/pengeluaran";
 import { filter } from "@/db/schema/filter";
 import { computeFilterStatus } from "@/lib/filter-status";
+import { bahanBaku } from "@/db/schema/bahan-baku";
 import { sql, gte, eq, desc, ne, lt, and, isNull } from "drizzle-orm";
 import { formatRupiah } from "@/lib/utils";
 import { countChurnRisk } from "@/lib/analytics";
@@ -112,6 +113,14 @@ export default async function DashboardPage() {
 
   const churnStats = await countChurnRisk().catch(() => ({ due: 0, overdue: 0, churn: 0 }));
   const totalActionable = churnStats.due + churnStats.overdue + churnStats.churn;
+
+  // Bahan baku stok menipis (aktif + threshold > 0 + stok <= threshold)
+  const bahanBakuRows = await db.query.bahanBaku.findMany({
+    where: eq(bahanBaku.aktif, true),
+  });
+  const bahanLow = bahanBakuRows.filter(
+    (b) => b.threshold > 0 && b.stok <= b.threshold,
+  );
 
   // Filter pemeliharaan — count overdue & due_soon (cuma yang aktif)
   const filterRows = await db.query.filter.findMany({ where: eq(filter.aktif, true) });
@@ -324,6 +333,34 @@ export default async function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Bahan baku stok menipis */}
+      {bahanLow.length > 0 && (
+        <Link
+          href="/admin/bahan-baku"
+          className="block bg-rose-50 border border-rose-200 rounded-2xl p-4 hover:border-rose-400 transition"
+        >
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="min-w-0">
+              <div className="font-bold text-rose-900 inline-flex items-center gap-1.5">
+                <AlertTriangle size={16} />
+                Stok Bahan Baku Menipis
+              </div>
+              <div className="text-xs mt-1 space-y-0.5">
+                {bahanLow.map((b) => (
+                  <div key={b.id} className="text-rose-800">
+                    🔴 <strong>{b.nama}</strong> — sisa {b.stok} {b.satuan} (threshold{" "}
+                    {b.threshold})
+                  </div>
+                ))}
+              </div>
+            </div>
+            <span className="text-xs text-rose-900 font-bold whitespace-nowrap">
+              Buka →
+            </span>
+          </div>
+        </Link>
+      )}
 
       {/* Filter pemeliharaan alert */}
       {(filterAlerts.overdue.length > 0 || filterAlerts.dueSoon.length > 0) && (
