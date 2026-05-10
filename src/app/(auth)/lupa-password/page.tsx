@@ -12,8 +12,16 @@ export default function LupaPasswordPage() {
   const [identifier, setIdentifier] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<
-    | { ok: true; method: "wa_otp"; userId: string; nomorHint: string }
-    | { ok: true; method: "email"; emailHint: string }
+    | {
+        ok: true;
+        userId: string;
+        sentWa: boolean;
+        sentEmail: boolean;
+        nomorHint?: string;
+        emailHint?: string;
+        waError?: string;
+        emailError?: string;
+      }
     | { needsAdmin: true; userName: string }
     | null
   >(null);
@@ -26,20 +34,18 @@ export default function LupaPasswordPage() {
       const r = await requestPasswordReset(identifier);
       if ("ok" in r && r.ok) {
         setResult(r);
-        if (r.method === "wa_otp") {
-          // Pindah ke halaman input OTP
-          setTimeout(() => {
-            router.push(
-              `/reset-password?method=wa&userId=${encodeURIComponent(r.userId)}&hint=${encodeURIComponent(r.nomorHint)}`,
-            );
-          }, 1500);
-        }
       } else if ("needsAdmin" in r && r.needsAdmin) {
         setResult({ needsAdmin: true, userName: r.userName });
       } else if ("error" in r) {
         setError(r.error);
       }
     });
+  }
+
+  function gotoWaOtp(userId: string, hint?: string) {
+    router.push(
+      `/reset-password?method=wa&userId=${encodeURIComponent(userId)}&hint=${encodeURIComponent(hint ?? "")}`,
+    );
   }
 
   return (
@@ -59,28 +65,47 @@ export default function LupaPasswordPage() {
         </p>
       </div>
 
-      {result && "method" in result && result.method === "wa_otp" && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-          <div className="font-bold text-emerald-900 inline-flex items-center gap-2">
-            <MessageCircle size={16} /> OTP Terkirim
-          </div>
-          <p className="text-xs text-emerald-800 mt-1">
-            OTP 6 digit dikirim ke WhatsApp <strong>{result.nomorHint}</strong>.
-            Membuka halaman input OTP...
-          </p>
-          <Loader2 className="animate-spin text-emerald-700 mt-2" size={14} />
-        </div>
-      )}
-
-      {result && "method" in result && result.method === "email" && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-          <div className="font-bold text-blue-900 inline-flex items-center gap-2">
-            <Mail size={16} /> Link Reset Terkirim
-          </div>
-          <p className="text-xs text-blue-800 mt-1">
-            Link reset password dikirim ke <strong>{result.emailHint}</strong>. Cek
-            inbox (atau folder Spam) — link berlaku 1 jam.
-          </p>
+      {result && "ok" in result && result.ok && (
+        <div className="space-y-2">
+          {result.sentWa && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+              <div className="font-bold text-emerald-900 inline-flex items-center gap-2">
+                <MessageCircle size={16} /> OTP Terkirim ke WhatsApp
+              </div>
+              <p className="text-xs text-emerald-800 mt-1">
+                OTP 6 digit dikirim ke <strong>{result.nomorHint}</strong>. Berlaku 5
+                menit.
+              </p>
+              <button
+                onClick={() => gotoWaOtp(result.userId, result.nomorHint)}
+                className="mt-2 px-3 py-1.5 bg-emerald-600 text-white rounded-md text-xs font-bold inline-flex items-center gap-1"
+              >
+                Input OTP →
+              </button>
+            </div>
+          )}
+          {result.sentEmail && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className="font-bold text-blue-900 inline-flex items-center gap-2">
+                <Mail size={16} /> Link Reset Terkirim ke Email
+              </div>
+              <p className="text-xs text-blue-800 mt-1">
+                Link reset password dikirim ke <strong>{result.emailHint}</strong>.
+                Cek inbox (atau folder Spam) — link berlaku 1 jam.
+              </p>
+            </div>
+          )}
+          {(result.waError || result.emailError) && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 space-y-1">
+              {result.waError && <div>⚠ Gagal kirim WA: {result.waError}</div>}
+              {result.emailError && <div>⚠ Gagal kirim email: {result.emailError}</div>}
+            </div>
+          )}
+          {result.sentWa && result.sentEmail && (
+            <div className="text-xs text-[color:var(--muted)] text-center">
+              Pakai salah satu — yang sampai duluan, kedua-duanya valid.
+            </div>
+          )}
         </div>
       )}
 
