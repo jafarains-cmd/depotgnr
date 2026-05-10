@@ -58,6 +58,39 @@ const ALL_FIELDS: Record<string, Field> = {
   },
   heroCta: { key: "heroCta", label: "Hero · Tombol CTA", help: "Default: 'Pesan sekarang'." },
 
+  promoAktif: {
+    key: "promoAktif",
+    label: "Tampilkan Banner Promo Pelanggan Baru",
+    type: "select",
+    options: [
+      { value: "1", label: "Aktif (tampilkan banner)" },
+      { value: "0", label: "Nonaktif (sembunyikan)" },
+    ],
+    help: "Banner promo di landing page (sebelum login). Set ke nonaktif saat tidak ada promo.",
+  },
+  promoBadge: {
+    key: "promoBadge",
+    label: "Promo · Badge",
+    help: "Default: '★ Pelanggan Baru ★'. Teks kecil di atas judul promo.",
+  },
+  promoTitle: {
+    key: "promoTitle",
+    label: "Promo · Judul",
+    type: "textarea",
+    help: "Default: 'Bonus Rp 5.000 untuk Daftar Hari Ini'. Bisa multi-baris.",
+  },
+  promoSubtitle: {
+    key: "promoSubtitle",
+    label: "Promo · Subtitle",
+    type: "textarea",
+    help: "Default: 'Saldo loyalty otomatis masuk...'. Detail benefit promo.",
+  },
+  promoCta: {
+    key: "promoCta",
+    label: "Promo · Tombol CTA",
+    help: "Default: 'Klaim Bonus Saya'. Teks di tombol action.",
+  },
+
   templateNotifOrderMasukAdmin: {
     key: "templateNotifOrderMasukAdmin",
     label: "Template Notif Order Masuk (untuk Admin)",
@@ -196,7 +229,17 @@ const TABS: Tab[] = [
     id: "tampilan",
     label: "Tampilan",
     icon: <Megaphone size={14} />,
-    fieldKeys: ["heroBadge", "heroTitle", "heroSubtitle", "heroCta"],
+    fieldKeys: [
+      "heroBadge",
+      "heroTitle",
+      "heroSubtitle",
+      "heroCta",
+      "promoAktif",
+      "promoBadge",
+      "promoTitle",
+      "promoSubtitle",
+      "promoCta",
+    ],
   },
   {
     id: "pembayaran",

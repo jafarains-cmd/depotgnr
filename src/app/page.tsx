@@ -40,6 +40,15 @@ export default async function Home() {
     cfg.heroSubtitle ||
     "Pesan galon isi ulang dari depot terdekat. Antar cepat, harga jujur, lacak realtime.";
 
+  // Promo banner — bisa disembunyikan dengan promoAktif=0
+  const promoAktif = (cfg.promoAktif ?? "1") !== "0";
+  const promoBadge = cfg.promoBadge || "★ Pelanggan Baru ★";
+  const promoTitle = cfg.promoTitle || "Bonus Rp 5.000 untuk Daftar Hari Ini";
+  const promoSubtitle =
+    cfg.promoSubtitle ||
+    "Saldo loyalty otomatis masuk setelah order pertama berhasil. Plus dapat kode referral untuk ajak teman — tambah bonus lagi!";
+  const promoCta = cfg.promoCta || "Klaim Bonus Saya";
+
   return (
     <div className="min-h-screen bg-[color:var(--surface2)]">
       {/* Top bar */}
@@ -223,32 +232,33 @@ export default async function Home() {
       </section>
 
       {/* Promo banner */}
-      <section className="max-w-6xl mx-auto px-4 py-12 md:py-16">
-        <div className="rounded-3xl bg-gradient-to-br from-[color:var(--accent)] via-[color:var(--accent)] to-amber-600 p-8 md:p-12 text-center text-white relative overflow-hidden">
-          <div className="absolute inset-0 opacity-20 pointer-events-none">
-            <div className="absolute top-4 right-4 w-32 h-32 rounded-full bg-white blur-3xl" />
-            <div className="absolute bottom-4 left-4 w-32 h-32 rounded-full bg-white blur-3xl" />
-          </div>
-          <div className="relative">
-            <div className="inline-block bg-white/20 backdrop-blur text-[11px] font-extrabold tracking-widest uppercase px-3 py-1.5 rounded-full mb-3">
-              ★ Pelanggan Baru ★
+      {promoAktif && (
+        <section className="max-w-6xl mx-auto px-4 py-12 md:py-16">
+          <div className="rounded-3xl bg-gradient-to-br from-[color:var(--accent)] via-[color:var(--accent)] to-amber-600 p-8 md:p-12 text-center text-white relative overflow-hidden">
+            <div className="absolute inset-0 opacity-20 pointer-events-none">
+              <div className="absolute top-4 right-4 w-32 h-32 rounded-full bg-white blur-3xl" />
+              <div className="absolute bottom-4 left-4 w-32 h-32 rounded-full bg-white blur-3xl" />
             </div>
-            <h2 className="text-3xl md:text-4xl font-extrabold mb-3">
-              Bonus Rp 5.000 untuk Daftar Hari Ini
-            </h2>
-            <p className="text-sm md:text-base opacity-95 max-w-xl mx-auto mb-6">
-              Saldo loyalty otomatis masuk setelah order pertama berhasil. Plus
-              dapat kode referral untuk ajak teman — tambah bonus lagi!
-            </p>
-            <Link
-              href="/register"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-white text-amber-700 font-extrabold rounded-xl hover:bg-amber-50 transition"
-            >
-              Klaim Bonus Saya <ArrowRight size={18} />
-            </Link>
+            <div className="relative">
+              <div className="inline-block bg-white/20 backdrop-blur text-[11px] font-extrabold tracking-widest uppercase px-3 py-1.5 rounded-full mb-3">
+                {promoBadge}
+              </div>
+              <h2 className="text-3xl md:text-4xl font-extrabold mb-3 whitespace-pre-line">
+                {promoTitle}
+              </h2>
+              <p className="text-sm md:text-base opacity-95 max-w-xl mx-auto mb-6 whitespace-pre-line">
+                {promoSubtitle}
+              </p>
+              <Link
+                href="/register"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-white text-amber-700 font-extrabold rounded-xl hover:bg-amber-50 transition"
+              >
+                {promoCta} <ArrowRight size={18} />
+              </Link>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Contact / Footer */}
       <footer className="bg-surface border-t border-line">
