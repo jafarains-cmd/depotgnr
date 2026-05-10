@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { eq, desc, gte, lte, or, ne, and, inArray, sql } from "drizzle-orm";
+import { eq, desc, gte, lte, or, ne, and, inArray, sql, like } from "drizzle-orm";
 import { orderHeader, orderItem } from "@/db/schema/order";
 import { pelanggan } from "@/db/schema/pelanggan";
 import { produk } from "@/db/schema/produk";
@@ -18,7 +18,14 @@ export const dynamic = "force-dynamic";
 export default async function OrderKasirPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; from?: string; to?: string; limit?: string; page?: string }>;
+  searchParams: Promise<{
+    range?: string;
+    from?: string;
+    to?: string;
+    limit?: string;
+    page?: string;
+    q?: string;
+  }>;
 }) {
   const session = await requireRole(["admin", "kasir"]);
   const isAdmin = session.user.role === "admin";
@@ -26,17 +33,29 @@ export default async function OrderKasirPage({
   const range = parseRange(sp);
   const limit = parseLimit(sp.limit);
   const pageParam = parsePage(sp.page);
+  const q = (sp.q ?? "").trim();
 
   // Filter berdasarkan range tanggal user. Default 30 hari terakhir.
   // "Aktif" (non-selesai) selalu ditampilkan terlepas range kalau di-toggle "Semua".
   const conds = [];
   if (range.from) conds.push(gte(orderHeader.createdAt, range.from));
   if (range.to) conds.push(lte(orderHeader.createdAt, range.to));
+  if (q) {
+    const pat = `%${q}%`;
+    conds.push(
+      or(
+        like(orderHeader.nomorOrder, pat),
+        like(pelanggan.nama, pat),
+        like(pelanggan.telp, pat),
+      )!,
+    );
+  }
 
   const whereClause = conds.length > 0 ? and(...conds) : undefined;
   const [countRow] = await db
     .select({ n: sql<number>`count(*)` })
     .from(orderHeader)
+    .leftJoin(pelanggan, eq(orderHeader.pelangganId, pelanggan.id))
     .where(whereClause);
   const total = countRow?.n ?? 0;
   const { page, totalPages, offset } = getPagination({ total, limit, page: pageParam });
@@ -130,6 +149,32 @@ export default async function OrderKasirPage({
         />
         <PageSizeSelect value={limit} />
       </div>
+      <form className="flex gap-2 items-center mb-4">
+        {range.key && <input type="hidden" name="range" value={range.key} />}
+        {sp.from && <input type="hidden" name="from" value={sp.from} />}
+        {sp.to && <input type="hidden" name="to" value={sp.to} />}
+        <input
+          type="search"
+          name="q"
+          defaultValue={q}
+          placeholder="Cari nama pelanggan / telp / no order..."
+          className="flex-1 px-3 py-2 border border-line rounded-md text-sm"
+        />
+        <button
+          type="submit"
+          className="px-4 py-2 bg-brand-600 text-white rounded-md text-sm font-bold"
+        >
+          Cari
+        </button>
+        {q && (
+          <a
+            href="/kasir/order"
+            className="px-3 py-2 text-sm text-[color:var(--muted)] hover:text-ink"
+          >
+            Reset
+          </a>
+        )}
+      </form>
       <OrderClient rows={rows} kurirList={kurirList} isAdmin={isAdmin} />
       <Pagination page={page} totalPages={totalPages} total={total} />
     </div>

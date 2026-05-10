@@ -1,4 +1,4 @@
-import { eq, desc, ne, and, gte, lte, sql } from "drizzle-orm";
+import { eq, desc, ne, and, gte, lte, sql, like, or } from "drizzle-orm";
 import { db } from "@/db";
 import { orderHeader } from "@/db/schema/order";
 import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
@@ -15,13 +15,21 @@ export const dynamic = "force-dynamic";
 export default async function PembayaranPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; from?: string; to?: string; limit?: string; page?: string }>;
+  searchParams: Promise<{
+    range?: string;
+    from?: string;
+    to?: string;
+    limit?: string;
+    page?: string;
+    q?: string;
+  }>;
 }) {
   await requireRole(["admin", "kasir"]);
   const sp = await searchParams;
   const range = parseRange(sp);
   const limit = parseLimit(sp.limit);
   const pageParam = parsePage(sp.page);
+  const q = (sp.q ?? "").trim();
 
   // Filter ke SQL supaya pagination akurat: status != batal, dan
   // (statusBayar in [menunggu, lunas] OR (status=selesai AND statusBayar=belum))
@@ -31,11 +39,22 @@ export default async function PembayaranPage({
   ];
   if (range.from) conds.push(gte(orderHeader.createdAt, range.from));
   if (range.to) conds.push(lte(orderHeader.createdAt, range.to));
+  if (q) {
+    const pat = `%${q}%`;
+    conds.push(
+      or(
+        like(orderHeader.nomorOrder, pat),
+        like(pelangganTable.nama, pat),
+        like(pelangganTable.telp, pat),
+      )!,
+    );
+  }
 
   const whereClause = and(...conds);
   const [countRow] = await db
     .select({ n: sql<number>`count(*)` })
     .from(orderHeader)
+    .leftJoin(pelangganTable, eq(orderHeader.pelangganId, pelangganTable.id))
     .where(whereClause);
   const total = countRow?.n ?? 0;
   const { page, totalPages, offset } = getPagination({ total, limit, page: pageParam });
@@ -94,6 +113,32 @@ export default async function PembayaranPage({
         />
         <PageSizeSelect value={limit} />
       </div>
+      <form className="flex gap-2 items-center">
+        {range.key && <input type="hidden" name="range" value={range.key} />}
+        {sp.from && <input type="hidden" name="from" value={sp.from} />}
+        {sp.to && <input type="hidden" name="to" value={sp.to} />}
+        <input
+          type="search"
+          name="q"
+          defaultValue={q}
+          placeholder="Cari nama pelanggan / telp / no order..."
+          className="flex-1 px-3 py-2 border border-line rounded-md text-sm"
+        />
+        <button
+          type="submit"
+          className="px-4 py-2 bg-brand-600 text-white rounded-md text-sm font-bold"
+        >
+          Cari
+        </button>
+        {q && (
+          <a
+            href="/pembayaran"
+            className="px-3 py-2 text-sm text-[color:var(--muted)] hover:text-ink"
+          >
+            Reset
+          </a>
+        )}
+      </form>
       <PembayaranClient rows={rows} />
       <Pagination page={page} totalPages={totalPages} total={total} />
     </div>

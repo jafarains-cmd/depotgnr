@@ -1,4 +1,4 @@
-import { eq, desc, sql, and } from "drizzle-orm";
+import { eq, desc, sql, and, or, like } from "drizzle-orm";
 import Link from "next/link";
 import { db } from "@/db";
 import { komplain } from "@/db/schema/komplain";
@@ -19,7 +19,7 @@ type StatusTab = (typeof STATUS_TABS)[number];
 export default async function KomplainAdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; limit?: string; page?: string }>;
+  searchParams: Promise<{ status?: string; limit?: string; page?: string; q?: string }>;
 }) {
   await requireRole(["admin"]);
   const sp = await searchParams;
@@ -28,13 +28,27 @@ export default async function KomplainAdminPage({
     : "baru";
   const limit = parseLimit(sp.limit);
   const pageParam = parsePage(sp.page);
+  const q = (sp.q ?? "").trim();
 
-  const whereClause =
-    status !== "all" ? eq(komplain.status, status as Exclude<StatusTab, "all">) : undefined;
+  const conds = [];
+  if (status !== "all")
+    conds.push(eq(komplain.status, status as Exclude<StatusTab, "all">));
+  if (q) {
+    const pat = `%${q}%`;
+    conds.push(
+      or(
+        like(pelangganTable.nama, pat),
+        like(pelangganTable.telp, pat),
+        like(komplain.deskripsi, pat),
+      )!,
+    );
+  }
+  const whereClause = conds.length > 0 ? and(...conds) : undefined;
 
   const [aggRow] = await db
     .select({ n: sql<number>`count(*)` })
     .from(komplain)
+    .leftJoin(pelangganTable, eq(komplain.pelangganId, pelangganTable.id))
     .where(whereClause);
   const total = aggRow?.n ?? 0;
   const { page, totalPages, offset } = getPagination({ total, limit, page: pageParam });
@@ -117,6 +131,31 @@ export default async function KomplainAdminPage({
         </div>
         <PageSizeSelect value={limit} />
       </div>
+
+      <form className="flex gap-2 items-center">
+        <input type="hidden" name="status" value={status} />
+        <input
+          type="search"
+          name="q"
+          defaultValue={q}
+          placeholder="Cari nama / telp pelanggan / isi komplain..."
+          className="flex-1 px-3 py-2 border border-line rounded-md text-sm"
+        />
+        <button
+          type="submit"
+          className="px-4 py-2 bg-brand-600 text-white rounded-md text-sm font-bold"
+        >
+          Cari
+        </button>
+        {q && (
+          <a
+            href={`/admin/komplain?status=${status}`}
+            className="px-3 py-2 text-sm text-[color:var(--muted)] hover:text-ink"
+          >
+            Reset
+          </a>
+        )}
+      </form>
 
       <KomplainAdminClient
         rows={rows.map((r) => ({
