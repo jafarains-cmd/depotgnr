@@ -46,6 +46,7 @@ function doPost(e) {
       case "replace":    return jsonOut(opReplace(body.tab, body.rows));
       case "read":       return jsonOut(opRead(body.tab));
       case "uploadFile": return jsonOut(opUploadFile(body));
+      case "sendEmail":  return jsonOut(opSendEmail(body));
       default:           return jsonOut({ ok: false, error: "Unknown op: " + body.op });
     }
   } catch (err) {
@@ -135,4 +136,27 @@ function opUploadFile(body) {
     fileId: fileId,
     url: "https://lh3.googleusercontent.com/d/" + fileId
   };
+}
+
+/**
+ * Kirim email via MailApp (Gmail owner). Quota: 100/hari (Gmail personal),
+ * 1500/hari (Google Workspace). Body args:
+ *   { to, subject, htmlBody, textBody? }
+ */
+function opSendEmail(body) {
+  if (!body.to || !body.subject || !body.htmlBody) {
+    return { ok: false, error: "Missing to/subject/htmlBody" };
+  }
+  try {
+    MailApp.sendEmail({
+      to: body.to,
+      subject: body.subject,
+      htmlBody: body.htmlBody,
+      body: body.textBody || body.htmlBody.replace(/<[^>]+>/g, ""),
+      noReply: true,
+    });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
 }

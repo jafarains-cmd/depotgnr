@@ -174,6 +174,12 @@ function LoginInner() {
         </button>
       </form>
 
+      <p className="text-sm text-center">
+        <Link href="/lupa-password" className="text-[color:var(--muted)] hover:text-brand-600 hover:underline">
+          Lupa password?
+        </Link>
+      </p>
+
       <p className="text-sm text-center text-[color:var(--muted)]">
         Belum punya akun?{" "}
         <Link href="/register" className="text-brand-600 hover:underline">

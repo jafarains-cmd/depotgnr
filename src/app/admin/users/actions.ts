@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { user as userTable } from "@/db/schema/auth";
 import { requireRole } from "@/lib/permissions";
 import { auth } from "@/lib/auth";
+import { generateToken, createResetToken } from "@/lib/password-reset";
 
 export async function createStaff(formData: FormData) {
   await requireRole(["admin"]);
@@ -153,4 +154,30 @@ export async function deleteUser(
   await db.delete(userTable).where(eq(userTable.id, id));
   revalidatePath("/admin/users");
   return { ok: true };
+}
+
+/**
+ * Generate reset password link untuk user (admin only). Pakai metode 'admin'
+ * dengan expiry 24 jam. Admin kasih link ini ke user lewat channel apapun
+ * (in-person, telepon). User klik link → set password baru langsung.
+ */
+export async function generateResetLink(
+  userId: string,
+): Promise<{ ok: true; url: string; expiresAt: string } | { error: string }> {
+  const session = await requireRole(["admin"]);
+  const target = await db.query.user.findFirst({ where: eq(userTable.id, userId) });
+  if (!target) return { error: "User tidak ditemukan" };
+
+  const token = generateToken();
+  const { expiresAt } = await createResetToken({
+    userId,
+    method: "admin",
+    token,
+    createdByUserId: session.user.id,
+  });
+
+  const baseUrl = process.env.BETTER_AUTH_URL ?? "https://depot.genster.my.id";
+  const url = `${baseUrl}/reset-password?token=${token}`;
+
+  return { ok: true, url, expiresAt: expiresAt.toISOString() };
 }

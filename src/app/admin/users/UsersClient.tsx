@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, ShieldAlert, ShieldCheck, X, Pencil, Trash2 } from "lucide-react";
+import { Plus, ShieldAlert, ShieldCheck, X, Pencil, Trash2, KeyRound, Copy, Check } from "lucide-react";
 import {
   createStaff,
   updateUserRole,
@@ -9,6 +9,7 @@ import {
   unbanUser,
   editUser,
   deleteUser,
+  generateResetLink,
 } from "./actions";
 import { PasswordInput } from "@/components/PasswordInput";
 
@@ -105,6 +106,7 @@ export function UsersClient({ users }: { users: Row[] }) {
                     >
                       <Pencil size={12} /> Edit
                     </button>
+                    <ResetLinkButton userId={u.id} userName={u.name} />
                     {u.banned ? (
                       <button
                         onClick={() => startTransition(() => unbanUser(u.id))}
@@ -339,5 +341,95 @@ function Field({
         className="w-full px-3 py-2 border border-line rounded-md bg-surface text-sm"
       />
     </div>
+  );
+}
+
+function ResetLinkButton({ userId, userName }: { userId: string; userName: string }) {
+  const [pending, startTransition] = useTransition();
+  const [link, setLink] = useState<string | null>(null);
+  const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  function handleClick() {
+    if (
+      !confirm(
+        `Generate link reset password untuk ${userName}?\n\nLink berlaku 24 jam. Pastikan Anda kasih link ke user yang benar.`,
+      )
+    )
+      return;
+    startTransition(async () => {
+      const r = await generateResetLink(userId);
+      if ("error" in r) {
+        alert(r.error);
+        return;
+      }
+      setLink(r.url);
+      setExpiresAt(r.expiresAt);
+    });
+  }
+
+  function copyLink() {
+    if (!link) return;
+    navigator.clipboard.writeText(link).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  if (link) {
+    return (
+      <div className="absolute inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+        <div className="bg-surface rounded-2xl max-w-lg w-full p-4 space-y-3">
+          <h3 className="font-bold inline-flex items-center gap-1.5">
+            <KeyRound size={14} /> Reset Link untuk {userName}
+          </h3>
+          <p className="text-xs text-[color:var(--muted)]">
+            Salin link ini & berikan ke user via channel apapun (in-person, WA, telpon).
+            Berlaku sampai{" "}
+            <strong>
+              {expiresAt
+                ? new Date(expiresAt).toLocaleString("id-ID", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })
+                : "—"}
+            </strong>
+            .
+          </p>
+          <div className="bg-[color:var(--surface2)] border border-line rounded-md p-2 break-all text-xs font-mono">
+            {link}
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => {
+                setLink(null);
+                setExpiresAt(null);
+              }}
+              className="px-3 py-1.5 border border-line rounded-md text-xs"
+            >
+              Tutup
+            </button>
+            <button
+              onClick={copyLink}
+              className="px-3 py-1.5 bg-brand-600 text-white rounded-md text-xs font-bold inline-flex items-center gap-1"
+            >
+              {copied ? <Check size={12} /> : <Copy size={12} />}
+              {copied ? "Tersalin" : "Salin Link"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={pending}
+      className="text-purple-600 inline-flex items-center gap-1 hover:underline disabled:opacity-50"
+      title="Generate link reset password (24 jam)"
+    >
+      <KeyRound size={12} /> Reset
+    </button>
   );
 }
