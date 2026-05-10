@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { KeyRound, AtSign, Check, User, MapPin, Phone } from "lucide-react";
+import { KeyRound, AtSign, Check, User, MapPin, Phone, Mail } from "lucide-react";
 import {
   setUsernameAction,
   setPasswordAction,
   setNamaAction,
   setAlamatAction,
   setNomorWAAction,
+  setEmailAction,
 } from "./actions";
 import { PasswordInput } from "@/components/PasswordInput";
 
@@ -15,6 +16,7 @@ export function AkunClient({
   currentNama,
   currentAlamat,
   currentNomor,
+  currentEmail,
   currentUsername,
   hasPassword,
   showAlamat,
@@ -22,6 +24,7 @@ export function AkunClient({
   currentNama: string;
   currentAlamat: string;
   currentNomor: string;
+  currentEmail: string;
   currentUsername: string | null;
   hasPassword: boolean;
   showAlamat: boolean;
@@ -31,8 +34,62 @@ export function AkunClient({
       <NamaForm currentNama={currentNama} />
       {showAlamat && <AlamatForm currentAlamat={currentAlamat} />}
       <NomorWAForm currentNomor={currentNomor} />
+      <EmailForm currentEmail={currentEmail} />
       <UsernameForm currentUsername={currentUsername} />
       <PasswordForm hasPassword={hasPassword} />
+    </div>
+  );
+}
+
+function EmailForm({ currentEmail }: { currentEmail: string }) {
+  // Hide auto-generated phone-based emails from initial state
+  const isPhoneEmail = currentEmail.endsWith("@phone.depot.local");
+  const [email, setEmail] = useState(isPhoneEmail ? "" : currentEmail);
+  const [pending, startTransition] = useTransition();
+  const [msg, setMsg] = useState<{ ok?: boolean; text: string } | null>(null);
+
+  return (
+    <div className="bg-surface border border-line rounded-2xl p-4 space-y-3">
+      <h2 className="font-semibold inline-flex items-center gap-1.5">
+        <Mail size={16} /> Email
+      </h2>
+      <p className="text-sm text-[color:var(--muted)]">
+        Dipakai untuk login & reset password lewat email kalau lupa.
+        {isPhoneEmail && (
+          <span className="text-amber-600">
+            {" "}
+            Akun Anda belum punya email — silakan isi.
+          </span>
+        )}
+      </p>
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="contoh@email.com"
+        className="w-full px-3 py-2 border border-line rounded-md text-sm"
+      />
+      <div className="flex items-center gap-3">
+        <button
+          disabled={pending || !email.trim() || email === currentEmail}
+          onClick={() => {
+            setMsg(null);
+            startTransition(async () => {
+              const r = await setEmailAction(email);
+              if ("error" in r) setMsg({ ok: false, text: r.error });
+              else setMsg({ ok: true, text: "Email tersimpan" });
+            });
+          }}
+          className="px-4 py-2 bg-brand-600 text-white rounded-md text-sm disabled:opacity-50 inline-flex items-center gap-1.5"
+        >
+          <Check size={14} /> Simpan
+        </button>
+        {msg && (
+          <span className={`text-xs ${msg.ok ? "text-emerald-700" : "text-rose-600"}`}>
+            {msg.text}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

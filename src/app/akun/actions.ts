@@ -149,6 +149,37 @@ export async function setNomorWAAction(
   return { ok: true, normalized: nomor };
 }
 
+export async function setEmailAction(
+  rawEmail: string,
+): Promise<{ ok: true } | { error: string }> {
+  const session = await requireSession();
+  const email = rawEmail.trim().toLowerCase();
+
+  if (!email) return { error: "Email wajib diisi" };
+  // Email regex sederhana — cukup untuk validasi format dasar
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { error: "Format email tidak valid" };
+  }
+  if (email.length > 100) return { error: "Email terlalu panjang" };
+  if (email.endsWith("@phone.depot.local")) {
+    return { error: "Tidak boleh pakai email otomatis sistem" };
+  }
+
+  // Cek unique exclude diri sendiri
+  const existing = await db.query.user.findFirst({
+    where: and(eq(userTable.email, email), ne(userTable.id, session.user.id)),
+  });
+  if (existing) return { error: "Email sudah dipakai akun lain" };
+
+  await db
+    .update(userTable)
+    .set({ email, emailVerified: false, updatedAt: new Date() })
+    .where(eq(userTable.id, session.user.id));
+
+  revalidatePath("/akun");
+  return { ok: true };
+}
+
 export async function setUsernameAction(
   rawUsername: string,
 ): Promise<{ ok: true } | { error: string }> {

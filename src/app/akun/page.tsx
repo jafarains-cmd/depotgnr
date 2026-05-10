@@ -64,6 +64,7 @@ export default async function AkunPage() {
           currentNama={u?.name ?? session.user.name ?? ""}
           currentAlamat={pel?.alamat ?? ""}
           currentNomor={u?.phoneNumber ?? ""}
+          currentEmail={u?.email ?? ""}
           currentUsername={u?.displayUsername ?? u?.username ?? null}
           hasPassword={hasPassword}
           showAlamat={isPelanggan}
