@@ -24,8 +24,16 @@ export type Row = {
 
 type Tab = "menunggu" | "piutang" | "lunas" | "all";
 
-export function PembayaranClient({ rows }: { rows: Row[] }) {
-  const [filter, setFilter] = useState<Tab>("menunggu");
+export function PembayaranClient({
+  rows,
+  hasSearch = false,
+}: {
+  rows: Row[];
+  hasSearch?: boolean;
+}) {
+  // Kalau ada query search aktif, default ke 'Semua' supaya hasil pasti
+  // ke-render tanpa user perlu klik tab manual.
+  const [filter, setFilter] = useState<Tab>(hasSearch ? "all" : "menunggu");
   const [pending, startTransition] = useTransition();
   const [detailId, setDetailId] = useState<number | null>(null);
 

@@ -139,7 +139,7 @@ export default async function PembayaranPage({
           </a>
         )}
       </form>
-      <PembayaranClient rows={rows} />
+      <PembayaranClient rows={rows} hasSearch={!!q} />
       <Pagination page={page} totalPages={totalPages} total={total} />
     </div>
   );
