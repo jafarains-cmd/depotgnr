@@ -12,6 +12,7 @@ import { getOrCreatePelanggan } from "@/lib/pelanggan";
 import { generateNomorNota } from "@/lib/utils";
 import { generateTrackingToken } from "@/lib/tracking";
 import { notifGrupOrder } from "@/lib/telegram";
+import { sendWhatsAppGroup } from "@/lib/whatsapp";
 import { pushOrder } from "@/lib/sheets";
 
 type Jenis = "isi_ulang" | "tukar" | "beli_baru";
@@ -82,16 +83,25 @@ export async function createOrder(input: OrderInput): Promise<void> {
 
   pushOrder(newOrderId).catch((e) => console.warn("[sheets] pushOrder:", e));
 
-  notifGrupOrder(
-    "pending",
-    await renderTemplate("templateNotifOrderMasukAdmin", {
-      nomorOrder,
-      namaPelanggan: pel.nama,
-      jumlahItem: String(input.items.reduce((s, i) => s + i.qty, 0)),
-      totalEstimasi: totalEstimasi.toLocaleString("id-ID"),
-      alamatAntar: input.alamatAntar,
-    }),
-  ).catch(() => {});
+  const notifText = await renderTemplate("templateNotifOrderMasukAdmin", {
+    nomorOrder,
+    namaPelanggan: pel.nama,
+    jumlahItem: String(input.items.reduce((s, i) => s + i.qty, 0)),
+    totalEstimasi: totalEstimasi.toLocaleString("id-ID"),
+    alamatAntar: input.alamatAntar,
+  });
+  notifGrupOrder("pending", notifText).catch(() => {});
+
+  // Notif ke grup WhatsApp depot (kalau dikonfigurasi)
+  (async () => {
+    const groupIdRow = await db.query.pengaturan.findFirst({
+      where: eq(pengaturan.key, "waGroupOrderMasuk"),
+    });
+    const groupId = groupIdRow?.value?.trim();
+    if (groupId) {
+      await sendWhatsAppGroup(groupId, notifText).catch(() => {});
+    }
+  })().catch(() => {});
 
   revalidatePath("/pelanggan/beranda");
   revalidatePath("/pelanggan/riwayat");

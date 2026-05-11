@@ -104,6 +104,11 @@ const ALL_FIELDS: Record<string, Field> = {
     help: "Placeholder: {nomorOrder}, {total}, {namaDepot}",
   },
 
+  waGroupOrderMasuk: {
+    key: "waGroupOrderMasuk",
+    label: "WA Group ID — Notif Order Masuk",
+    help: "ID grup WhatsApp depot untuk terima notif tiap order baru. Cara dapat: tambahkan nomor bot Fonnte ke grup → dashboard Fonnte → Device → Sync Group → salin Group ID. Kosongkan untuk mati.",
+  },
   telegramGroupChatId: {
     key: "telegramGroupChatId",
     label: "Telegram Group Chat ID",
@@ -270,6 +275,7 @@ const TABS: Tab[] = [
     fieldKeys: [
       "templateNotifOrderMasukAdmin",
       "templateNotifOrderSelesaiPelanggan",
+      "waGroupOrderMasuk",
       "telegramGroupChatId",
       "telegramTopicSemua",
       "telegramTopicPending",

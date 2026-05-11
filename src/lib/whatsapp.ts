@@ -58,6 +58,65 @@ export function normalizePhone(input: string): string {
 }
 
 /**
+ * Kirim pesan ke WhatsApp Group. Target adalah Group ID dari Fonnte:
+ *   - Bisa berupa angka dengan dash (mis: '1234567890-12345')
+ *   - Atau format hash unique
+ * Tidak di-normalize karena bukan nomor telpon.
+ *
+ * Cara dapat Group ID:
+ *   1. Tambahkan nomor bot Fonnte ke grup WhatsApp Anda
+ *   2. Buka dashboard Fonnte → Device → Sync Group → list semua grup
+ *   3. Salin Group ID
+ */
+export async function sendWhatsAppGroup(
+  groupId: string,
+  message: string,
+): Promise<void> {
+  const provider = getProvider();
+  const target = groupId.trim();
+  if (!target) {
+    console.warn("[whatsapp:group] target kosong");
+    return;
+  }
+
+  if (provider === "fonnte") {
+    const url = process.env.WHATSAPP_API_URL ?? "https://api.fonnte.com/send";
+    const token = process.env.WHATSAPP_API_KEY;
+    if (!token) {
+      console.log(`[whatsapp:dev:group] -> ${target}: ${message}`);
+      return;
+    }
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { Authorization: token, "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ target, message }),
+    });
+    if (!res.ok) {
+      throw new Error(`Fonnte group error ${res.status}: ${await res.text()}`);
+    }
+    return;
+  }
+
+  if (provider === "wablas") {
+    const url = process.env.WHATSAPP_API_URL ?? "https://console.wablas.com/api/send-message";
+    const token = process.env.WHATSAPP_API_KEY;
+    if (!token) {
+      console.log(`[whatsapp:dev:group] -> ${target}: ${message}`);
+      return;
+    }
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { Authorization: token, "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: target, message, isGroup: true }),
+    });
+    if (!res.ok) throw new Error(`Wablas group error ${res.status}`);
+    return;
+  }
+
+  console.log(`[whatsapp:dev:group] -> ${target}: ${message}`);
+}
+
+/**
  * Parse incoming webhook payload — provider berbeda format-nya.
  * Mengembalikan { sender, message } yang seragam.
  */

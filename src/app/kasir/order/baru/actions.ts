@@ -11,6 +11,8 @@ import { requireRole } from "@/lib/permissions";
 import { generateNomorNota } from "@/lib/utils";
 import { generateTrackingToken } from "@/lib/tracking";
 import { notifGrupOrder } from "@/lib/telegram";
+import { sendWhatsAppGroup } from "@/lib/whatsapp";
+import { pengaturan as pengaturanTable } from "@/db/schema/pengaturan";
 import { pushOrder } from "@/lib/sheets";
 
 type Jenis = "isi_ulang" | "tukar" | "beli_baru";
@@ -117,12 +119,21 @@ export async function createWalkInOrder(input: WalkInOrderInput): Promise<void> 
 
   pushOrder(newOrderId).catch(() => {});
 
-  notifGrupOrder(
-    "pending",
-    `🆕 *${nomorOrder}* (walk-in)\nPelanggan: ${pelangganNama}\nTotal est: ${totalEstimasi.toLocaleString(
-      "id-ID",
-    )}\n${input.tipePengantaran === "jemput-antar" ? "🔄 jemput-isi-antar" : "Antar saja"}`,
-  ).catch(() => {});
+  const notifText = `🆕 *${nomorOrder}* (walk-in)\nPelanggan: ${pelangganNama}\nTotal est: ${totalEstimasi.toLocaleString(
+    "id-ID",
+  )}\n${input.tipePengantaran === "jemput-antar" ? "🔄 jemput-isi-antar" : "Antar saja"}`;
+  notifGrupOrder("pending", notifText).catch(() => {});
+
+  // Notif ke grup WhatsApp depot (kalau dikonfigurasi)
+  (async () => {
+    const groupIdRow = await db.query.pengaturan.findFirst({
+      where: eq(pengaturanTable.key, "waGroupOrderMasuk"),
+    });
+    const groupId = groupIdRow?.value?.trim();
+    if (groupId) {
+      await sendWhatsAppGroup(groupId, notifText).catch(() => {});
+    }
+  })().catch(() => {});
 
   revalidatePath("/kasir/order");
   revalidatePath("/admin/order");
