@@ -21,7 +21,44 @@ type Row = {
   phoneNumber: string | null;
   role: "admin" | "kasir" | "kurir" | "pelanggan";
   banned: boolean;
+  lastLogin: string | null;
+  sessionCount: number;
 };
+
+function formatLastLogin(iso: string | null): { label: string; color: string } {
+  if (!iso) return { label: "Belum pernah", color: "text-[color:var(--muted)]" };
+  const date = new Date(iso);
+  const diffMs = Date.now() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  let label: string;
+  let color: string;
+  if (diffMin < 5) {
+    label = "Aktif sekarang";
+    color = "text-emerald-700";
+  } else if (diffMin < 60) {
+    label = `${diffMin} menit lalu`;
+    color = "text-emerald-700";
+  } else if (diffHour < 24) {
+    label = `${diffHour} jam lalu`;
+    color = "text-emerald-700";
+  } else if (diffDay < 7) {
+    label = `${diffDay} hari lalu`;
+    color = "text-amber-700";
+  } else if (diffDay < 30) {
+    label = `${diffDay} hari lalu`;
+    color = "text-amber-700";
+  } else if (diffDay < 90) {
+    label = `${diffDay} hari lalu`;
+    color = "text-rose-700";
+  } else {
+    label = `> 90 hari (tidak aktif)`;
+    color = "text-rose-700";
+  }
+  return { label, color };
+}
 
 export function UsersClient({ users }: { users: Row[] }) {
   const [creating, setCreating] = useState(false);
@@ -62,6 +99,7 @@ export function UsersClient({ users }: { users: Row[] }) {
               <th className="p-3">Nama</th>
               <th className="p-3">Login</th>
               <th className="p-3">Role</th>
+              <th className="p-3 hidden md:table-cell">Aktivitas</th>
               <th className="p-3">Status</th>
               <th className="p-3 text-right">Aksi</th>
             </tr>
@@ -90,6 +128,9 @@ export function UsersClient({ users }: { users: Row[] }) {
                     <option value="kasir">kasir</option>
                     <option value="admin">admin</option>
                   </select>
+                </td>
+                <td className="p-3 hidden md:table-cell">
+                  <UserActivity row={u} />
                 </td>
                 <td className="p-3">
                   {u.banned ? (
@@ -431,5 +472,17 @@ function ResetLinkButton({ userId, userName }: { userId: string; userName: strin
     >
       <KeyRound size={12} /> Reset
     </button>
+  );
+}
+
+function UserActivity({ row }: { row: Row }) {
+  const { label, color } = formatLastLogin(row.lastLogin);
+  return (
+    <div className="text-xs space-y-0.5">
+      <div className={`font-bold ${color}`}>{label}</div>
+      <div className="text-[10px] text-[color:var(--muted)]">
+        {row.sessionCount} sesi login
+      </div>
+    </div>
   );
 }

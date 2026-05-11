@@ -1,6 +1,6 @@
-import { sql, like, or } from "drizzle-orm";
+import { sql, like, or, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { user as userTable } from "@/db/schema/auth";
+import { user as userTable, session as sessionTable } from "@/db/schema/auth";
 import { PageHeader } from "@/components/AppShell";
 import { UsersClient } from "./UsersClient";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
@@ -41,6 +41,26 @@ export default async function UsersPage({
     offset,
   });
 
+  // Login terakhir per user (max session.createdAt). Subquery aggregate
+  // ke Map untuk lookup cepat di render.
+  const lastLogins = await db
+    .select({
+      userId: sessionTable.userId,
+      lastLogin: sql<number>`max(${sessionTable.createdAt})`,
+      sessionCount: sql<number>`count(*)`,
+    })
+    .from(sessionTable)
+    .groupBy(sessionTable.userId);
+  const loginMap = new Map(
+    lastLogins.map((r) => [
+      r.userId,
+      {
+        lastLogin: r.lastLogin ? new Date(r.lastLogin * 1000) : null,
+        sessionCount: r.sessionCount,
+      },
+    ]),
+  );
+
   return (
     <div className="p-4 md:p-6">
       <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
@@ -71,15 +91,20 @@ export default async function UsersPage({
         )}
       </form>
       <UsersClient
-        users={list.map((u) => ({
-          id: u.id,
-          name: u.name,
-          email: u.email,
-          username: u.username,
-          phoneNumber: u.phoneNumber,
-          role: u.role,
-          banned: !!u.banned,
-        }))}
+        users={list.map((u) => {
+          const log = loginMap.get(u.id);
+          return {
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            username: u.username,
+            phoneNumber: u.phoneNumber,
+            role: u.role,
+            banned: !!u.banned,
+            lastLogin: log?.lastLogin?.toISOString() ?? null,
+            sessionCount: log?.sessionCount ?? 0,
+          };
+        })}
       />
       <Pagination page={page} totalPages={totalPages} total={total} />
     </div>
