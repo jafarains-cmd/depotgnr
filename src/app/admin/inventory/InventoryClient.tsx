@@ -129,15 +129,16 @@ export function InventoryClient({
         <div className="px-4 py-3 border-b border-line font-medium text-sm">
           Riwayat Mutasi (50 terbaru)
         </div>
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left text-xs">
             <tr>
               <th className="p-3">Waktu</th>
               <th className="p-3">Produk</th>
-              <th className="p-3">Status</th>
+              <th className="p-3 hidden sm:table-cell">Status</th>
               <th className="p-3 text-right">Perubahan</th>
-              <th className="p-3">Alasan</th>
-              <th className="p-3">Oleh</th>
+              <th className="p-3 hidden md:table-cell">Alasan</th>
+              <th className="p-3 hidden md:table-cell">Oleh</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
@@ -147,7 +148,7 @@ export function InventoryClient({
                   {new Date(m.createdAt).toLocaleString("id-ID")}
                 </td>
                 <td className="p-3">{m.namaProduk}</td>
-                <td className="p-3">{m.status}</td>
+                <td className="p-3 hidden sm:table-cell">{m.status}</td>
                 <td
                   className={`p-3 text-right font-medium ${
                     m.perubahan > 0 ? "text-emerald-700" : "text-red-700"
@@ -155,8 +156,8 @@ export function InventoryClient({
                 >
                   {m.perubahan > 0 ? `+${m.perubahan}` : m.perubahan}
                 </td>
-                <td className="p-3 text-xs">{m.alasan}</td>
-                <td className="p-3 text-xs text-[color:var(--muted)]">{m.userName ?? "-"}</td>
+                <td className="p-3 text-xs hidden md:table-cell">{m.alasan}</td>
+                <td className="p-3 text-xs text-[color:var(--muted)] hidden md:table-cell">{m.userName ?? "-"}</td>
               </tr>
             ))}
             {mutasi.length === 0 && (
@@ -168,6 +169,7 @@ export function InventoryClient({
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

@@ -44,10 +44,15 @@ export function ProdukRow({ produk }: { produk: Row }) {
         <div className="font-medium">{produk.nama}</div>
         {produk.deskripsi && <div className="text-xs text-[color:var(--muted)]">{produk.deskripsi}</div>}
       </td>
-      <td className="p-3 text-right">{produk.hargaIsiUlangFmt}</td>
-      <td className="p-3 text-right">{produk.hargaTukarFmt}</td>
-      <td className="p-3 text-right">{produk.hargaBeliBaruFmt}</td>
-      <td className="p-3">
+      <td className="p-3 text-right">
+        {produk.hargaIsiUlangFmt}
+        <div className="sm:hidden text-[10px] text-[color:var(--muted)] mt-0.5">
+          Tukar: {produk.hargaTukarFmt} · Baru: {produk.hargaBeliBaruFmt}
+        </div>
+      </td>
+      <td className="p-3 text-right hidden sm:table-cell">{produk.hargaTukarFmt}</td>
+      <td className="p-3 text-right hidden sm:table-cell">{produk.hargaBeliBaruFmt}</td>
+      <td className="p-3 hidden md:table-cell">
         <button
           onClick={() => startTransition(() => toggleAktif(produk.id, !produk.aktif))}
           className={`px-2 py-0.5 rounded-full text-xs ${

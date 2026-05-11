@@ -108,6 +108,7 @@ export function PengeluaranClient({
       )}
 
       <div className="bg-surface border border-line rounded-2xl overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left text-xs">
             <tr>
@@ -171,6 +172,7 @@ export function PengeluaranClient({
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

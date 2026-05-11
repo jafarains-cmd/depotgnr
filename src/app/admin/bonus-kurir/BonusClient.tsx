@@ -127,15 +127,16 @@ export function BonusClient({
           HISTORY (100 TERBARU)
         </h2>
         <div className="bg-surface border border-line rounded-2xl overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
               <tr>
                 <th className="p-3">Tanggal</th>
                 <th className="p-3">Kurir</th>
-                <th className="p-3">Order</th>
-                <th className="p-3 text-right">Galon</th>
+                <th className="p-3 hidden sm:table-cell">Order</th>
+                <th className="p-3 text-right hidden sm:table-cell">Galon</th>
                 <th className="p-3 text-right">Bonus</th>
-                <th className="p-3">Status</th>
+                <th className="p-3 hidden sm:table-cell">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -153,11 +154,19 @@ export function BonusClient({
                       minute: "2-digit",
                     })}
                   </td>
-                  <td className="p-3 text-sm font-medium">{d.kurirNama}</td>
-                  <td className="p-3 text-xs font-mono text-brand">{d.nomorOrder}</td>
-                  <td className="p-3 text-right text-sm">{d.jumlahGalon}</td>
+                  <td className="p-3 text-sm font-medium">
+                    {d.kurirNama}
+                    <div className="sm:hidden text-[10px] font-mono text-brand mt-0.5">
+                      {d.nomorOrder}
+                    </div>
+                    <div className="sm:hidden text-[10px] text-[color:var(--muted)] mt-0.5">
+                      {d.jumlahGalon} galon · {d.status.toUpperCase()}
+                    </div>
+                  </td>
+                  <td className="p-3 text-xs font-mono text-brand hidden sm:table-cell">{d.nomorOrder}</td>
+                  <td className="p-3 text-right text-sm hidden sm:table-cell">{d.jumlahGalon}</td>
                   <td className="p-3 text-right text-sm font-bold">{formatRupiah(d.total)}</td>
-                  <td className="p-3">
+                  <td className="p-3 hidden sm:table-cell">
                     <span
                       className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                         d.status === "dibayar"
@@ -179,6 +188,7 @@ export function BonusClient({
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </section>
 

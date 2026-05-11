@@ -93,22 +93,30 @@ export function UsersClient({ users }: { users: Row[] }) {
       )}
 
       <div className="bg-surface rounded-xl border border-line overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
             <tr>
               <th className="p-3">Nama</th>
-              <th className="p-3">Login</th>
+              <th className="p-3 hidden sm:table-cell">Login</th>
               <th className="p-3">Role</th>
               <th className="p-3 hidden md:table-cell">Aktivitas</th>
-              <th className="p-3">Status</th>
+              <th className="p-3 hidden sm:table-cell">Status</th>
               <th className="p-3 text-right">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
             {users.map((u) => (
               <tr key={u.id}>
-                <td className="p-3 font-medium">{u.name}</td>
-                <td className="p-3 text-xs">
+                <td className="p-3 font-medium">
+                  <div>{u.name}</div>
+                  {/* Mobile: tampilkan email/status di bawah nama */}
+                  <div className="sm:hidden text-[10px] text-[color:var(--muted)] mt-0.5 space-y-0.5">
+                    <div>{u.email}</div>
+                    {u.banned && <div className="text-red-600 font-bold">DITANGGUHKAN</div>}
+                  </div>
+                </td>
+                <td className="p-3 text-xs hidden sm:table-cell">
                   <div>{u.email}</div>
                   {u.username && <div className="text-[color:var(--muted)]">@{u.username}</div>}
                   {u.phoneNumber && <div className="text-[color:var(--muted)]">{u.phoneNumber}</div>}
@@ -189,6 +197,7 @@ export function UsersClient({ users }: { users: Row[] }) {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
