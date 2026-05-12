@@ -67,6 +67,34 @@ const STATUS_COLOR: Record<OrderStatus, string> = {
   batal: "bg-[color:var(--surface2)] text-[color:var(--muted)]",
 };
 
+/**
+ * Warna border kiri card berdasarkan status — supaya in-flight orders
+ * mudah dibedakan dari yang sudah selesai/batal saat tab 'Semua'.
+ */
+const STATUS_BORDER: Record<OrderStatus, string> = {
+  pending: "#F59E0B", // amber — butuh ditindak (badge trigger)
+  diproses: "#2563EB", // blue
+  dijemput: "#4F46E5", // indigo
+  diisi: "#0891B2", // cyan
+  diantar: "#7E22CE", // purple
+  selesai: "#10B981", // emerald (subtle)
+  batal: "#94A3B8", // slate (faded)
+};
+
+/**
+ * Background tint card untuk status yang butuh attention.
+ * pending = paling jelas (alert), in-progress = subtle, selesai/batal = transparan.
+ */
+const STATUS_BG: Record<OrderStatus, string> = {
+  pending: "bg-amber-50",
+  diproses: "bg-blue-50/30",
+  dijemput: "bg-indigo-50/30",
+  diisi: "bg-cyan-50/30",
+  diantar: "bg-purple-50/30",
+  selesai: "bg-surface",
+  batal: "bg-surface opacity-70",
+};
+
 export function OrderClient({
   rows,
   kurirList,
@@ -97,9 +125,22 @@ export function OrderClient({
     });
   }
 
+  // Priority sort: in-flight orders (pending, diproses, dll) di atas,
+  // selesai/batal di bawah. Dalam grup, urutan asli (createdAt desc) dipertahankan.
+  const STATUS_PRIORITY: Record<OrderStatus, number> = {
+    pending: 0,
+    diproses: 1,
+    dijemput: 2,
+    diisi: 3,
+    diantar: 4,
+    selesai: 5,
+    batal: 6,
+  };
   const filtered =
     filter === "all"
-      ? rows
+      ? [...rows].sort(
+          (a, b) => STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status],
+        )
       : rows.filter((r) => r.status === (filter as OrderStatus));
 
   return (
@@ -122,7 +163,14 @@ export function OrderClient({
         {filtered.map((o) => {
           const next = nextStatus(o);
           return (
-            <div key={o.id} className="bg-surface rounded-xl border border-line p-4 space-y-2">
+            <div
+              key={o.id}
+              className={`rounded-xl border border-line p-4 space-y-2 ${STATUS_BG[o.status]}`}
+              style={{
+                borderLeftWidth: 4,
+                borderLeftColor: STATUS_BORDER[o.status],
+              }}
+            >
               <div className="flex justify-between items-start">
                 <div>
                   <div className="font-mono text-xs text-[color:var(--muted)]">{o.nomorOrder}</div>
@@ -153,11 +201,18 @@ export function OrderClient({
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLOR[o.status]}`}
+                    className={`px-2 py-0.5 rounded-full text-xs font-bold uppercase ${STATUS_COLOR[o.status]} ${
+                      o.status === "pending" ? "animate-pulse" : ""
+                    }`}
                   >
                     {o.status}
                   </span>
                   <span className="text-xs text-[color:var(--muted)]">via {o.sumber}</span>
+                  {o.status === "pending" && (
+                    <span className="text-[10px] font-bold text-amber-700 uppercase">
+                      ⚠ Perlu tindakan
+                    </span>
+                  )}
                 </div>
               </div>
 
