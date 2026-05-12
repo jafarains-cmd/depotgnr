@@ -1,4 +1,4 @@
-import { eq, desc, ne, and, gte, lte, sql, like, or } from "drizzle-orm";
+import { eq, desc, asc, ne, and, gte, lte, sql, like, or } from "drizzle-orm";
 import { db } from "@/db";
 import { orderHeader } from "@/db/schema/order";
 import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
@@ -22,6 +22,7 @@ export default async function PembayaranPage({
     limit?: string;
     page?: string;
     q?: string;
+    sort?: string;
   }>;
 }) {
   await requireRole(["admin", "kasir"]);
@@ -30,6 +31,7 @@ export default async function PembayaranPage({
   const limit = parseLimit(sp.limit);
   const pageParam = parsePage(sp.page);
   const q = (sp.q ?? "").trim();
+  const sortKey = sp.sort ?? "order-desc";
 
   // Filter ke SQL supaya pagination akurat: status != batal, dan
   // (statusBayar in [menunggu, lunas] OR (status=selesai AND statusBayar=belum))
@@ -77,7 +79,15 @@ export default async function PembayaranPage({
     .from(orderHeader)
     .leftJoin(pelangganTable, eq(orderHeader.pelangganId, pelangganTable.id))
     .where(whereClause)
-    .orderBy(desc(orderHeader.updatedAt))
+    .orderBy(
+      sortKey === "order-asc"
+        ? asc(orderHeader.createdAt)
+        : sortKey === "bayar-desc"
+          ? desc(orderHeader.bayarAt)
+          : sortKey === "bayar-asc"
+            ? asc(orderHeader.bayarAt)
+            : desc(orderHeader.createdAt),
+    )
     .limit(limit)
     .offset(offset);
 
@@ -113,7 +123,7 @@ export default async function PembayaranPage({
         />
         <PageSizeSelect value={limit} />
       </div>
-      <form className="flex gap-2 items-center">
+      <form className="flex gap-2 items-center flex-wrap">
         {range.key && <input type="hidden" name="range" value={range.key} />}
         {sp.from && <input type="hidden" name="from" value={sp.from} />}
         {sp.to && <input type="hidden" name="to" value={sp.to} />}
@@ -122,15 +132,28 @@ export default async function PembayaranPage({
           name="q"
           defaultValue={q}
           placeholder="Cari nama pelanggan / telp / no order..."
-          className="flex-1 px-3 py-2 border border-line rounded-md text-sm"
+          className="flex-1 min-w-[200px] px-3 py-2 border border-line rounded-md text-sm"
         />
+        <label className="text-xs text-[color:var(--muted)] inline-flex items-center gap-1.5">
+          Urut
+          <select
+            name="sort"
+            defaultValue={sortKey}
+            className="px-2 py-2 border border-line rounded-md text-xs bg-surface"
+          >
+            <option value="order-desc">Tanggal order ↓ (terbaru)</option>
+            <option value="order-asc">Tanggal order ↑ (terlama)</option>
+            <option value="bayar-desc">Tanggal bayar ↓ (terbaru)</option>
+            <option value="bayar-asc">Tanggal bayar ↑ (terlama)</option>
+          </select>
+        </label>
         <button
           type="submit"
           className="px-4 py-2 bg-brand-600 text-white rounded-md text-sm font-bold"
         >
-          Cari
+          Terapkan
         </button>
-        {q && (
+        {(q || sortKey !== "order-desc") && (
           <a
             href="/pembayaran"
             className="px-3 py-2 text-sm text-[color:var(--muted)] hover:text-ink"
