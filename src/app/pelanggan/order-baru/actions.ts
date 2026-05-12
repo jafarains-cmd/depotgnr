@@ -83,13 +83,35 @@ export async function createOrder(input: OrderInput): Promise<void> {
 
   pushOrder(newOrderId).catch((e) => console.warn("[sheets] pushOrder:", e));
 
-  const notifText = await renderTemplate("templateNotifOrderMasukAdmin", {
+  const linkMaps =
+    pel.koordinatLat != null && pel.koordinatLng != null
+      ? `https://www.google.com/maps?q=${pel.koordinatLat},${pel.koordinatLng}`
+      : "";
+  const nomorWA = pel.telp ?? "";
+
+  const templateVars = {
     nomorOrder,
     namaPelanggan: pel.nama,
     jumlahItem: String(input.items.reduce((s, i) => s + i.qty, 0)),
     totalEstimasi: totalEstimasi.toLocaleString("id-ID"),
     alamatAntar: input.alamatAntar,
-  });
+    nomorWA,
+    linkMaps,
+  };
+  let notifText = await renderTemplate("templateNotifOrderMasukAdmin", templateVars);
+  if (!notifText.trim()) {
+    // Fallback default kalau template belum diset di pengaturan
+    const lines = [
+      `🔔 *Order Baru ${nomorOrder}*`,
+      `Pelanggan: ${pel.nama}`,
+      nomorWA ? `WA: ${nomorWA}` : "",
+      `Total item: ${templateVars.jumlahItem}`,
+      `Estimasi: ${templateVars.totalEstimasi}`,
+      `Alamat: ${input.alamatAntar}`,
+      linkMaps ? `Lokasi: ${linkMaps}` : "",
+    ].filter(Boolean);
+    notifText = lines.join("\n");
+  }
   notifGrupOrder("pending", notifText).catch(() => {});
 
   // Notif ke grup WhatsApp depot (kalau dikonfigurasi)

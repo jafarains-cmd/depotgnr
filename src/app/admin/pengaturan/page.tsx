@@ -95,7 +95,7 @@ const ALL_FIELDS: Record<string, Field> = {
     key: "templateNotifOrderMasukAdmin",
     label: "Template Notif Order Masuk (untuk Admin)",
     type: "textarea",
-    help: "Placeholder: {nomorOrder}, {namaPelanggan}, {jumlahItem}, {totalEstimasi}, {alamatAntar}",
+    help: "Placeholder: {nomorOrder}, {namaPelanggan}, {nomorWA}, {jumlahItem}, {totalEstimasi}, {alamatAntar}, {linkMaps}. Kalau kosong, pakai default yang include semua field.",
   },
   templateNotifOrderSelesaiPelanggan: {
     key: "templateNotifOrderSelesaiPelanggan",

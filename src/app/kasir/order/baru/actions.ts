@@ -71,6 +71,11 @@ export async function createWalkInOrder(input: WalkInOrderInput): Promise<void> 
     if (p) pelangganNama = p.nama;
   }
 
+  // Ambil info pelanggan untuk notif (telp + koordinat)
+  const pelInfo = pelangganId
+    ? await db.query.pelanggan.findFirst({ where: eq(pelangganTable.id, pelangganId) })
+    : null;
+
   const ids = [...new Set(input.items.map((i) => i.produkId))];
   const produkRows = await db.query.produk.findMany({ where: inArray(produk.id, ids) });
   const produkMap = new Map(produkRows.map((p) => [p.id, p]));
@@ -119,9 +124,21 @@ export async function createWalkInOrder(input: WalkInOrderInput): Promise<void> 
 
   pushOrder(newOrderId).catch(() => {});
 
-  const notifText = `🆕 *${nomorOrder}* (walk-in)\nPelanggan: ${pelangganNama}\nTotal est: ${totalEstimasi.toLocaleString(
-    "id-ID",
-  )}\n${input.tipePengantaran === "jemput-antar" ? "🔄 jemput-isi-antar" : "Antar saja"}`;
+  const linkMaps =
+    pelInfo?.koordinatLat != null && pelInfo?.koordinatLng != null
+      ? `https://www.google.com/maps?q=${pelInfo.koordinatLat},${pelInfo.koordinatLng}`
+      : "";
+  const notifText = [
+    `🆕 *${nomorOrder}* (walk-in)`,
+    `Pelanggan: ${pelangganNama}`,
+    pelInfo?.telp ? `WA: ${pelInfo.telp}` : "",
+    `Total est: ${totalEstimasi.toLocaleString("id-ID")}`,
+    input.tipePengantaran === "jemput-antar" ? "🔄 jemput-isi-antar" : "Antar saja",
+    input.alamatAntar ? `Alamat: ${input.alamatAntar}` : "",
+    linkMaps ? `Lokasi: ${linkMaps}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
   notifGrupOrder("pending", notifText).catch(() => {});
 
   // Notif ke grup WhatsApp depot (kalau dikonfigurasi)
