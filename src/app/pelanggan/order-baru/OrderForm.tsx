@@ -59,6 +59,11 @@ export function OrderForm({
   );
 
   const totalQty = items.reduce((s, it) => s + it.qty, 0);
+  // Hanya tampilkan opsi 'pakai galon saya sendiri' kalau ada item isi_ulang.
+  // Tukar/beli baru → galon dari depot, jadi tidak perlu jemput.
+  const hasIsiUlang = items.some((it) => it.jenis === "isi_ulang");
+  // Auto-uncheck kalau cart tidak ada isi_ulang lagi
+  const effectivePakaiGalonSaya = hasIsiUlang && pakaiGalonSaya;
 
   function setQty(pid: number, jenis: Jenis, delta: number) {
     setQtyMap((m) => {
@@ -80,7 +85,7 @@ export function OrderForm({
           alamatAntar,
           jadwalAntar: jadwalAntar || undefined,
           catatan: catatan || undefined,
-          tipePengantaran: pakaiGalonSaya ? "jemput-antar" : "antar-saja",
+          tipePengantaran: effectivePakaiGalonSaya ? "jemput-antar" : "antar-saja",
         });
       } catch (e) {
         if (e instanceof Error && /NEXT_REDIRECT/.test(e.message)) return;
@@ -174,23 +179,25 @@ export function OrderForm({
           PENGANTARAN
         </div>
         <div className="bg-surface border border-line rounded-2xl p-4 space-y-3">
-          <label className="flex items-start gap-3 cursor-pointer p-3 -mx-1 rounded-xl bg-[color:var(--surface2)]">
-            <input
-              type="checkbox"
-              checked={pakaiGalonSaya}
-              onChange={(e) => setPakaiGalonSaya(e.target.checked)}
-              className="mt-0.5 accent-[color:var(--brand)]"
-            />
-            <span className="text-sm">
-              <span className="font-bold inline-flex items-center gap-1.5">
-                <Truck size={14} className="text-brand" />
-                Pakai galon saya sendiri
+          {hasIsiUlang && (
+            <label className="flex items-start gap-3 cursor-pointer p-3 -mx-1 rounded-xl bg-[color:var(--surface2)]">
+              <input
+                type="checkbox"
+                checked={pakaiGalonSaya}
+                onChange={(e) => setPakaiGalonSaya(e.target.checked)}
+                className="mt-0.5 accent-[color:var(--brand)]"
+              />
+              <span className="text-sm">
+                <span className="font-bold inline-flex items-center gap-1.5">
+                  <Truck size={14} className="text-brand" />
+                  Pakai galon saya sendiri
+                </span>
+                <span className="block text-xs text-[color:var(--muted)] mt-0.5">
+                  Kurir jemput → isi di depot → antar balik. Cocok galon merek tertentu.
+                </span>
               </span>
-              <span className="block text-xs text-[color:var(--muted)] mt-0.5">
-                Kurir jemput → isi di depot → antar balik. Cocok galon merek tertentu.
-              </span>
-            </span>
-          </label>
+            </label>
+          )}
 
           <div>
             <label className="text-xs font-bold text-[color:var(--muted)] mb-1.5 inline-flex items-center gap-1.5">
@@ -209,7 +216,10 @@ export function OrderForm({
           <div className="grid grid-cols-1 gap-3">
             <div>
               <label className="text-xs font-bold text-[color:var(--muted)] mb-1.5 inline-flex items-center gap-1.5">
-                <Clock size={12} /> JADWAL (OPSIONAL)
+                <Clock size={12} />{" "}
+                {effectivePakaiGalonSaya
+                  ? "JADWAL PENJEMPUTAN (OPSIONAL)"
+                  : "JADWAL PENGANTARAN (OPSIONAL)"}
               </label>
               <input
                 type="datetime-local"
@@ -217,6 +227,11 @@ export function OrderForm({
                 onChange={(e) => setJadwalAntar(e.target.value)}
                 className="w-full px-3 py-2.5 bg-[color:var(--surface2)] border-2 border-transparent focus:border-brand rounded-xl text-sm outline-none transition"
               />
+              <p className="text-[10px] text-[color:var(--muted)] mt-1">
+                {effectivePakaiGalonSaya
+                  ? "Kapan kurir datang ambil galon kosong Anda. Kosongkan = secepatnya."
+                  : "Kapan Anda ingin galon diantar. Kosongkan = secepatnya."}
+              </p>
             </div>
             <div>
               <label className="text-xs font-bold text-[color:var(--muted)] mb-1.5 inline-flex items-center gap-1.5">
