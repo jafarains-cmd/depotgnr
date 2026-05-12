@@ -17,7 +17,18 @@ export type NavItem = {
   badge?: number;
   /** Key di NotifCounts (mis. "orderMasuk") — kalau diisi, AppShell pakai polling untuk update. */
   badgeKey?: keyof NotifCounts;
+  /** Warna icon (Tailwind color class) — opsional, untuk visual grouping. */
+  iconColor?: string;
 };
+
+export type NavGroup = {
+  label: string;
+  items: NavItem[];
+};
+
+function isGrouped(nav: NavItem[] | NavGroup[]): nav is NavGroup[] {
+  return nav.length > 0 && "items" in (nav[0] as NavGroup);
+}
 
 export function AppShell({
   title,
@@ -27,7 +38,7 @@ export function AppShell({
   children,
 }: {
   title: string;
-  nav: NavItem[];
+  nav: NavItem[] | NavGroup[];
   userName: string;
   initialBadges?: NotifCounts;
   children: React.ReactNode;
@@ -111,31 +122,19 @@ export function AppShell({
             <X size={18} />
           </button>
         </div>
-        <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
-          {nav.map((item) => {
-            const active = pathname === item.href || pathname.startsWith(item.href + "/");
-            const liveValue = item.badgeKey ? liveBadges[item.badgeKey] : undefined;
-            const badge = liveValue ?? item.badge;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm transition ${
-                  active
-                    ? "bg-brand-soft text-brand font-bold"
-                    : "text-[color:var(--ink2)] hover:bg-[color:var(--surface2)]"
-                }`}
-              >
-                {item.icon}
-                <span className="flex-1">{item.label}</span>
-                {badge !== undefined && badge > 0 && (
-                  <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-rose-500 text-white min-w-[18px] text-center leading-none flex-shrink-0">
-                    {badge > 99 ? "99+" : badge}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 p-2 space-y-3 overflow-y-auto">
+          {isGrouped(nav)
+            ? nav.map((g) => (
+                <div key={g.label} className="space-y-0.5">
+                  <div className="text-[10px] font-extrabold tracking-widest text-[color:var(--muted)] uppercase px-3 mt-2 mb-1">
+                    {g.label}
+                  </div>
+                  {g.items.map((item) =>
+                    renderNavItem(item, pathname, liveBadges),
+                  )}
+                </div>
+              ))
+            : nav.map((item) => renderNavItem(item, pathname, liveBadges))}
         </nav>
         <div className="p-3 border-t border-line">
           <div className="px-2 py-2 mb-2 rounded-xl bg-[color:var(--surface2)]">
@@ -155,6 +154,43 @@ export function AppShell({
 
       <main className="flex-1 overflow-auto min-w-0">{children}</main>
     </div>
+  );
+}
+
+function renderNavItem(
+  item: NavItem,
+  pathname: string,
+  liveBadges: NotifCounts,
+): React.ReactNode {
+  const active = pathname === item.href || pathname.startsWith(item.href + "/");
+  const liveValue = item.badgeKey ? liveBadges[item.badgeKey] : undefined;
+  const badge = liveValue ?? item.badge;
+  return (
+    <Link
+      key={item.href}
+      href={item.href}
+      className={`group flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm transition ${
+        active
+          ? "bg-brand-soft text-brand font-bold"
+          : "text-[color:var(--ink2)] hover:bg-[color:var(--surface2)]"
+      }`}
+    >
+      <span
+        className={`flex-shrink-0 transition ${
+          active
+            ? "text-brand"
+            : item.iconColor ?? "text-[color:var(--muted)] group-hover:text-ink"
+        }`}
+      >
+        {item.icon}
+      </span>
+      <span className="flex-1">{item.label}</span>
+      {badge !== undefined && badge > 0 && (
+        <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-rose-500 text-white min-w-[18px] text-center leading-none flex-shrink-0">
+          {badge > 99 ? "99+" : badge}
+        </span>
+      )}
+    </Link>
   );
 }
 

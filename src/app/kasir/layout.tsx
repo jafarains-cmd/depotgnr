@@ -1,5 +1,5 @@
 import { ShoppingCart, Truck, Receipt, KeyRound, Bike, Wallet, Users } from "lucide-react";
-import { AppShell, type NavItem } from "@/components/AppShell";
+import { AppShell, type NavGroup } from "@/components/AppShell";
 import { requireRole } from "@/lib/permissions";
 import {
   countOrderMasuk,
@@ -15,14 +15,29 @@ export default async function KasirLayout({ children }: { children: React.ReactN
     countKurirAktif(session.user.id),
   ]);
 
-  const NAV: NavItem[] = [
-    { href: "/kasir/pos", label: "POS Kasir", icon: <ShoppingCart size={16} /> },
-    { href: "/kasir/order", label: "Order Antar", icon: <Truck size={16} />, badgeKey: "orderMasuk" },
-    { href: "/kasir/transaksi", label: "Riwayat Transaksi", icon: <Receipt size={16} /> },
-    { href: "/data-pelanggan", label: "Pelanggan", icon: <Users size={16} /> },
-    { href: "/pembayaran", label: "Pembayaran", icon: <Wallet size={16} />, badgeKey: "pembayaran" },
-    { href: "/kurir", label: "Mode Kurir", icon: <Bike size={16} />, badgeKey: "kurirAktif" },
-    { href: "/akun", label: "Akun Saya", icon: <KeyRound size={16} /> },
+  const NAV: NavGroup[] = [
+    {
+      label: "Penjualan",
+      items: [
+        { href: "/kasir/pos", label: "POS Kasir", icon: <ShoppingCart size={16} />, iconColor: "text-brand" },
+        { href: "/kasir/order", label: "Order Antar", icon: <Truck size={16} />, iconColor: "text-blue-600", badgeKey: "orderMasuk" },
+        { href: "/kasir/transaksi", label: "Riwayat Transaksi", icon: <Receipt size={16} />, iconColor: "text-cyan-600" },
+      ],
+    },
+    {
+      label: "Pelanggan & Pembayaran",
+      items: [
+        { href: "/data-pelanggan", label: "Pelanggan", icon: <Users size={16} />, iconColor: "text-fuchsia-600" },
+        { href: "/pembayaran", label: "Pembayaran", icon: <Wallet size={16} />, iconColor: "text-emerald-600", badgeKey: "pembayaran" },
+      ],
+    },
+    {
+      label: "Lainnya",
+      items: [
+        { href: "/kurir", label: "Mode Kurir", icon: <Bike size={16} />, iconColor: "text-indigo-600", badgeKey: "kurirAktif" },
+        { href: "/akun", label: "Akun Saya", icon: <KeyRound size={16} />, iconColor: "text-gray-600" },
+      ],
+    },
   ];
 
   return (

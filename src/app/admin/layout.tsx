@@ -20,7 +20,7 @@ import {
   Wrench,
   MessageSquareWarning,
 } from "lucide-react";
-import { AppShell, type NavItem } from "@/components/AppShell";
+import { AppShell, type NavGroup } from "@/components/AppShell";
 import { requireRole } from "@/lib/permissions";
 import {
   countOrderMasuk,
@@ -44,28 +44,169 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     ]);
   const followUp = churn.due + churn.overdue + churn.churn;
 
-  const NAV: NavItem[] = [
-    { href: "/admin/dashboard", label: "Dashboard", icon: <LayoutDashboard size={16} /> },
-    { href: "/admin/produk", label: "Produk", icon: <Package size={16} /> },
-    { href: "/data-pelanggan", label: "Pelanggan", icon: <Users size={16} /> },
-    { href: "/admin/peta", label: "Peta Pelanggan", icon: <Map size={16} /> },
-    { href: "/admin/inventory", label: "Inventory", icon: <Boxes size={16} /> },
-    { href: "/admin/bahan-baku", label: "Bahan Baku", icon: <Package size={16} /> },
-    { href: "/admin/pemeliharaan", label: "Pemeliharaan", icon: <Wrench size={16} /> },
-    { href: "/kasir/transaksi", label: "Transaksi", icon: <Receipt size={16} /> },
-    { href: "/pembayaran", label: "Pembayaran", icon: <Wallet size={16} />, badgeKey: "pembayaran" },
-    { href: "/admin/bonus-kurir", label: "Bonus Kurir", icon: <Coins size={16} />, badgeKey: "bonusPending" },
-    { href: "/kasir/order", label: "Order Antar", icon: <Truck size={16} />, badgeKey: "orderMasuk" },
-    { href: "/admin/pengeluaran", label: "Pengeluaran", icon: <Banknote size={16} /> },
-    { href: "/admin/laporan", label: "Laporan", icon: <BarChart3 size={16} /> },
-    { href: "/admin/analitik/follow-up", label: "Follow-up", icon: <TrendingUp size={16} />, badgeKey: "followUp" },
-    { href: "/admin/komplain", label: "Komplain", icon: <MessageSquareWarning size={16} />, badgeKey: "komplain" },
-    { href: "/admin/users", label: "User", icon: <UserCog size={16} /> },
-    { href: "/admin/backup", label: "Backup", icon: <Cloud size={16} /> },
-    { href: "/admin/pengaturan", label: "Pengaturan", icon: <Settings size={16} /> },
-    { href: "/admin/bantuan", label: "Bantuan", icon: <HelpCircle size={16} /> },
-    { href: "/kurir", label: "Mode Kurir", icon: <Bike size={16} />, badgeKey: "kurirAktif" },
-    { href: "/akun", label: "Akun Saya", icon: <KeyRound size={16} /> },
+  const NAV: NavGroup[] = [
+    {
+      label: "Ringkasan",
+      items: [
+        {
+          href: "/admin/dashboard",
+          label: "Dashboard",
+          icon: <LayoutDashboard size={16} />,
+          iconColor: "text-brand",
+        },
+      ],
+    },
+    {
+      label: "Operasional",
+      items: [
+        {
+          href: "/kasir/order",
+          label: "Order Antar",
+          icon: <Truck size={16} />,
+          iconColor: "text-blue-600",
+          badgeKey: "orderMasuk",
+        },
+        {
+          href: "/pembayaran",
+          label: "Pembayaran",
+          icon: <Wallet size={16} />,
+          iconColor: "text-emerald-600",
+          badgeKey: "pembayaran",
+        },
+        {
+          href: "/kasir/transaksi",
+          label: "Transaksi",
+          icon: <Receipt size={16} />,
+          iconColor: "text-cyan-600",
+        },
+        {
+          href: "/admin/komplain",
+          label: "Komplain",
+          icon: <MessageSquareWarning size={16} />,
+          iconColor: "text-rose-600",
+          badgeKey: "komplain",
+        },
+        {
+          href: "/kurir",
+          label: "Mode Kurir",
+          icon: <Bike size={16} />,
+          iconColor: "text-indigo-600",
+          badgeKey: "kurirAktif",
+        },
+      ],
+    },
+    {
+      label: "Pelanggan",
+      items: [
+        {
+          href: "/data-pelanggan",
+          label: "Pelanggan",
+          icon: <Users size={16} />,
+          iconColor: "text-fuchsia-600",
+        },
+        {
+          href: "/admin/peta",
+          label: "Peta Pelanggan",
+          icon: <Map size={16} />,
+          iconColor: "text-violet-600",
+        },
+        {
+          href: "/admin/analitik/follow-up",
+          label: "Follow-up",
+          icon: <TrendingUp size={16} />,
+          iconColor: "text-pink-600",
+          badgeKey: "followUp",
+        },
+      ],
+    },
+    {
+      label: "Inventori",
+      items: [
+        {
+          href: "/admin/produk",
+          label: "Produk",
+          icon: <Package size={16} />,
+          iconColor: "text-sky-600",
+        },
+        {
+          href: "/admin/inventory",
+          label: "Inventory",
+          icon: <Boxes size={16} />,
+          iconColor: "text-teal-600",
+        },
+        {
+          href: "/admin/bahan-baku",
+          label: "Bahan Baku",
+          icon: <Package size={16} />,
+          iconColor: "text-lime-600",
+        },
+        {
+          href: "/admin/pemeliharaan",
+          label: "Pemeliharaan",
+          icon: <Wrench size={16} />,
+          iconColor: "text-orange-600",
+        },
+      ],
+    },
+    {
+      label: "Keuangan",
+      items: [
+        {
+          href: "/admin/pengeluaran",
+          label: "Pengeluaran",
+          icon: <Banknote size={16} />,
+          iconColor: "text-red-600",
+        },
+        {
+          href: "/admin/bonus-kurir",
+          label: "Bonus Kurir",
+          icon: <Coins size={16} />,
+          iconColor: "text-amber-600",
+          badgeKey: "bonusPending",
+        },
+        {
+          href: "/admin/laporan",
+          label: "Laporan",
+          icon: <BarChart3 size={16} />,
+          iconColor: "text-yellow-600",
+        },
+      ],
+    },
+    {
+      label: "Sistem",
+      items: [
+        {
+          href: "/admin/users",
+          label: "User",
+          icon: <UserCog size={16} />,
+          iconColor: "text-slate-600",
+        },
+        {
+          href: "/admin/backup",
+          label: "Backup",
+          icon: <Cloud size={16} />,
+          iconColor: "text-sky-600",
+        },
+        {
+          href: "/admin/pengaturan",
+          label: "Pengaturan",
+          icon: <Settings size={16} />,
+          iconColor: "text-stone-600",
+        },
+        {
+          href: "/admin/bantuan",
+          label: "Bantuan",
+          icon: <HelpCircle size={16} />,
+          iconColor: "text-zinc-600",
+        },
+        {
+          href: "/akun",
+          label: "Akun Saya",
+          icon: <KeyRound size={16} />,
+          iconColor: "text-gray-600",
+        },
+      ],
+    },
   ];
 
   return (
