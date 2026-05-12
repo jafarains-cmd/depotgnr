@@ -22,69 +22,18 @@ export type Row = {
   pelangganTelp: string | null;
 };
 
-type Tab = "menunggu" | "piutang" | "lunas" | "all";
-
-export function PembayaranClient({
-  rows,
-  hasSearch = false,
-}: {
-  rows: Row[];
-  hasSearch?: boolean;
-}) {
-  // Kalau ada query search aktif, default ke 'Semua' supaya hasil pasti
-  // ke-render tanpa user perlu klik tab manual.
-  const [filter, setFilter] = useState<Tab>(hasSearch ? "all" : "menunggu");
+export function PembayaranClient({ rows }: { rows: Row[] }) {
   const [pending, startTransition] = useTransition();
   const [detailId, setDetailId] = useState<number | null>(null);
 
-  // Piutang = order selesai tapi belum lunas
   function isPiutang(r: Row) {
     return r.statusOrder === "selesai" && r.status === "belum";
   }
 
-  const filtered =
-    filter === "all"
-      ? rows
-      : filter === "piutang"
-        ? rows.filter(isPiutang)
-        : rows.filter((r) => r.status === filter);
-
-  const countMenunggu = rows.filter((r) => r.status === "menunggu").length;
-  const countPiutang = rows.filter(isPiutang).length;
-
   return (
     <div className="space-y-4">
-      <div className="flex gap-2 text-sm flex-wrap">
-        {([
-          { id: "menunggu", label: "Menunggu Verifikasi", count: countMenunggu },
-          { id: "piutang", label: "Piutang", count: countPiutang },
-          { id: "lunas", label: "Lunas", count: 0 },
-          { id: "all", label: "Semua", count: 0 },
-        ] as const).map((f) => {
-          const isActive = filter === f.id;
-          return (
-            <button
-              key={f.id}
-              onClick={() => setFilter(f.id as Tab)}
-              className={`px-3.5 py-1.5 rounded-full font-bold text-xs transition ${
-                isActive
-                  ? "bg-brand text-white"
-                  : "bg-surface border border-line text-[color:var(--muted)] hover:text-ink"
-              }`}
-            >
-              {f.label}
-              {f.count > 0 && (
-                <span className="ml-1.5 px-1.5 py-0.5 bg-[color:var(--accent2)] text-white rounded text-[10px]">
-                  {f.count}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
       <div className="grid lg:grid-cols-2 gap-3">
-        {filtered.map((r) => (
+        {rows.map((r) => (
           <div
             key={r.id}
             className="bg-surface border border-line rounded-2xl p-4 space-y-3"
@@ -230,7 +179,7 @@ export function PembayaranClient({
             )}
           </div>
         ))}
-        {filtered.length === 0 && (
+        {rows.length === 0 && (
           <div className="lg:col-span-2 p-10 text-center text-[color:var(--muted)] bg-surface rounded-2xl border border-line">
             Tidak ada data.
           </div>
