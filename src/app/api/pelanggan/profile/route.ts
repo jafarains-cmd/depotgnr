@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, ne, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { pelanggan } from "@/db/schema/pelanggan";
 import { user as userTable } from "@/db/schema/auth";
 import { getSession } from "@/lib/permissions";
-import { findPelangganByKode, generateUniqueKodeReferral } from "@/lib/loyalty";
+import { findPelangganByKode, generateUniqueKodeReferral, ensureKodeReferral } from "@/lib/loyalty";
 
 function normalizeNomorWA(raw: string): string {
   let s = raw.trim().replace(/[\s-]/g, "");
@@ -57,6 +57,36 @@ export async function POST(req: Request) {
   const existing = await db.query.pelanggan.findFirst({
     where: eq(pelanggan.userId, session.user.id),
   });
+
+  // Auto-link: kalau belum ada record pelanggan dengan userId user ini,
+  // tapi ada record walk-in (userId IS NULL) dengan nomor WA yang sama,
+  // hubungkan ke yang existing — supaya history/loyalty yang dibuat
+  // kasir tidak hilang.
+  let linkedWalkIn = false;
+  if (!existing && nomor) {
+    const walkIn = await db.query.pelanggan.findFirst({
+      where: and(eq(pelanggan.telp, nomor), isNull(pelanggan.userId)),
+    });
+    if (walkIn) {
+      const kode =
+        walkIn.kodeReferral ?? (await ensureKodeReferral(walkIn.id));
+      await db
+        .update(pelanggan)
+        .set({
+          userId: session.user.id,
+          nama: nama ?? walkIn.nama,
+          alamat: alamat ?? walkIn.alamat,
+          kodeReferral: kode,
+          updatedAt: new Date(),
+        })
+        .where(eq(pelanggan.id, walkIn.id));
+      linkedWalkIn = true;
+    }
+  }
+
+  if (linkedWalkIn) {
+    return NextResponse.json({ ok: true, linked: true });
+  }
 
   // Resolve referrer (hanya saat row pelanggan baru dibuat, bukan update)
   let referredBy: number | undefined;

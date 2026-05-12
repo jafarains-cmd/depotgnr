@@ -13,6 +13,7 @@ import { produk as produkTable } from "@/db/schema/produk";
 import { user as userTableSchema } from "@/db/schema/auth";
 import { requireRole } from "@/lib/permissions";
 import { TitipanSection } from "./TitipanSection";
+import { LinkUserSection } from "./LinkUserSection";
 import { formatRupiah } from "@/lib/utils";
 import { LoyaltyAdjustForm } from "./LoyaltyAdjustForm";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
@@ -50,6 +51,10 @@ export default async function PelangganDetailPage({
     where: eq(pelangganTable.id, pelangganId),
   });
   if (!pel) notFound();
+
+  const linkedUser = pel.userId
+    ? await db.query.user.findFirst({ where: eq(userTableSchema.id, pel.userId) })
+    : null;
 
   const [countRow] = await db
     .select({ n: sql<number>`count(*)` })
@@ -172,6 +177,17 @@ export default async function PelangganDetailPage({
           value={formatRupiah(totalRedeem)}
         />
       </div>
+
+      {isAdmin && (
+        <LinkUserSection
+          pelangganId={pel.id}
+          pelangganNama={pel.nama}
+          currentUserId={pel.userId}
+          currentUserName={linkedUser?.name ?? null}
+          currentUserEmail={linkedUser?.email ?? null}
+          currentUserTelp={linkedUser?.phoneNumber ?? null}
+        />
+      )}
 
       {isAdmin && <LoyaltyAdjustForm pelangganId={pel.id} />}
 

@@ -9,6 +9,7 @@ import {
   galonPelanggan,
   mutasiTitipan,
 } from "@/db/schema/pelanggan";
+import { user as userTable } from "@/db/schema/auth";
 import { requireRole } from "@/lib/permissions";
 
 export async function upsertPelanggan(formData: FormData) {
@@ -89,6 +90,90 @@ export async function adjustLoyaltyManual(
     }
   });
 
+  revalidatePath(`/data-pelanggan/${pelangganId}`);
+  revalidatePath("/data-pelanggan");
+  return { ok: true };
+}
+
+/**
+ * Hubungkan record pelanggan walk-in ke akun user existing. Hanya
+ * boleh kalau pelanggan saat ini userId=null DAN target user belum
+ * punya pelanggan record (cegah duplikat). Admin only.
+ */
+export async function linkPelangganToUser(
+  pelangganId: number,
+  userId: string,
+): Promise<{ ok: true } | { error: string }> {
+  await requireRole(["admin"]);
+
+  const pel = await db.query.pelanggan.findFirst({ where: eq(pelanggan.id, pelangganId) });
+  if (!pel) return { error: "Pelanggan tidak ditemukan" };
+  if (pel.userId) return { error: "Pelanggan ini sudah terhubung ke akun lain" };
+
+  const u = await db.query.user.findFirst({ where: eq(userTable.id, userId) });
+  if (!u) return { error: "User tidak ditemukan" };
+
+  const existingForUser = await db.query.pelanggan.findFirst({
+    where: eq(pelanggan.userId, userId),
+  });
+  if (existingForUser) {
+    return {
+      error: `User ${u.name} sudah punya record pelanggan (id ${existingForUser.id}). Hapus dulu salah satu untuk hindari duplikat.`,
+    };
+  }
+
+  await db
+    .update(pelanggan)
+    .set({ userId, updatedAt: new Date() })
+    .where(eq(pelanggan.id, pelangganId));
+
+  revalidatePath(`/data-pelanggan/${pelangganId}`);
+  revalidatePath("/data-pelanggan");
+  revalidatePath("/admin/users");
+  return { ok: true };
+}
+
+/**
+ * Search user yang belum punya record pelanggan (untuk kandidat link).
+ */
+export async function searchUsersWithoutPelanggan(
+  q: string,
+): Promise<{ id: string; name: string; email: string; phoneNumber: string | null }[]> {
+  await requireRole(["admin"]);
+  const term = q.trim();
+  if (term.length < 2) return [];
+
+  const pat = `%${term}%`;
+  const rows = await db
+    .select({
+      id: userTable.id,
+      name: userTable.name,
+      email: userTable.email,
+      phoneNumber: userTable.phoneNumber,
+    })
+    .from(userTable)
+    .leftJoin(pelanggan, eq(pelanggan.userId, userTable.id))
+    .where(
+      and(
+        sql`${pelanggan.id} IS NULL`,
+        sql`(${userTable.name} LIKE ${pat} OR ${userTable.email} LIKE ${pat} OR ${userTable.phoneNumber} LIKE ${pat} OR ${userTable.username} LIKE ${pat})`,
+      ),
+    )
+    .limit(10);
+  return rows;
+}
+
+/**
+ * Hapus link userId — pelanggan kembali jadi walk-in.
+ */
+export async function unlinkPelangganFromUser(
+  pelangganId: number,
+): Promise<{ ok: true } | { error: string }> {
+  await requireRole(["admin"]);
+  await db
+    .update(pelanggan)
+    .set({ userId: null, updatedAt: new Date() })
+    .where(eq(pelanggan.id, pelangganId));
   revalidatePath(`/data-pelanggan/${pelangganId}`);
   revalidatePath("/data-pelanggan");
   return { ok: true };
