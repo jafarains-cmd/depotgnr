@@ -47,7 +47,7 @@ export async function searchPelanggan(
 }
 
 export async function createWalkInOrder(input: WalkInOrderInput): Promise<void> {
-  await requireRole(["admin", "kasir"]);
+  const session = await requireRole(["admin", "kasir"]);
   if (input.items.length === 0) throw new Error("Pilih minimal satu produk");
   if (!input.alamatAntar.trim()) throw new Error("Alamat pengantaran wajib diisi");
 
@@ -136,6 +136,7 @@ export async function createWalkInOrder(input: WalkInOrderInput): Promise<void> 
     input.tipePengantaran === "jemput-antar" ? "🔄 jemput-isi-antar" : "Antar saja",
     input.alamatAntar ? `Alamat: ${input.alamatAntar}` : "",
     linkMaps ? `Lokasi: ${linkMaps}` : "",
+    `Dibuat oleh: ${session.user.name}`,
   ]
     .filter(Boolean)
     .join("\n");

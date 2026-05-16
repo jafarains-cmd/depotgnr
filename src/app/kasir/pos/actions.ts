@@ -238,7 +238,7 @@ async function createOrderUntukBayarOnline(args: {
   bestEffort(
     "notifAdminTelegram(pos-online)",
     notifAdminTelegram(
-      `🧾 *${nomorOrder}* (POS · ${input.metodeBayar.toUpperCase()})\nTotal: ${total.toLocaleString("id-ID")}\nMenunggu pelanggan upload bukti bayar.`,
+      `🧾 *${nomorOrder}* (POS · ${input.metodeBayar.toUpperCase()})\nTotal: ${total.toLocaleString("id-ID")}\nKasir: ${session.user.name}\nMenunggu pelanggan upload bukti bayar.`,
     ),
   );
 
