@@ -1,11 +1,14 @@
 const ALLOWED = [20, 50, 100] as const;
 export const DEFAULT_PAGE_SIZE = 20;
+/** Sentinel "Semua" — limit super tinggi, cukup untuk skala UMKM. */
+export const ALL_PAGE_SIZE = 100000;
 
 /**
- * Parse limit dari searchParams. Whitelist 20/50/100, default 20.
+ * Parse limit dari searchParams. Whitelist 20/50/100/all, default 20.
  * Pakai bersama <PageSizeSelect>.
  */
 export function parseLimit(raw: string | undefined): number {
+  if (raw === "all") return ALL_PAGE_SIZE;
   const n = Number(raw);
   return (ALLOWED as readonly number[]).includes(n) ? n : DEFAULT_PAGE_SIZE;
 }
