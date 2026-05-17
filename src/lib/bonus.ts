@@ -43,6 +43,9 @@ export async function recordKurirBonus(orderId: number): Promise<void> {
   if (!o) return;
   if (o.status !== "selesai" || o.statusBayar !== "lunas") return;
   if (!o.kurirUserId) return;
+  // Skip POS depot (pelanggan ambil sendiri) — tidak ada antar fisik,
+  // jadi tidak wajar dapat bonus kurir.
+  if (o.alamatAntar === "(diambil di depot)") return;
 
   // Idempotency: cek by orderId
   const existing = await db.query.bonusKurir.findFirst({

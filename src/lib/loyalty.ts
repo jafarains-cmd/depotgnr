@@ -232,12 +232,16 @@ export async function earnFromOrderIfEligible(orderId: number): Promise<void> {
   if (totalGalon === 0) return;
 
   const cfg = await getLoyaltyConfig();
+  // POS depot (pelanggan datang langsung) ditandai dengan alamat
+  // '(diambil di depot)' → pakai rate DEPOT, bukan ANTAR
+  const isPickupDepot = o.alamatAntar === "(diambil di depot)";
+  const rate = isPickupDepot ? cfg.ratePerGalonDepot : cfg.ratePerGalonAntar;
   await earnLoyalty({
     pelangganId: o.pelangganId,
     jumlahGalon: totalGalon,
-    rate: cfg.ratePerGalonAntar,
+    rate,
     refOrderId: orderId,
-    deskripsi: `Earn dari order ${o.nomorOrder} (${totalGalon} galon × Rp ${cfg.ratePerGalonAntar.toLocaleString("id-ID")})`,
+    deskripsi: `Earn dari order ${o.nomorOrder} (${totalGalon} galon × Rp ${rate.toLocaleString("id-ID")})`,
   });
   await claimReferralBonusIfFirstOrder(o.pelangganId, orderId);
 }
