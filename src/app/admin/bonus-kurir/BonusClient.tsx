@@ -21,6 +21,7 @@ export type BonusRow = {
   orderId: number;
   kurirNama: string;
   nomorOrder: string;
+  pelangganNama: string;
   jumlahGalon: number;
   ratePerGalon: number;
   total: number;
@@ -134,6 +135,7 @@ export function BonusClient({
                 <th className="p-3">Tanggal</th>
                 <th className="p-3">Kurir</th>
                 <th className="p-3 hidden sm:table-cell">Order</th>
+                <th className="p-3 hidden md:table-cell">Pelanggan</th>
                 <th className="p-3 text-right hidden sm:table-cell">Galon</th>
                 <th className="p-3 text-right">Bonus</th>
                 <th className="p-3 hidden sm:table-cell">Status</th>
@@ -159,11 +161,15 @@ export function BonusClient({
                     <div className="sm:hidden text-[10px] font-mono text-brand mt-0.5">
                       {d.nomorOrder}
                     </div>
+                    <div className="sm:hidden text-[10px] text-[color:var(--muted)] mt-0.5 truncate">
+                      {d.pelangganNama}
+                    </div>
                     <div className="sm:hidden text-[10px] text-[color:var(--muted)] mt-0.5">
                       {d.jumlahGalon} galon · {d.status.toUpperCase()}
                     </div>
                   </td>
                   <td className="p-3 text-xs font-mono text-brand hidden sm:table-cell">{d.nomorOrder}</td>
+                  <td className="p-3 text-xs hidden md:table-cell">{d.pelangganNama}</td>
                   <td className="p-3 text-right text-sm hidden sm:table-cell">{d.jumlahGalon}</td>
                   <td className="p-3 text-right text-sm font-bold">{formatRupiah(d.total)}</td>
                   <td className="p-3 hidden sm:table-cell">
@@ -181,7 +187,7 @@ export function BonusClient({
               ))}
               {detail.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-[color:var(--muted)]">
+                  <td colSpan={7} className="p-8 text-center text-[color:var(--muted)]">
                     Belum ada history.
                   </td>
                 </tr>

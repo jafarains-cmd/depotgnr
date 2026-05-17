@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { bonusKurir } from "@/db/schema/bonus";
 import { user as userTable } from "@/db/schema/auth";
 import { orderHeader } from "@/db/schema/order";
+import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
 import { PageHeader } from "@/components/AppShell";
 import { requireRole } from "@/lib/permissions";
 import { formatRupiah } from "@/lib/utils";
@@ -53,13 +54,13 @@ export default async function BonusKurirPage({
     totalGalon: s.totalGalon,
   }));
 
-  // Detail list 100 terbaru
   const detail = await db
     .select({
       id: bonusKurir.id,
       kurirNama: userTable.name,
       orderId: bonusKurir.orderId,
       nomorOrder: orderHeader.nomorOrder,
+      pelangganNama: pelangganTable.nama,
       jumlahGalon: bonusKurir.jumlahGalon,
       ratePerGalon: bonusKurir.ratePerGalon,
       total: bonusKurir.total,
@@ -70,6 +71,7 @@ export default async function BonusKurirPage({
     .from(bonusKurir)
     .leftJoin(userTable, eq(bonusKurir.kurirUserId, userTable.id))
     .leftJoin(orderHeader, eq(bonusKurir.orderId, orderHeader.id))
+    .leftJoin(pelangganTable, eq(orderHeader.pelangganId, pelangganTable.id))
     .orderBy(desc(bonusKurir.createdAt))
     .limit(limit)
     .offset(offset);
@@ -79,6 +81,7 @@ export default async function BonusKurirPage({
     orderId: d.orderId,
     kurirNama: d.kurirNama ?? "—",
     nomorOrder: d.nomorOrder ?? `#${d.orderId}`,
+    pelangganNama: d.pelangganNama ?? "—",
     jumlahGalon: d.jumlahGalon,
     ratePerGalon: d.ratePerGalon,
     total: d.total,
