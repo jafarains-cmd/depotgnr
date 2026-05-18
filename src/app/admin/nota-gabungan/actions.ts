@@ -155,8 +155,9 @@ export async function ensureNotaGabungan(args: {
     .set({ notaGabunganId: created.id, updatedAt: new Date() })
     .where(inArray(orderHeader.id, orderIds));
 
-  revalidatePath("/pembayaran");
-  revalidatePath("/admin/nota-gabungan");
+  // Catatan: tidak panggil revalidatePath di sini karena helper ini
+  // dipanggil dari Server Component render (cetak page). revalidatePath
+  // hanya legal di Server Action/Route Handler.
   return { ok: true, id: created.id, kode: created.kode };
 }
 
