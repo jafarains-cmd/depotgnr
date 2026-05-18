@@ -2,6 +2,7 @@ import { eq, desc, asc, ne, and, gte, lte, sql, like, or } from "drizzle-orm";
 import { db } from "@/db";
 import { orderHeader } from "@/db/schema/order";
 import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
+import { notaGabungan } from "@/db/schema/nota-gabungan";
 import { requireRole } from "@/lib/permissions";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { parseRange } from "@/lib/date-range";
@@ -126,9 +127,12 @@ export default async function PembayaranPage({
       createdAt: orderHeader.createdAt,
       pelangganNama: pelangganTable.nama,
       pelangganTelp: pelangganTable.telp,
+      notaGabunganId: orderHeader.notaGabunganId,
+      notaGabunganKode: notaGabungan.kode,
     })
     .from(orderHeader)
     .leftJoin(pelangganTable, eq(orderHeader.pelangganId, pelangganTable.id))
+    .leftJoin(notaGabungan, eq(orderHeader.notaGabunganId, notaGabungan.id))
     .where(whereClause)
     .orderBy(
       sortKey === "order-asc"
@@ -155,6 +159,8 @@ export default async function PembayaranPage({
     createdAt: r.createdAt.toISOString(),
     pelangganNama: r.pelangganNama,
     pelangganTelp: r.pelangganTelp,
+    notaGabunganId: r.notaGabunganId,
+    notaGabunganKode: r.notaGabunganKode,
   }));
 
   // Query string base untuk preserve filter di tab links

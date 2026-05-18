@@ -7,8 +7,8 @@ import { produk as produkTable } from "@/db/schema/produk";
 import { pengaturan } from "@/db/schema/pengaturan";
 import { requireRole } from "@/lib/permissions";
 import { formatRupiah } from "@/lib/utils";
-import { generateNomorNota } from "@/lib/utils";
 import { CetakActions } from "./CetakActions";
+import { ensureNotaGabungan } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +26,24 @@ export default async function CetakNotaGabunganPage({
 
   if (ids.length === 0) redirect("/admin/nota-gabungan");
 
+  // Persist grup ke DB (idempoten). Validasi pelanggan-sama + belum-lunas + minimal 2 order
+  // ada di sini, jadi tidak perlu duplikat di view.
+  const grupResult = await ensureNotaGabungan({ orderIds: ids });
+  if ("error" in grupResult) {
+    return (
+      <div className="p-6 max-w-md mx-auto">
+        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 text-sm text-rose-900">
+          {grupResult.error}
+        </div>
+        <div className="mt-3">
+          <a href="/admin/nota-gabungan" className="text-sm text-brand font-bold">
+            ← Kembali ke picker
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   const orders = await db
     .select()
     .from(orderHeader)
@@ -33,17 +51,7 @@ export default async function CetakNotaGabunganPage({
 
   if (orders.length === 0) notFound();
 
-  // Wajib pelanggan sama
   const pelangganIds = [...new Set(orders.map((o) => o.pelangganId))];
-  if (pelangganIds.length !== 1 || pelangganIds[0] === null) {
-    return (
-      <div className="p-6 max-w-md mx-auto">
-        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 text-sm text-rose-900">
-          Order yang dipilih harus dari pelanggan yang sama (dan bukan walk-in tanpa pelanggan).
-        </div>
-      </div>
-    );
-  }
   const pel = await db.query.pelanggan.findFirst({
     where: eq(pelangganTable.id, pelangganIds[0]!),
   });
@@ -87,7 +95,7 @@ export default async function CetakNotaGabunganPage({
   const allLunas = sortedOrders.every((o) => o.statusBayar === "lunas");
   const adaBelumLunas = sortedOrders.some((o) => o.statusBayar !== "lunas");
 
-  const nomorGabungan = `GAB-${generateNomorNota("").replace("-", "")}`.slice(0, 18);
+  const nomorGabungan = grupResult.kode;
   const orderIdsSerialized = sortedOrders.map((o) => o.id);
   const tanggalCetak = new Date();
 

@@ -3,6 +3,7 @@ import { eq, desc, like, or, and, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { orderHeader, orderItem } from "@/db/schema/order";
 import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
+import { notaGabungan } from "@/db/schema/nota-gabungan";
 import { PageHeader } from "@/components/AppShell";
 import { requireRole } from "@/lib/permissions";
 import { PickerClient } from "./PickerClient";
@@ -47,6 +48,7 @@ export default async function NotaGabunganPage({
     statusBayar: string;
     totalEstimasi: number;
     totalGalon: number;
+    notaGabunganKode: string | null;
   }[] = [];
 
   if (pel) {
@@ -58,8 +60,10 @@ export default async function NotaGabunganPage({
         status: orderHeader.status,
         statusBayar: orderHeader.statusBayar,
         totalEstimasi: orderHeader.totalEstimasi,
+        notaGabunganKode: notaGabungan.kode,
       })
       .from(orderHeader)
+      .leftJoin(notaGabungan, eq(orderHeader.notaGabunganId, notaGabungan.id))
       .where(
         and(
           eq(orderHeader.pelangganId, pel.id),
@@ -90,6 +94,7 @@ export default async function NotaGabunganPage({
       statusBayar: r.statusBayar,
       totalEstimasi: r.totalEstimasi,
       totalGalon: galonMap.get(r.id) ?? 0,
+      notaGabunganKode: r.notaGabunganKode,
     }));
   }
 

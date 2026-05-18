@@ -3,6 +3,7 @@ import { pelanggan } from "./pelanggan";
 import { produk } from "./produk";
 import { user } from "./auth";
 import { transaksi } from "./transaksi";
+import { notaGabungan } from "./nota-gabungan";
 
 export const lokasiKurir = sqliteTable(
   "lokasi_kurir",
@@ -68,6 +69,9 @@ export const orderHeader = sqliteTable("order", {
     onDelete: "set null",
   }),
   loyaltiDipakai: integer("loyalti_dipakai").notNull().default(0),
+  notaGabunganId: integer("nota_gabungan_id").references(() => notaGabungan.id, {
+    onDelete: "set null",
+  }),
   trackingToken: text("tracking_token"),
   sheetRowId: text("sheet_row_id"),
   lastSyncedAt: integer("last_synced_at", { mode: "timestamp" }),
@@ -77,6 +81,7 @@ export const orderHeader = sqliteTable("order", {
   pelangganDateIdx: index("order_pelanggan_date_idx").on(t.pelangganId, t.createdAt),
   statusDateIdx: index("order_status_date_idx").on(t.status, t.createdAt),
   kurirStatusIdx: index("order_kurir_status_idx").on(t.kurirUserId, t.status),
+  notaGabunganIdx: index("order_nota_gabungan_idx").on(t.notaGabunganId, t.statusBayar),
 }));
 
 export const orderItem = sqliteTable("order_item", {

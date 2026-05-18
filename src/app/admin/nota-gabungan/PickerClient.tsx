@@ -12,6 +12,7 @@ type OrderRow = {
   statusBayar: string;
   totalEstimasi: number;
   totalGalon: number;
+  notaGabunganKode: string | null;
 };
 
 export function PickerClient({ orders }: { orders: OrderRow[] }) {
@@ -40,11 +41,14 @@ export function PickerClient({ orders }: { orders: OrderRow[] }) {
     });
   }
 
+  function isEligible(o: OrderRow) {
+    return o.statusBayar !== "lunas" && !o.notaGabunganKode;
+  }
   function pickAll() {
-    setPicked(new Set(orders.map((o) => o.id)));
+    setPicked(new Set(orders.filter(isEligible).map((o) => o.id)));
   }
   function pickPiutang() {
-    setPicked(new Set(orders.filter((o) => o.statusBayar !== "lunas").map((o) => o.id)));
+    setPicked(new Set(orders.filter(isEligible).map((o) => o.id)));
   }
   function clearPick() {
     setPicked(new Set());
@@ -94,13 +98,29 @@ export function PickerClient({ orders }: { orders: OrderRow[] }) {
           <ul className="divide-y divide-line">
             {orders.map((o) => {
               const lunas = o.statusBayar === "lunas";
+              const sudahDiGrup = !!o.notaGabunganKode;
+              const disabled = lunas || sudahDiGrup;
               return (
                 <li key={o.id}>
-                  <label className="flex items-center gap-3 p-3 hover:bg-[color:var(--surface2)] cursor-pointer">
+                  <label
+                    className={`flex items-center gap-3 p-3 ${
+                      disabled
+                        ? "opacity-60 cursor-not-allowed bg-[color:var(--surface2)]/50"
+                        : "hover:bg-[color:var(--surface2)] cursor-pointer"
+                    }`}
+                    title={
+                      sudahDiGrup
+                        ? `Sudah di grup ${o.notaGabunganKode}. Lepas dari grup dulu untuk pilih ulang.`
+                        : lunas
+                          ? "Sudah lunas — tidak bisa digabung"
+                          : ""
+                    }
+                  >
                     <input
                       type="checkbox"
                       checked={picked.has(o.id)}
-                      onChange={() => toggle(o.id)}
+                      onChange={() => !disabled && toggle(o.id)}
+                      disabled={disabled}
                       className="w-4 h-4"
                     />
                     <div className="flex-1 min-w-0">
@@ -117,6 +137,11 @@ export function PickerClient({ orders }: { orders: OrderRow[] }) {
                         })}{" "}
                         · {o.totalGalon} galon
                       </div>
+                      {sudahDiGrup && (
+                        <div className="text-[10px] text-amber-700 mt-0.5 font-bold">
+                          📎 Di grup {o.notaGabunganKode}
+                        </div>
+                      )}
                     </div>
                     <div className="text-right">
                       <div className="font-bold text-sm">{formatRupiah(o.totalEstimasi)}</div>
