@@ -168,11 +168,19 @@ export default async function PembayaranPage({
 
   return (
     <div className="space-y-3">
-      <div>
-        <h1 className="text-xl font-bold">Konfirmasi Pembayaran</h1>
-        <p className="text-sm text-[color:var(--muted)]">
-          Review bukti pembayaran, tandai lunas piutang, atau lihat history.
-        </p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-xl font-bold">Konfirmasi Pembayaran</h1>
+          <p className="text-sm text-[color:var(--muted)]">
+            Review bukti pembayaran, tandai lunas piutang, atau lihat history.
+          </p>
+        </div>
+        <a
+          href="/admin/nota-gabungan"
+          className="text-xs px-3 py-2 bg-violet-100 text-violet-800 rounded-md font-bold inline-flex items-center gap-1"
+        >
+          Buat Nota Gabungan →
+        </a>
       </div>
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <DateRangeFilter

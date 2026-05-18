@@ -16,6 +16,7 @@ import {
   TrendingUp,
   Coins,
   Banknote,
+  FileStack,
   Cloud,
   Wrench,
   MessageSquareWarning,
@@ -163,6 +164,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           icon: <Coins size={16} />,
           iconColor: "text-amber-600",
           badgeKey: "bonusPending",
+        },
+        {
+          href: "/admin/nota-gabungan",
+          label: "Nota Gabungan",
+          icon: <FileStack size={16} />,
+          iconColor: "text-violet-600",
         },
         {
           href: "/admin/laporan",
