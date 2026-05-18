@@ -1,7 +1,8 @@
 import { db } from "@/db";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { produk } from "@/db/schema/produk";
 import { orderHeader, orderItem } from "@/db/schema/order";
+import { user as userTable } from "@/db/schema/auth";
 import { PageHeader } from "@/components/AppShell";
 import { POSClient, type Preset } from "./POSClient";
 
@@ -13,9 +14,13 @@ export default async function POSPage({
   searchParams: Promise<{ orderId?: string }>;
 }) {
   const sp = await searchParams;
-  const [produkList, pelangganList] = await Promise.all([
+  const [produkList, pelangganList, kurirList] = await Promise.all([
     db.query.produk.findMany({ where: eq(produk.aktif, true), orderBy: (p, { asc }) => [asc(p.id)] }),
     db.query.pelanggan.findMany({ orderBy: (p, { asc }) => [asc(p.nama)] }),
+    db
+      .select({ id: userTable.id, name: userTable.name })
+      .from(userTable)
+      .where(inArray(userTable.role, ["kurir", "admin", "kasir"])),
   ]);
 
   let preset: Preset | undefined;
@@ -60,7 +65,13 @@ export default async function POSPage({
       />
       <POSClient
         produkList={produkList}
-        pelangganList={pelangganList.map((p) => ({ id: p.id, nama: p.nama, telp: p.telp }))}
+        pelangganList={pelangganList.map((p) => ({
+          id: p.id,
+          nama: p.nama,
+          telp: p.telp,
+          alamat: p.alamat,
+        }))}
+        kurirList={kurirList}
         preset={preset}
       />
     </div>

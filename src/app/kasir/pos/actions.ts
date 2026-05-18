@@ -39,6 +39,7 @@ export type CreateTransaksiInput = {
   pengantaran?: "pickup" | "antar";
   alamatAntar?: string;
   jadwalAntar?: string;
+  kurirUserId?: string;
   catatan?: string;
   refOrderId?: number;
   redeemLoyalti?: number; // saldo yang dipakai oleh pelanggan
@@ -61,8 +62,18 @@ export async function createTransaksi(input: CreateTransaksiInput) {
   if (isPiutang && !input.pelangganId) {
     throw new Error("Bayar nanti (piutang) wajib pilih pelanggan terdaftar");
   }
-  if (pengantaran === "antar" && !input.alamatAntar?.trim()) {
-    throw new Error("Antar ke alamat: isi alamat dulu");
+  // Fallback alamat: kalau antar dan alamat kosong, pakai alamat pelanggan tersimpan
+  let resolvedAlamat = input.alamatAntar?.trim() ?? "";
+  if (pengantaran === "antar" && !resolvedAlamat && input.pelangganId) {
+    const pel = await db.query.pelanggan.findFirst({
+      where: eq(pelangganTable.id, input.pelangganId),
+    });
+    resolvedAlamat = pel?.alamat?.trim() ?? "";
+  }
+  if (pengantaran === "antar" && !resolvedAlamat) {
+    throw new Error(
+      "Antar ke alamat: isi alamat (atau pilih pelanggan yang sudah punya alamat tersimpan)",
+    );
   }
   if (isPayOnline && !input.pelangganId) {
     throw new Error(
@@ -76,7 +87,7 @@ export async function createTransaksi(input: CreateTransaksiInput) {
   //   pickup + piutang                    → order POS langsung selesai, statusBayar=belum
   //   pickup + cash                       → transaksi lunas (existing)
   if (pengantaran === "antar") {
-    return createOrderAntar({ session, input, total });
+    return createOrderAntar({ session, input, total, resolvedAlamat });
   }
   if (isPayOnline) {
     return createOrderUntukBayarOnline({ session, input, total, subtotal });
@@ -370,6 +381,7 @@ async function createOrderAntar(args: {
   session: Awaited<ReturnType<typeof requireRole>>;
   input: CreateTransaksiInput;
   total: number;
+  resolvedAlamat: string;
 }): Promise<{
   type: "order";
   orderId: number;
@@ -377,7 +389,7 @@ async function createOrderAntar(args: {
   total: number;
   payUrl: string;
 }> {
-  const { session, input, total } = args;
+  const { session, input, total, resolvedAlamat } = args;
   const nomorOrder = generateNomorNota("ORD");
   const isPiutang = input.metodeBayar === "piutang";
   const isCash = input.metodeBayar === "cash";
@@ -390,7 +402,7 @@ async function createOrderAntar(args: {
         nomorOrder,
         pelangganId: input.pelangganId,
         sumber: "walk-in",
-        alamatAntar: input.alamatAntar!,
+        alamatAntar: resolvedAlamat,
         jadwalAntar: input.jadwalAntar ? new Date(input.jadwalAntar) : null,
         status: "pending",
         tipePengantaran: "antar-saja",
@@ -404,6 +416,7 @@ async function createOrderAntar(args: {
         statusBayar: isCash ? "lunas" : "belum",
         bayarAt: isCash ? new Date() : null,
         bayarDikonfirmasiOleh: isCash ? session.user.id : null,
+        kurirUserId: input.kurirUserId ?? null,
         trackingToken: generateTrackingToken(),
       })
       .returning()
@@ -436,7 +449,7 @@ async function createOrderAntar(args: {
     `🆕 *${nomorOrder}* (POS antar · ${badge})`,
     `Pelanggan: ${pelNama}`,
     `Total est: ${total.toLocaleString("id-ID")}`,
-    input.alamatAntar ? `Alamat: ${input.alamatAntar}` : "",
+    resolvedAlamat ? `Alamat: ${resolvedAlamat}` : "",
     `Kasir: ${session.user.name}`,
   ]
     .filter(Boolean)

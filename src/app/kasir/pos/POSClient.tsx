@@ -6,7 +6,8 @@ import type { Produk } from "@/db/schema/produk";
 import { formatRupiah } from "@/lib/utils";
 import { createTransaksi, type CartItem } from "./actions";
 
-type PelangganOpt = { id: number; nama: string; telp: string | null };
+type PelangganOpt = { id: number; nama: string; telp: string | null; alamat: string | null };
+type KurirOpt = { id: string; name: string };
 type Jenis = "isi_ulang" | "tukar" | "beli_baru";
 
 export type Preset = {
@@ -19,10 +20,12 @@ export type Preset = {
 export function POSClient({
   produkList,
   pelangganList,
+  kurirList,
   preset,
 }: {
   produkList: Produk[];
   pelangganList: PelangganOpt[];
+  kurirList: KurirOpt[];
   preset?: Preset;
 }) {
   const [pelangganId, setPelangganId] = useState<number | null>(preset?.pelangganId ?? null);
@@ -33,6 +36,7 @@ export function POSClient({
   const [pengantaran, setPengantaran] = useState<"pickup" | "antar">("pickup");
   const [alamatAntar, setAlamatAntar] = useState("");
   const [jadwalAntar, setJadwalAntar] = useState("");
+  const [kurirUserId, setKurirUserId] = useState<string>("");
   const [catatan, setCatatan] = useState("");
   const [pending, startTransition] = useTransition();
   const [lastNota, setLastNota] = useState<{ id: number; nota: string; total: number } | null>(null);
@@ -90,8 +94,9 @@ export function POSClient({
       setError("Bayar nanti (piutang) wajib pilih pelanggan terdaftar");
       return;
     }
-    if (pengantaran === "antar" && !alamatAntar.trim()) {
-      setError("Antar ke alamat: isi alamat dulu");
+    const pelAlamat = pelangganList.find((p) => p.id === pelangganId)?.alamat?.trim() ?? "";
+    if (pengantaran === "antar" && !alamatAntar.trim() && !pelAlamat) {
+      setError("Antar ke alamat: isi alamat (atau pilih pelanggan yang sudah punya alamat tersimpan)");
       return;
     }
     startTransition(async () => {
@@ -102,8 +107,9 @@ export function POSClient({
           diskon,
           metodeBayar,
           pengantaran,
-          alamatAntar: pengantaran === "antar" ? alamatAntar.trim() : undefined,
+          alamatAntar: pengantaran === "antar" ? alamatAntar.trim() || undefined : undefined,
           jadwalAntar: pengantaran === "antar" && jadwalAntar ? jadwalAntar : undefined,
+          kurirUserId: pengantaran === "antar" && kurirUserId ? kurirUserId : undefined,
           catatan: catatan || undefined,
           refOrderId: preset?.refOrderId,
         });
@@ -125,6 +131,7 @@ export function POSClient({
         setPelangganQ("");
         setAlamatAntar("");
         setJadwalAntar("");
+        setKurirUserId("");
         setPengantaran("pickup");
         setMetodeBayar("cash");
       } catch (e) {
@@ -300,26 +307,51 @@ export function POSClient({
               </div>
             </div>
 
-            {pengantaran === "antar" && (
-              <div className="space-y-2 bg-[color:var(--surface2)] rounded-md p-2">
-                <textarea
-                  value={alamatAntar}
-                  onChange={(e) => setAlamatAntar(e.target.value)}
-                  placeholder="Alamat antar (wajib)"
-                  rows={2}
-                  className="w-full px-2 py-1 border border-line rounded text-xs bg-surface"
-                />
-                <input
-                  type="datetime-local"
-                  value={jadwalAntar}
-                  onChange={(e) => setJadwalAntar(e.target.value)}
-                  className="w-full px-2 py-1 border border-line rounded text-xs bg-surface"
-                />
-                <div className="text-[10px] text-[color:var(--muted)]">
-                  Order akan masuk antrian kurir. Admin assign kurir di /admin/order.
+            {pengantaran === "antar" && (() => {
+              const pel = pelangganList.find((p) => p.id === pelangganId);
+              const alamatTersimpan = pel?.alamat?.trim() ?? "";
+              return (
+                <div className="space-y-2 bg-[color:var(--surface2)] rounded-md p-2">
+                  {alamatTersimpan && (
+                    <div className="text-[10px] text-emerald-700 bg-emerald-50 rounded px-2 py-1">
+                      📍 Alamat pelanggan: <b>{alamatTersimpan}</b>
+                      <div className="text-[10px] text-[color:var(--muted)] mt-0.5">
+                        Kosongkan kolom di bawah untuk pakai alamat ini.
+                      </div>
+                    </div>
+                  )}
+                  <textarea
+                    value={alamatAntar}
+                    onChange={(e) => setAlamatAntar(e.target.value)}
+                    placeholder={
+                      alamatTersimpan
+                        ? "Alamat antar (kosongkan = pakai alamat pelanggan)"
+                        : "Alamat antar (wajib)"
+                    }
+                    rows={2}
+                    className="w-full px-2 py-1 border border-line rounded text-xs bg-surface"
+                  />
+                  <input
+                    type="datetime-local"
+                    value={jadwalAntar}
+                    onChange={(e) => setJadwalAntar(e.target.value)}
+                    className="w-full px-2 py-1 border border-line rounded text-xs bg-surface"
+                  />
+                  <select
+                    value={kurirUserId}
+                    onChange={(e) => setKurirUserId(e.target.value)}
+                    className="w-full px-2 py-1 border border-line rounded text-xs bg-surface"
+                  >
+                    <option value="">— Kurir: belum di-assign (admin pilih nanti) —</option>
+                    {kurirList.map((k) => (
+                      <option key={k.id} value={k.id}>
+                        {k.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             <div>
               <div className="text-[10px] font-bold tracking-widest text-[color:var(--muted)] mb-1">
