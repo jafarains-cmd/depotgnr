@@ -9,8 +9,11 @@ import { orderHeader, orderItem } from "@/db/schema/order";
 import { generateTrackingToken } from "@/lib/tracking";
 import { requireRole } from "@/lib/permissions";
 import { generateNomorNota } from "@/lib/utils";
-import { notifAdminTelegram } from "@/lib/telegram";
-import { pushTransaksi } from "@/lib/sheets";
+import { notifAdminTelegram, notifGrupOrder } from "@/lib/telegram";
+import { sendWhatsAppGroup } from "@/lib/whatsapp";
+import { pengaturan as pengaturanTable } from "@/db/schema/pengaturan";
+import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
+import { pushTransaksi, pushOrder } from "@/lib/sheets";
 import {
   earnLoyalty,
   redeemLoyalty,
@@ -32,7 +35,10 @@ export type CreateTransaksiInput = {
   pelangganId: number | null;
   items: CartItem[];
   diskon: number;
-  metodeBayar: "cash" | "transfer" | "qris";
+  metodeBayar: "cash" | "transfer" | "qris" | "piutang";
+  pengantaran?: "pickup" | "antar";
+  alamatAntar?: string;
+  jadwalAntar?: string;
   catatan?: string;
   refOrderId?: number;
   redeemLoyalti?: number; // saldo yang dipakai oleh pelanggan
@@ -47,22 +53,36 @@ export async function createTransaksi(input: CreateTransaksiInput) {
   const redeem = Math.max(0, Math.min(input.redeemLoyalti ?? 0, subtotal - (input.diskon ?? 0)));
   const total = Math.max(0, subtotal - (input.diskon ?? 0) - redeem);
 
-  // Bayar online (transfer/qris) tidak langsung lunas — pelanggan harus upload bukti.
-  // Karena itu kita pakai jalur ORDER walk-in (yang sudah punya flow upload bukti + konfirmasi
-  // di /pembayaran), bukan transaksi.
+  const pengantaran = input.pengantaran ?? "pickup";
+  const isPiutang = input.metodeBayar === "piutang";
   const isPayOnline = input.metodeBayar === "transfer" || input.metodeBayar === "qris";
+
+  // Validasi awal
+  if (isPiutang && !input.pelangganId) {
+    throw new Error("Bayar nanti (piutang) wajib pilih pelanggan terdaftar");
+  }
+  if (pengantaran === "antar" && !input.alamatAntar?.trim()) {
+    throw new Error("Antar ke alamat: isi alamat dulu");
+  }
+  if (isPayOnline && !input.pelangganId) {
+    throw new Error(
+      "Bayar transfer/QRIS butuh pelanggan terdaftar (untuk upload bukti bayar). Pilih pelanggan dulu, atau pakai metode CASH.",
+    );
+  }
+
+  // Routing:
+  //   antar (apapun bayarnya)             → order delivery
+  //   pickup + transfer/qris              → order POS upload bukti (existing)
+  //   pickup + piutang                    → order POS langsung selesai, statusBayar=belum
+  //   pickup + cash                       → transaksi lunas (existing)
+  if (pengantaran === "antar") {
+    return createOrderAntar({ session, input, total });
+  }
   if (isPayOnline) {
-    if (!input.pelangganId) {
-      throw new Error(
-        "Bayar transfer/QRIS butuh pelanggan terdaftar (untuk upload bukti bayar). Pilih pelanggan dulu, atau pakai metode CASH.",
-      );
-    }
-    return createOrderUntukBayarOnline({
-      session,
-      input,
-      total,
-      subtotal,
-    });
+    return createOrderUntukBayarOnline({ session, input, total, subtotal });
+  }
+  if (isPiutang) {
+    return createOrderPickupPiutang({ session, input, total });
   }
 
   // === Cash flow (existing) ===
@@ -89,7 +109,7 @@ export async function createTransaksi(input: CreateTransaksiInput) {
         subtotal,
         diskon: input.diskon ?? 0,
         total,
-        metodeBayar: input.metodeBayar,
+        metodeBayar: "cash",
         status: "lunas",
         catatan: input.catatan ?? null,
         refOrderId: input.refOrderId ?? null,
@@ -206,7 +226,7 @@ async function createOrderUntukBayarOnline(args: {
         tipePengantaran: "antar-saja",
         totalEstimasi: total,
         catatan: input.catatan ?? null,
-        metodeBayar: input.metodeBayar,
+        metodeBayar: input.metodeBayar as "transfer" | "qris",
         statusBayar: "belum",
         trackingToken: generateTrackingToken(),
         kurirUserId: session.user.id, // catat siapa kasir yang handle
@@ -238,7 +258,7 @@ async function createOrderUntukBayarOnline(args: {
   bestEffort(
     "notifAdminTelegram(pos-online)",
     notifAdminTelegram(
-      `🧾 *${nomorOrder}* (POS · ${input.metodeBayar.toUpperCase()})\nTotal: ${total.toLocaleString("id-ID")}\nKasir: ${session.user.name}\nMenunggu pelanggan upload bukti bayar.`,
+      `🧾 *${nomorOrder}* (POS · ${(input.metodeBayar ?? "").toUpperCase()})\nTotal: ${total.toLocaleString("id-ID")}\nKasir: ${session.user.name}\nMenunggu pelanggan upload bukti bayar.`,
     ),
   );
 
@@ -252,6 +272,206 @@ async function createOrderUntukBayarOnline(args: {
     total,
     payUrl: `/pelanggan/order/${orderId}/bayar`,
   };
+}
+
+/**
+ * POS pickup + bayar nanti (piutang). Pelanggan ambil galon langsung di depot
+ * dan janji bayar nanti. Tidak ada bonus kurir (alamat=depot). Stok turun.
+ */
+async function createOrderPickupPiutang(args: {
+  session: Awaited<ReturnType<typeof requireRole>>;
+  input: CreateTransaksiInput;
+  total: number;
+}): Promise<{
+  type: "order";
+  orderId: number;
+  nomorOrder: string;
+  total: number;
+  payUrl: string;
+}> {
+  const { session, input, total } = args;
+  const nomorOrder = generateNomorNota("POS");
+
+  const orderId = db.transaction((tx) => {
+    const [o] = tx
+      .insert(orderHeader)
+      .values({
+        nomorOrder,
+        pelangganId: input.pelangganId,
+        sumber: "walk-in",
+        alamatAntar: "(diambil di depot)",
+        status: "selesai",
+        diantarAt: new Date(),
+        selesaiAt: new Date(),
+        tipePengantaran: "antar-saja",
+        totalEstimasi: total,
+        catatan: input.catatan ?? null,
+        statusBayar: "belum",
+        trackingToken: generateTrackingToken(),
+        kurirUserId: session.user.id,
+      })
+      .returning()
+      .all();
+
+    for (const it of input.items) {
+      tx.insert(orderItem)
+        .values({
+          orderId: o.id,
+          produkId: it.produkId,
+          qty: it.qty,
+          jenis: it.jenis,
+          hargaEstimasi: it.hargaSatuan,
+        })
+        .run();
+
+      adjustStok(tx, it.produkId, "terisi", -it.qty, it.jenis, null, o.id, session.user.id);
+      if (it.jenis === "tukar") {
+        adjustStok(tx, it.produkId, "kosong", +it.qty, it.jenis, null, o.id, session.user.id);
+      }
+    }
+
+    return o.id;
+  });
+
+  const pelNama = await getPelangganNama(input.pelangganId);
+  const notifText = [
+    `📒 *${nomorOrder}* (POS · PIUTANG)`,
+    `Pelanggan: ${pelNama}`,
+    `Total: ${total.toLocaleString("id-ID")}`,
+    `Bayar nanti — tunggu pelanggan lunasi.`,
+    `Kasir: ${session.user.name}`,
+  ].join("\n");
+  bestEffort("notifAdminTelegram(pos-piutang)", notifAdminTelegram(notifText));
+  bestEffort("notifGrupOrder(pos-piutang)", notifGrupOrder("pending", notifText));
+  bestEffort("notifWaGroup(pos-piutang)", notifWaGroupOrder(notifText));
+
+  revalidatePath("/kasir/pos");
+  revalidatePath("/pembayaran");
+  revalidatePath("/admin/transaksi");
+  revalidatePath("/admin/dashboard");
+
+  return {
+    type: "order",
+    orderId,
+    nomorOrder,
+    total,
+    payUrl: `/pelanggan/order/${orderId}/bayar`,
+  };
+}
+
+/**
+ * POS dengan pengantaran antar — kasir buat order, kurir akan antar.
+ * Stok tetap turun langsung (galon disiapkan untuk diantar).
+ * - cash: statusBayar=lunas (pelanggan bayar di depot sebelum antar)
+ * - transfer/qris: statusBayar=belum (pelanggan upload bukti)
+ * - piutang: statusBayar=belum (bayar saat barang sampai / nanti)
+ */
+async function createOrderAntar(args: {
+  session: Awaited<ReturnType<typeof requireRole>>;
+  input: CreateTransaksiInput;
+  total: number;
+}): Promise<{
+  type: "order";
+  orderId: number;
+  nomorOrder: string;
+  total: number;
+  payUrl: string;
+}> {
+  const { session, input, total } = args;
+  const nomorOrder = generateNomorNota("ORD");
+  const isPiutang = input.metodeBayar === "piutang";
+  const isCash = input.metodeBayar === "cash";
+  const isOnline = input.metodeBayar === "transfer" || input.metodeBayar === "qris";
+
+  const orderId = db.transaction((tx) => {
+    const [o] = tx
+      .insert(orderHeader)
+      .values({
+        nomorOrder,
+        pelangganId: input.pelangganId,
+        sumber: "walk-in",
+        alamatAntar: input.alamatAntar!,
+        jadwalAntar: input.jadwalAntar ? new Date(input.jadwalAntar) : null,
+        status: "pending",
+        tipePengantaran: "antar-saja",
+        totalEstimasi: total,
+        catatan: input.catatan ?? null,
+        metodeBayar: isOnline
+          ? (input.metodeBayar as "transfer" | "qris")
+          : isCash
+            ? "cash"
+            : null,
+        statusBayar: isCash ? "lunas" : "belum",
+        bayarAt: isCash ? new Date() : null,
+        bayarDikonfirmasiOleh: isCash ? session.user.id : null,
+        trackingToken: generateTrackingToken(),
+      })
+      .returning()
+      .all();
+
+    for (const it of input.items) {
+      tx.insert(orderItem)
+        .values({
+          orderId: o.id,
+          produkId: it.produkId,
+          qty: it.qty,
+          jenis: it.jenis,
+          hargaEstimasi: it.hargaSatuan,
+        })
+        .run();
+    }
+
+    return o.id;
+  });
+
+  pushOrder(orderId).catch(() => {});
+
+  const pelNama = await getPelangganNama(input.pelangganId);
+  const badge = isPiutang
+    ? "PIUTANG"
+    : isCash
+      ? "CASH-LUNAS"
+      : (input.metodeBayar ?? "").toUpperCase();
+  const notifText = [
+    `🆕 *${nomorOrder}* (POS antar · ${badge})`,
+    `Pelanggan: ${pelNama}`,
+    `Total est: ${total.toLocaleString("id-ID")}`,
+    input.alamatAntar ? `Alamat: ${input.alamatAntar}` : "",
+    `Kasir: ${session.user.name}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  bestEffort("notifGrupOrder(pos-antar)", notifGrupOrder("pending", notifText));
+  bestEffort("notifWaGroup(pos-antar)", notifWaGroupOrder(notifText));
+
+  revalidatePath("/kasir/pos");
+  revalidatePath("/kasir/order");
+  revalidatePath("/admin/order");
+  revalidatePath("/pembayaran");
+
+  return {
+    type: "order",
+    orderId,
+    nomorOrder,
+    total,
+    payUrl: isOnline ? `/pelanggan/order/${orderId}/bayar` : `/admin/order`,
+  };
+}
+
+async function getPelangganNama(pelangganId: number | null): Promise<string> {
+  if (!pelangganId) return "Walk-in";
+  const p = await db.query.pelanggan.findFirst({
+    where: eq(pelangganTable.id, pelangganId),
+  });
+  return p?.nama ?? "Walk-in";
+}
+
+async function notifWaGroupOrder(text: string) {
+  const row = await db.query.pengaturan.findFirst({
+    where: eq(pengaturanTable.key, "waGroupOrderMasuk"),
+  });
+  const groupId = row?.value?.trim();
+  if (groupId) await sendWhatsAppGroup(groupId, text);
 }
 
 function adjustStok(

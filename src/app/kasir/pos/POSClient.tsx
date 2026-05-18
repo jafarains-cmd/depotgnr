@@ -29,7 +29,10 @@ export function POSClient({
   const [pelangganQ, setPelangganQ] = useState("");
   const [cart, setCart] = useState<CartItem[]>(preset?.cart ?? []);
   const [diskon, setDiskon] = useState(0);
-  const [metodeBayar, setMetodeBayar] = useState<"cash" | "transfer" | "qris">("cash");
+  const [metodeBayar, setMetodeBayar] = useState<"cash" | "transfer" | "qris" | "piutang">("cash");
+  const [pengantaran, setPengantaran] = useState<"pickup" | "antar">("pickup");
+  const [alamatAntar, setAlamatAntar] = useState("");
+  const [jadwalAntar, setJadwalAntar] = useState("");
   const [catatan, setCatatan] = useState("");
   const [pending, startTransition] = useTransition();
   const [lastNota, setLastNota] = useState<{ id: number; nota: string; total: number } | null>(null);
@@ -83,6 +86,14 @@ export function POSClient({
       setError("Tambahkan item dulu");
       return;
     }
+    if (metodeBayar === "piutang" && !pelangganId) {
+      setError("Bayar nanti (piutang) wajib pilih pelanggan terdaftar");
+      return;
+    }
+    if (pengantaran === "antar" && !alamatAntar.trim()) {
+      setError("Antar ke alamat: isi alamat dulu");
+      return;
+    }
     startTransition(async () => {
       try {
         const res = await createTransaksi({
@@ -90,6 +101,9 @@ export function POSClient({
           items: cart,
           diskon,
           metodeBayar,
+          pengantaran,
+          alamatAntar: pengantaran === "antar" ? alamatAntar.trim() : undefined,
+          jadwalAntar: pengantaran === "antar" && jadwalAntar ? jadwalAntar : undefined,
           catatan: catatan || undefined,
           refOrderId: preset?.refOrderId,
         });
@@ -109,6 +123,10 @@ export function POSClient({
         setCatatan("");
         setPelangganId(null);
         setPelangganQ("");
+        setAlamatAntar("");
+        setJadwalAntar("");
+        setPengantaran("pickup");
+        setMetodeBayar("cash");
       } catch (e) {
         setError(e instanceof Error ? e.message : "Gagal");
       }
@@ -256,20 +274,79 @@ export function POSClient({
             </div>
             <Row label="Total" value={formatRupiah(total)} bold />
 
-            <div className="grid grid-cols-3 gap-1 text-xs">
-              {(["cash", "transfer", "qris"] as const).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setMetodeBayar(m)}
-                  className={`py-1.5 rounded-md uppercase ${
-                    metodeBayar === m
-                      ? "bg-brand-600 text-white"
-                      : "bg-[color:var(--surface2)] text-[color:var(--muted)]"
-                  }`}
-                >
-                  {m}
-                </button>
-              ))}
+            <div>
+              <div className="text-[10px] font-bold tracking-widest text-[color:var(--muted)] mb-1">
+                PENGANTARAN
+              </div>
+              <div className="grid grid-cols-2 gap-1 text-xs">
+                {(
+                  [
+                    { v: "pickup", label: "Ambil di depot" },
+                    { v: "antar", label: "Antar ke alamat" },
+                  ] as const
+                ).map((opt) => (
+                  <button
+                    key={opt.v}
+                    onClick={() => setPengantaran(opt.v)}
+                    className={`py-1.5 rounded-md ${
+                      pengantaran === opt.v
+                        ? "bg-brand-600 text-white"
+                        : "bg-[color:var(--surface2)] text-[color:var(--muted)]"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {pengantaran === "antar" && (
+              <div className="space-y-2 bg-[color:var(--surface2)] rounded-md p-2">
+                <textarea
+                  value={alamatAntar}
+                  onChange={(e) => setAlamatAntar(e.target.value)}
+                  placeholder="Alamat antar (wajib)"
+                  rows={2}
+                  className="w-full px-2 py-1 border border-line rounded text-xs bg-surface"
+                />
+                <input
+                  type="datetime-local"
+                  value={jadwalAntar}
+                  onChange={(e) => setJadwalAntar(e.target.value)}
+                  className="w-full px-2 py-1 border border-line rounded text-xs bg-surface"
+                />
+                <div className="text-[10px] text-[color:var(--muted)]">
+                  Order akan masuk antrian kurir. Admin assign kurir di /admin/order.
+                </div>
+              </div>
+            )}
+
+            <div>
+              <div className="text-[10px] font-bold tracking-widest text-[color:var(--muted)] mb-1">
+                PEMBAYARAN
+              </div>
+              <div className="grid grid-cols-4 gap-1 text-xs">
+                {(["cash", "transfer", "qris", "piutang"] as const).map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setMetodeBayar(m)}
+                    className={`py-1.5 rounded-md uppercase ${
+                      metodeBayar === m
+                        ? m === "piutang"
+                          ? "bg-amber-600 text-white"
+                          : "bg-brand-600 text-white"
+                        : "bg-[color:var(--surface2)] text-[color:var(--muted)]"
+                    }`}
+                  >
+                    {m === "piutang" ? "Nanti" : m}
+                  </button>
+                ))}
+              </div>
+              {metodeBayar === "piutang" && (
+                <div className="text-[10px] text-amber-700 mt-1">
+                  ⚠ Pelanggan ambil/terima galon, bayar nanti. Wajib pelanggan terdaftar.
+                </div>
+              )}
             </div>
 
             <textarea
