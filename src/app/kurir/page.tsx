@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { orderHeader } from "@/db/schema/order";
 import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
 import { requireRole } from "@/lib/permissions";
-import { MapPin, Phone, Clock, ChevronRight, Truck, Check, Coins } from "lucide-react";
+import { MapPin, Phone, Clock, ChevronRight, Truck, Check, Coins, History } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
 import { getBonusConfig, summaryBonusKurir } from "@/lib/bonus";
 
@@ -88,6 +88,26 @@ export default async function KurirHomePage() {
           </div>
         </div>
       </div>
+
+      <Link
+        href="/kurir/riwayat"
+        className="block bg-surface border border-line rounded-2xl p-3 hover:border-brand transition"
+      >
+        <div className="flex items-center justify-between">
+          <div className="inline-flex items-center gap-2">
+            <span className="w-9 h-9 rounded-xl bg-[color:var(--surface2)] grid place-items-center text-brand">
+              <History size={16} />
+            </span>
+            <div>
+              <div className="text-sm font-bold">Riwayat Pengantaran</div>
+              <div className="text-[11px] text-[color:var(--muted)]">
+                Filter pelanggan, tanggal, status, bonus
+              </div>
+            </div>
+          </div>
+          <ChevronRight size={16} className="text-[color:var(--muted)]" />
+        </div>
+      </Link>
 
       {/* Bonus card (kalau visibility on) */}
       {bonus && (
