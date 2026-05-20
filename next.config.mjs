@@ -1,6 +1,5 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   serverExternalPackages: ["better-sqlite3"],
   experimental: {
     // Default 1MB terlalu kecil untuk upload bukti foto dari kamera HP.
