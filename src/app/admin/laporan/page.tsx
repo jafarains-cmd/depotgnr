@@ -6,6 +6,7 @@ import { pengeluaran } from "@/db/schema/pengeluaran";
 import { PageHeader } from "@/components/AppShell";
 import { formatRupiah } from "@/lib/utils";
 import { ExportActions } from "./ExportActions";
+import { LaporanNav } from "./LaporanNav";
 
 export const dynamic = "force-dynamic";
 
@@ -121,6 +122,7 @@ export default async function LaporanPage({
       <div className="no-print">
         <PageHeader title="Laporan" description="Omzet, transaksi, dan breakdown produk." />
       </div>
+      <LaporanNav active="/admin/laporan" />
 
       <div className="print-only text-center border-b border-line pb-3">
         <div className="text-xl font-extrabold">LAPORAN DEPOT AIR MINUM</div>
@@ -158,9 +160,7 @@ export default async function LaporanPage({
         </button>
       </form>
 
-      <div className="no-print">
-        <ExportActions from={fromStr} to={toStr} />
-      </div>
+      <ExportActions jenis="ringkasan" params={{ from: fromStr, to: toStr }} />
 
       <div className="grid sm:grid-cols-3 gap-3">
         <Card label="Total Omzet" value={formatRupiah(ringkasan.totalOmzet)} color="bg-emerald-50 text-emerald-700" />
