@@ -14,6 +14,7 @@ import { user as userTableSchema } from "@/db/schema/auth";
 import { requireRole } from "@/lib/permissions";
 import { TitipanSection } from "./TitipanSection";
 import { LinkUserSection } from "./LinkUserSection";
+import { LoyaltyHistoryTable } from "./LoyaltyHistoryTable";
 import { formatRupiah } from "@/lib/utils";
 import { LoyaltyAdjustForm } from "./LoyaltyAdjustForm";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
@@ -21,15 +22,6 @@ import { Pagination } from "@/components/Pagination";
 import { parseLimit, parsePage, getPagination } from "@/lib/page-size";
 
 export const dynamic = "force-dynamic";
-
-const TIPE_LABEL: Record<string, { label: string; color: string }> = {
-  earn: { label: "Earn", color: "text-emerald-600" },
-  redeem: { label: "Redeem", color: "text-red-600" },
-  referral_in: { label: "Referral", color: "text-blue-600" },
-  referral_bonus: { label: "Bonus Referral", color: "text-blue-600" },
-  stamp_reward: { label: "Stamp", color: "text-amber-600" },
-  adjust: { label: "Adjust", color: "text-purple-600" },
-};
 
 export default async function PelangganDetailPage({
   params,
@@ -228,46 +220,17 @@ export default async function PelangganDetailPage({
             Belum ada mutasi loyalty.
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left text-xs">
-              <tr>
-                <th className="p-3">Tanggal</th>
-                <th className="p-3">Tipe</th>
-                <th className="p-3">Deskripsi</th>
-                <th className="p-3 text-right">Jumlah</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {mutasi.map((m) => {
-                const tipe = TIPE_LABEL[m.tipe] ?? { label: m.tipe, color: "text-[color:var(--muted)]" };
-                return (
-                  <tr key={m.id}>
-                    <td className="p-3 text-xs whitespace-nowrap">
-                      {m.createdAt.toLocaleString("id-ID", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </td>
-                    <td className={`p-3 text-xs font-bold ${tipe.color}`}>{tipe.label}</td>
-                    <td className="p-3 text-xs text-[color:var(--muted)] max-w-xs truncate">
-                      {m.deskripsi ?? "-"}
-                    </td>
-                    <td
-                      className={`p-3 text-right font-mono font-bold whitespace-nowrap ${
-                        m.jumlah > 0 ? "text-emerald-600" : "text-red-600"
-                      }`}
-                    >
-                      {m.jumlah > 0 ? "+" : ""}
-                      {formatRupiah(m.jumlah)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <LoyaltyHistoryTable
+            mutasi={mutasi.map((m) => ({
+              id: m.id,
+              tipe: m.tipe,
+              jumlah: m.jumlah,
+              deskripsi: m.deskripsi,
+              refOrderId: m.refOrderId,
+              refTransaksiId: m.refTransaksiId,
+              createdAt: m.createdAt.toISOString(),
+            }))}
+          />
         )}
       </div>
       <Pagination page={page} totalPages={totalPages} total={totalMutasi} />
