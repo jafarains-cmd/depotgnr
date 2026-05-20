@@ -1,6 +1,7 @@
-import { sql, like, or, eq } from "drizzle-orm";
+import { sql, like, or, eq, inArray, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
 import { user as userTable, session as sessionTable } from "@/db/schema/auth";
+import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
 import { PageHeader } from "@/components/AppShell";
 import { UsersClient } from "./UsersClient";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
@@ -61,6 +62,25 @@ export default async function UsersPage({
     ]),
   );
 
+  // Pelanggan yang tertaut ke user-user di halaman ini
+  const userIds = list.map((u) => u.id);
+  const linkedPelanggan = userIds.length
+    ? await db
+        .select({
+          id: pelangganTable.id,
+          nama: pelangganTable.nama,
+          userId: pelangganTable.userId,
+        })
+        .from(pelangganTable)
+        .where(inArray(pelangganTable.userId, userIds))
+    : [];
+  const pelMap = new Map(
+    linkedPelanggan
+      .filter((p): p is { id: number; nama: string; userId: string } => !!p.userId)
+      .map((p) => [p.userId, { id: p.id, nama: p.nama }]),
+  );
+  void isNotNull;
+
   return (
     <div className="p-4 md:p-6">
       <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
@@ -93,6 +113,7 @@ export default async function UsersPage({
       <UsersClient
         users={list.map((u) => {
           const log = loginMap.get(u.id);
+          const pel = pelMap.get(u.id);
           return {
             id: u.id,
             name: u.name,
@@ -103,6 +124,7 @@ export default async function UsersPage({
             banned: !!u.banned,
             lastLogin: log?.lastLogin?.toISOString() ?? null,
             sessionCount: log?.sessionCount ?? 0,
+            pelanggan: pel ?? null,
           };
         })}
       />

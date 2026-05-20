@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { Trophy } from "lucide-react";
-import { desc, gt, sql } from "drizzle-orm";
+import { desc, gt, sql, inArray, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { pelanggan as pelangganTable, galonPelanggan } from "@/db/schema/pelanggan";
+import { user as userTable } from "@/db/schema/auth";
 import { requireRole } from "@/lib/permissions";
 import { formatRupiah } from "@/lib/utils";
 import { PelangganTable } from "./PelangganTable";
@@ -57,6 +58,22 @@ export default async function PelangganDataPage({
 
   const titipanMap = new Map(titipanTotals.map((t) => [t.pelangganId, t.total]));
 
+  // Linked users — ambil info user yang tertaut ke pelanggan di halaman ini
+  const userIds = list.map((p) => p.userId).filter((id): id is string => !!id);
+  const linkedUsers = userIds.length
+    ? await db
+        .select({
+          id: userTable.id,
+          name: userTable.name,
+          email: userTable.email,
+          username: userTable.username,
+        })
+        .from(userTable)
+        .where(inArray(userTable.id, userIds))
+    : [];
+  const userMap = new Map(linkedUsers.map((u) => [u.id, u]));
+  void eq;
+
   return (
     <div>
       <div className="mb-4 flex items-start justify-between gap-3 flex-wrap">
@@ -100,7 +117,16 @@ export default async function PelangganDataPage({
       )}
 
       <PelangganTable
-        rows={list.map((p) => ({ ...p, titipanTotal: titipanMap.get(p.id) ?? 0 }))}
+        rows={list.map((p) => {
+          const u = p.userId ? userMap.get(p.userId) : null;
+          return {
+            ...p,
+            titipanTotal: titipanMap.get(p.id) ?? 0,
+            linkedUser: u
+              ? { id: u.id, name: u.name, email: u.email, username: u.username }
+              : null,
+          };
+        })}
         canDelete={session.user.role === "admin"}
       />
       <Pagination page={page} totalPages={totalPages} total={total} />

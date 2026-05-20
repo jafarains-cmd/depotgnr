@@ -2,12 +2,16 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Pencil, Trash2, Plus, X, MapPin, Eye, Package } from "lucide-react";
+import { Pencil, Trash2, Plus, X, MapPin, Eye, Package, UserCheck, UserX } from "lucide-react";
 import type { Pelanggan } from "@/db/schema/pelanggan";
 import { upsertPelanggan, deletePelanggan } from "./actions";
 import { LocationPicker } from "./LocationPicker";
 
-type RowWithTitipan = Pelanggan & { titipanTotal?: number };
+type LinkedUser = { id: string; name: string; email: string; username: string | null };
+type RowWithTitipan = Pelanggan & {
+  titipanTotal?: number;
+  linkedUser?: LinkedUser | null;
+};
 
 export function PelangganTable({
   rows,
@@ -79,6 +83,7 @@ export function PelangganTable({
               <th className="p-3 hidden md:table-cell">Alamat</th>
               <th className="p-3 hidden sm:table-cell">Tipe</th>
               <th className="p-3 hidden md:table-cell text-right">Titipan</th>
+              <th className="p-3 hidden lg:table-cell">Akun User</th>
               <th className="p-3 text-right">Aksi</th>
             </tr>
           </thead>
@@ -96,9 +101,9 @@ export function PelangganTable({
                   <div className="sm:hidden text-xs text-[color:var(--muted)] mt-0.5 space-y-0.5">
                     {p.telp && <div>📞 {p.telp}</div>}
                     {p.alamat && <div className="line-clamp-1">📍 {p.alamat}</div>}
-                    <div>
+                    <div className="flex items-center gap-2 flex-wrap mt-1">
                       <span
-                        className={`inline-block px-2 py-0.5 rounded-full text-[10px] mt-1 ${
+                        className={`inline-block px-2 py-0.5 rounded-full text-[10px] ${
                           p.tipe === "langganan"
                             ? "bg-blue-100 text-blue-700"
                             : "bg-[color:var(--surface2)] text-[color:var(--muted)]"
@@ -106,6 +111,15 @@ export function PelangganTable({
                       >
                         {p.tipe}
                       </span>
+                      {p.linkedUser ? (
+                        <span className="text-[10px] inline-flex items-center gap-0.5 text-emerald-700 font-bold">
+                          <UserCheck size={10} /> Tertaut
+                        </span>
+                      ) : (
+                        <span className="text-[10px] inline-flex items-center gap-0.5 text-[color:var(--muted)]">
+                          <UserX size={10} /> Walk-in
+                        </span>
+                      )}
                     </div>
                   </div>
                 </td>
@@ -130,6 +144,24 @@ export function PelangganTable({
                     </span>
                   ) : (
                     <span className="text-xs text-[color:var(--muted)]">—</span>
+                  )}
+                </td>
+                <td className="p-3 hidden lg:table-cell">
+                  {p.linkedUser ? (
+                    <div className="text-xs">
+                      <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
+                        <UserCheck size={11} /> Tertaut
+                      </span>
+                      <div className="text-[10px] text-[color:var(--muted)] mt-0.5 max-w-[180px] truncate">
+                        {p.linkedUser.username
+                          ? `@${p.linkedUser.username}`
+                          : p.linkedUser.email}
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-xs text-[color:var(--muted)]">
+                      <UserX size={11} /> Walk-in
+                    </span>
                   )}
                 </td>
                 <td className="p-3 text-right space-x-2">
@@ -165,7 +197,7 @@ export function PelangganTable({
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-6 text-center text-[color:var(--muted)]">
+                <td colSpan={7} className="p-6 text-center text-[color:var(--muted)]">
                   Tidak ada data.
                 </td>
               </tr>

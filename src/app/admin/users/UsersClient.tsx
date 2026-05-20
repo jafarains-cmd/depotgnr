@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, ShieldAlert, ShieldCheck, X, Pencil, Trash2, KeyRound, Copy, Check } from "lucide-react";
+import Link from "next/link";
+import { Plus, ShieldAlert, ShieldCheck, X, Pencil, Trash2, KeyRound, Copy, Check, UserCheck, UserX } from "lucide-react";
 import {
   createStaff,
   updateUserRole,
@@ -23,6 +24,7 @@ type Row = {
   banned: boolean;
   lastLogin: string | null;
   sessionCount: number;
+  pelanggan: { id: number; nama: string } | null;
 };
 
 function formatLastLogin(iso: string | null): { label: string; color: string } {
@@ -101,6 +103,7 @@ export function UsersClient({ users }: { users: Row[] }) {
               <th className="p-3 hidden sm:table-cell">Login</th>
               <th className="p-3">Role</th>
               <th className="p-3 hidden md:table-cell">Aktivitas</th>
+              <th className="p-3 hidden lg:table-cell">Pelanggan</th>
               <th className="p-3 hidden sm:table-cell">Status</th>
               <th className="p-3 text-right">Aksi</th>
             </tr>
@@ -139,6 +142,22 @@ export function UsersClient({ users }: { users: Row[] }) {
                 </td>
                 <td className="p-3 hidden md:table-cell">
                   <UserActivity row={u} />
+                </td>
+                <td className="p-3 hidden lg:table-cell">
+                  {u.pelanggan ? (
+                    <Link
+                      href={`/data-pelanggan/${u.pelanggan.id}`}
+                      className="text-xs inline-flex items-center gap-1 text-emerald-700 font-bold hover:underline"
+                      title="Buka detail pelanggan"
+                    >
+                      <UserCheck size={11} />
+                      <span className="max-w-[140px] truncate">{u.pelanggan.nama}</span>
+                    </Link>
+                  ) : (
+                    <span className="text-xs inline-flex items-center gap-1 text-[color:var(--muted)]">
+                      <UserX size={11} /> Belum tertaut
+                    </span>
+                  )}
                 </td>
                 <td className="p-3">
                   {u.banned ? (
