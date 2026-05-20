@@ -5,6 +5,7 @@ import { produk } from "@/db/schema/produk";
 import { pengeluaran } from "@/db/schema/pengeluaran";
 import { PageHeader } from "@/components/AppShell";
 import { formatRupiah } from "@/lib/utils";
+import { ExportActions } from "./ExportActions";
 
 export const dynamic = "force-dynamic";
 
@@ -100,10 +101,40 @@ export default async function LaporanPage({
   const toStr = to.toISOString().slice(0, 10);
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
-      <PageHeader title="Laporan" description="Omzet, transaksi, dan breakdown produk." />
+    <div className="p-4 md:p-6 space-y-6 laporan-print">
+      <style>{`
+        @media print {
+          .no-print { display: none !important; }
+          body { background: white !important; }
+          .laporan-print { padding: 0 !important; }
+          .laporan-print section, .laporan-print .rounded-2xl, .laporan-print .rounded-xl {
+            box-shadow: none !important;
+            border-color: #cbd5e1 !important;
+            page-break-inside: avoid;
+          }
+          @page { margin: 12mm; size: A4; }
+        }
+        .laporan-print .print-only { display: none; }
+        @media print { .laporan-print .print-only { display: block; } }
+      `}</style>
 
-      <form className="bg-surface border border-line rounded-2xl p-4 flex gap-3 items-end text-sm flex-wrap">
+      <div className="no-print">
+        <PageHeader title="Laporan" description="Omzet, transaksi, dan breakdown produk." />
+      </div>
+
+      <div className="print-only text-center border-b border-line pb-3">
+        <div className="text-xl font-extrabold">LAPORAN DEPOT AIR MINUM</div>
+        <div className="text-sm mt-1">
+          Periode: {new Date(fromStr).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" })}
+          {" — "}
+          {new Date(toStr).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" })}
+        </div>
+        <div className="text-[10px] text-[color:var(--muted)] mt-1">
+          Dicetak: {new Date().toLocaleString("id-ID")}
+        </div>
+      </div>
+
+      <form className="bg-surface border border-line rounded-2xl p-4 flex gap-3 items-end text-sm flex-wrap no-print">
         <div className="flex-1 min-w-[140px]">
           <label className="block text-xs text-[color:var(--muted)] mb-1">Dari</label>
           <input
@@ -126,6 +157,10 @@ export default async function LaporanPage({
           Terapkan
         </button>
       </form>
+
+      <div className="no-print">
+        <ExportActions from={fromStr} to={toStr} />
+      </div>
 
       <div className="grid sm:grid-cols-3 gap-3">
         <Card label="Total Omzet" value={formatRupiah(ringkasan.totalOmzet)} color="bg-emerald-50 text-emerald-700" />
@@ -255,8 +290,9 @@ export default async function LaporanPage({
         </div>
       </section>
 
-      <div className="text-xs text-[color:var(--muted)]">
-        Push laporan ke Google Sheets tersedia di milestone Sheets sync (M11).
+      <div className="text-[10px] text-[color:var(--muted)] no-print">
+        Tip: untuk simpan PDF, klik <b>Cetak / PDF</b> lalu pilih <i>Save as PDF</i> di dialog print browser.
+        CSV bisa dibuka langsung di Excel / Google Sheets.
       </div>
     </div>
   );
