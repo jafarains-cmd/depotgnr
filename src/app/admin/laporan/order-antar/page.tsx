@@ -14,6 +14,7 @@ import { LaporanNav } from "../LaporanNav";
 import { FilterBar } from "../FilterBar";
 import { ExportActions } from "../ExportActions";
 import { PrintStyles, PrintHeader } from "../PrintStyles";
+import { AutoSubmitSelect } from "../AutoSubmitSelect";
 
 export const dynamic = "force-dynamic";
 
@@ -160,22 +161,21 @@ export default async function OrderAntarReportPage({
         {q && <input type="hidden" name="q" value={q} />}
         {kurirId && <input type="hidden" name="userId" value={kurirId} />}
         {pelangganId && <input type="hidden" name="pelangganId" value={pelangganId} />}
-        <span className="text-[color:var(--muted)]">Status:</span>
-        <select
+        <AutoSubmitSelect
           name="status"
-          defaultValue={statusFilter ?? "all"}
-          onChange={(e) => e.currentTarget.form?.requestSubmit()}
-          className="px-2 py-1.5 border border-line rounded-md"
-        >
-          <option value="all">Semua</option>
-          <option value="pending">Pending</option>
-          <option value="diproses">Diproses</option>
-          <option value="dijemput">Dijemput</option>
-          <option value="diisi">Diisi</option>
-          <option value="diantar">Diantar</option>
-          <option value="selesai">Selesai</option>
-          <option value="batal">Batal</option>
-        </select>
+          value={statusFilter ?? "all"}
+          label="Status:"
+          options={[
+            { value: "all", label: "Semua" },
+            { value: "pending", label: "Pending" },
+            { value: "diproses", label: "Diproses" },
+            { value: "dijemput", label: "Dijemput" },
+            { value: "diisi", label: "Diisi" },
+            { value: "diantar", label: "Diantar" },
+            { value: "selesai", label: "Selesai" },
+            { value: "batal", label: "Batal" },
+          ]}
+        />
       </form>
 
       <div className="flex items-center justify-between gap-3 flex-wrap">

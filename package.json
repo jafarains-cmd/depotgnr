@@ -16,7 +16,12 @@
     "db:backup": "tsx src/db/runBackup.ts",
     "auth:generate": "npx @better-auth/cli generate --output src/db/schema/auth.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report",
+    "test:e2e:cleanup": "tsx tests/e2e/cleanup.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -43,6 +48,7 @@
   },
   "devDependencies": {
     "@better-auth/cli": "^1.4.21",
+    "@playwright/test": "^1.60.0",
     "@types/better-sqlite3": "^7.6.12",
     "@types/leaflet": "^1.9.21",
     "@types/node": "^22.10.10",

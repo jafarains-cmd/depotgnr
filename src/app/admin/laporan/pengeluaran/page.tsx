@@ -13,6 +13,7 @@ import { LaporanNav } from "../LaporanNav";
 import { FilterBar } from "../FilterBar";
 import { ExportActions } from "../ExportActions";
 import { PrintStyles, PrintHeader } from "../PrintStyles";
+import { AutoSubmitSelect } from "../AutoSubmitSelect";
 
 export const dynamic = "force-dynamic";
 
@@ -121,20 +122,15 @@ export default async function PengeluaranReportPage({
         {range.key && range.key !== "30d" && <input type="hidden" name="range" value={range.key} />}
         {q && <input type="hidden" name="q" value={q} />}
         {userId && <input type="hidden" name="userId" value={userId} />}
-        <span className="text-[color:var(--muted)]">Kategori:</span>
-        <select
+        <AutoSubmitSelect
           name="kategori"
-          defaultValue={kategori ?? "all"}
-          onChange={(e) => e.currentTarget.form?.requestSubmit()}
-          className="px-2 py-1.5 border border-line rounded-md"
-        >
-          <option value="all">Semua</option>
-          {kategoriList.map((k) => (
-            <option key={k} value={k}>
-              {k.replace(/-/g, " ")}
-            </option>
-          ))}
-        </select>
+          value={kategori ?? "all"}
+          label="Kategori:"
+          options={[
+            { value: "all", label: "Semua" },
+            ...kategoriList.map((k) => ({ value: k, label: k.replace(/-/g, " ") })),
+          ]}
+        />
       </form>
 
       <div className="flex items-center justify-between gap-3 flex-wrap">
