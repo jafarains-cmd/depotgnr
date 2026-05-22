@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { Plus, Trash2, Printer } from "lucide-react";
 import type { Produk } from "@/db/schema/produk";
 import { formatRupiah } from "@/lib/utils";
@@ -38,6 +38,7 @@ export function POSClient({
   const [pelangganQ, setPelangganQ] = useState("");
   const [cart, setCart] = useState<CartItem[]>(preset?.cart ?? []);
   const [diskon, setDiskon] = useState(0);
+  const [redeemLoyalti, setRedeemLoyalti] = useState(0);
   const [metodeBayar, setMetodeBayar] = useState<"cash" | "transfer" | "qris" | "piutang">("cash");
   const [pengantaran, setPengantaran] = useState<"pickup" | "antar">("pickup");
   const [alamatAntar, setAlamatAntar] = useState("");
@@ -60,7 +61,20 @@ export function POSClient({
     () => cart.reduce((s, it) => s + it.hargaSatuan * it.qty, 0),
     [cart],
   );
-  const total = Math.max(0, subtotal - diskon);
+  // Reset redeem saat pelanggan/metode berubah
+  useEffect(() => {
+    setRedeemLoyalti(0);
+  }, [pelangganId, metodeBayar]);
+
+  const totalSebelumRedeem = Math.max(0, subtotal - diskon);
+  const pelSelected = pelangganList.find((p) => p.id === pelangganId);
+  const saldoLoyalti = pelSelected?.saldoLoyalti ?? 0;
+  // Cap redeem: tidak melebihi saldo & tidak melebihi total
+  const redeemAktif =
+    metodeBayar === "cash" && pelangganId
+      ? Math.max(0, Math.min(redeemLoyalti, saldoLoyalti, totalSebelumRedeem))
+      : 0;
+  const total = Math.max(0, totalSebelumRedeem - redeemAktif);
 
   const filteredPelanggan = pelangganList
     .filter(
@@ -119,6 +133,7 @@ export function POSClient({
           kurirUserId: pengantaran === "antar" && kurirUserId ? kurirUserId : undefined,
           catatan: catatan || undefined,
           refOrderId: preset?.refOrderId,
+          redeemLoyalti: redeemAktif > 0 ? redeemAktif : undefined,
         });
         if (res.type === "transaksi") {
           setLastNota({ id: res.id, nota: res.nomorNota, total: res.total });
@@ -134,6 +149,7 @@ export function POSClient({
         }
         setCart([]);
         setDiskon(0);
+        setRedeemLoyalti(0);
         setCatatan("");
         setPelangganId(null);
         setPelangganQ("");
@@ -311,7 +327,47 @@ export function POSClient({
                 className="w-28 px-2 py-1 border border-line rounded text-right"
               />
             </div>
-            <Row label="Total" value={formatRupiah(total)} bold />
+            {pelangganId && saldoLoyalti > 0 && metodeBayar === "cash" && totalSebelumRedeem > 0 && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-md p-2 space-y-1.5">
+                <div className="flex justify-between items-center gap-2">
+                  <label className="text-xs text-emerald-800 font-bold inline-flex items-center gap-1">
+                    💎 Pakai Loyalti
+                  </label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min={0}
+                      max={Math.min(saldoLoyalti, totalSebelumRedeem)}
+                      value={redeemLoyalti}
+                      onChange={(e) => setRedeemLoyalti(Math.max(0, Number(e.target.value)))}
+                      className="w-24 px-2 py-1 border border-emerald-300 rounded text-right text-xs bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setRedeemLoyalti(Math.min(saldoLoyalti, totalSebelumRedeem))
+                      }
+                      className="text-[10px] px-1.5 py-1 bg-emerald-600 text-white rounded font-bold"
+                      title="Pakai maksimum"
+                    >
+                      MAX
+                    </button>
+                  </div>
+                </div>
+                <div className="flex justify-between text-[10px] text-emerald-700">
+                  <span>Saldo: {formatRupiah(saldoLoyalti)}</span>
+                  <span>Sisa setelah pakai: {formatRupiah(saldoLoyalti - redeemAktif)}</span>
+                </div>
+                {redeemAktif > 0 && (
+                  <div className="text-[10px] text-emerald-800 font-bold">
+                    {redeemAktif >= totalSebelumRedeem
+                      ? "✓ Loyalti cukup — tidak perlu bayar tunai"
+                      : `Sisa bayar tunai: ${formatRupiah(total)}`}
+                  </div>
+                )}
+              </div>
+            )}
+            <Row label="Total Bayar" value={formatRupiah(total)} bold />
 
             <div>
               <div className="text-[10px] font-bold tracking-widest text-[color:var(--muted)] mb-1">
