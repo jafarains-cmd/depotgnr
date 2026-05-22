@@ -231,17 +231,35 @@ export async function earnFromOrderIfEligible(orderId: number): Promise<void> {
   const totalGalon = items.reduce((s, it) => s + it.qty, 0);
   if (totalGalon === 0) return;
 
+  // Earn hanya untuk galon yang dibayar PAKAI UANG (bukan loyalty).
+  // Hitung jumlah galon "ditebus" loyalti berdasarkan harga rata-rata per galon.
+  const subtotal = items.reduce((s, it) => s + it.hargaEstimasi * it.qty, 0);
+  const hargaPerGalon = totalGalon > 0 ? Math.round(subtotal / totalGalon) : 0;
+  const galonRedeem =
+    hargaPerGalon > 0 && o.loyaltiDipakai > 0
+      ? Math.floor(o.loyaltiDipakai / hargaPerGalon)
+      : 0;
+  const galonForEarn = Math.max(0, totalGalon - galonRedeem);
+  if (galonForEarn === 0) {
+    // Full loyalty → tidak ada earn baru. Tetap klaim referral kalau eligible.
+    await claimReferralBonusIfFirstOrder(o.pelangganId, orderId);
+    return;
+  }
+
   const cfg = await getLoyaltyConfig();
   // POS depot (pelanggan datang langsung) ditandai dengan alamat
   // '(diambil di depot)' → pakai rate DEPOT, bukan ANTAR
   const isPickupDepot = o.alamatAntar === "(diambil di depot)";
   const rate = isPickupDepot ? cfg.ratePerGalonDepot : cfg.ratePerGalonAntar;
+  const desc = galonRedeem > 0
+    ? `Earn dari order ${o.nomorOrder} (${galonForEarn} galon bayar tunai × Rp ${rate.toLocaleString("id-ID")}, ${galonRedeem} galon pakai loyalty)`
+    : `Earn dari order ${o.nomorOrder} (${galonForEarn} galon × Rp ${rate.toLocaleString("id-ID")})`;
   await earnLoyalty({
     pelangganId: o.pelangganId,
-    jumlahGalon: totalGalon,
+    jumlahGalon: galonForEarn,
     rate,
     refOrderId: orderId,
-    deskripsi: `Earn dari order ${o.nomorOrder} (${totalGalon} galon × Rp ${rate.toLocaleString("id-ID")})`,
+    deskripsi: desc,
   });
   await claimReferralBonusIfFirstOrder(o.pelangganId, orderId);
 }

@@ -174,19 +174,31 @@ export async function createTransaksi(input: CreateTransaksiInput) {
   // Earn loyalty (best-effort) — rate baca dari pengaturan, fallback default
   if (input.pelangganId) {
     const totalGalon = input.items.reduce((s, it) => s + it.qty, 0);
-    const cfg = await getLoyaltyConfig();
-    const rate = input.refOrderId ? cfg.ratePerGalonAntar : cfg.ratePerGalonDepot;
-    bestEffort(
-      `earnLoyalty(${nomorNota})`,
-      earnLoyalty({
-        pelangganId: input.pelangganId,
-        jumlahGalon: totalGalon,
-        rate,
-        refTransaksiId: trxId,
-        refOrderId: input.refOrderId,
-        deskripsi: `Earn dari ${nomorNota} (${totalGalon} galon × Rp ${rate.toLocaleString("id-ID")})`,
-      }),
-    );
+    // Earn hanya untuk galon yang dibayar UANG (bukan loyalty). Hitung jumlah
+    // galon ditebus loyalty berdasarkan harga rata-rata per galon di cart.
+    const hargaPerGalon = totalGalon > 0 ? Math.round(subtotal / totalGalon) : 0;
+    const galonRedeem =
+      hargaPerGalon > 0 && redeem > 0 ? Math.floor(redeem / hargaPerGalon) : 0;
+    const galonForEarn = Math.max(0, totalGalon - galonRedeem);
+    if (galonForEarn > 0) {
+      const cfg = await getLoyaltyConfig();
+      const rate = input.refOrderId ? cfg.ratePerGalonAntar : cfg.ratePerGalonDepot;
+      const desc =
+        galonRedeem > 0
+          ? `Earn dari ${nomorNota} (${galonForEarn} galon bayar tunai × Rp ${rate.toLocaleString("id-ID")}, ${galonRedeem} galon pakai loyalty)`
+          : `Earn dari ${nomorNota} (${galonForEarn} galon × Rp ${rate.toLocaleString("id-ID")})`;
+      bestEffort(
+        `earnLoyalty(${nomorNota})`,
+        earnLoyalty({
+          pelangganId: input.pelangganId,
+          jumlahGalon: galonForEarn,
+          rate,
+          refTransaksiId: trxId,
+          refOrderId: input.refOrderId,
+          deskripsi: desc,
+        }),
+      );
+    }
     bestEffort(
       `claimReferralBonus(${nomorNota})`,
       claimReferralBonusIfFirstOrder(input.pelangganId, input.refOrderId, trxId),

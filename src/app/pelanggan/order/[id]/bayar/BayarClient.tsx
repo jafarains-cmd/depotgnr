@@ -23,6 +23,8 @@ export function BayarClient({
   nomorDana,
   atasNamaDana,
   rekeningList,
+  totalGalon,
+  hargaPerGalon,
 }: {
   orderId: number;
   nomorOrder: string;
@@ -36,6 +38,8 @@ export function BayarClient({
   nomorDana: string | null;
   atasNamaDana: string | null;
   rekeningList: { bank: string; nomor: string; atasNama: string }[];
+  totalGalon: number;
+  hargaPerGalon: number;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -96,6 +100,8 @@ export function BayarClient({
         saldo={saldoLoyalti}
         dipakai={loyaltiDipakai}
         totalAsli={totalAsli}
+        totalGalon={totalGalon}
+        hargaPerGalon={hargaPerGalon}
       />
 
       <div className="bg-surface border border-line rounded-2xl p-4">
@@ -270,14 +276,18 @@ function LoyaltyBlock({
   saldo,
   dipakai,
   totalAsli,
+  totalGalon,
+  hargaPerGalon,
 }: {
   orderId: number;
   saldo: number;
   dipakai: number;
   totalAsli: number;
+  totalGalon: number;
+  hargaPerGalon: number;
 }) {
   const [pending, startTransition] = useT2();
-  const [pakai, setPakai] = useState("");
+  const [galonRedeem, setGalonRedeem] = useState(0);
   const [msg, setMsg] = useState<string | null>(null);
 
   if (dipakai > 0) {
@@ -290,70 +300,99 @@ function LoyaltyBlock({
       </div>
     );
   }
-  if (saldo <= 0) return null;
+  if (saldo <= 0 || hargaPerGalon === 0) return null;
 
-  const max = Math.max(0, totalAsli);
-  const useAble = Math.min(saldo, max);
-  const pakaiN = Math.max(0, Math.min(useAble, Number(pakai) || 0));
-  const sisa = Math.max(0, totalAsli - pakaiN);
-  const willBeLunas = pakaiN > 0 && sisa === 0;
+  const maxGalon = Math.min(totalGalon, Math.floor(saldo / hargaPerGalon));
+  const galonRedeemAktif = Math.max(0, Math.min(galonRedeem, maxGalon));
+  const redeemRupiah = galonRedeemAktif * hargaPerGalon;
+  const sisa = Math.max(0, totalAsli - redeemRupiah);
+  const willBeLunas = redeemRupiah > 0 && sisa === 0;
+  const galonForEarn = Math.max(0, totalGalon - galonRedeemAktif);
 
   return (
     <div className="bg-surface border border-line rounded-2xl p-4 space-y-2">
       <div className="text-sm font-semibold inline-flex items-center gap-1.5">
-        <Gift size={16} /> Saldo Loyalty
+        <Gift size={16} /> Bayar Pakai Loyalty
       </div>
-      <div className="text-xs text-[color:var(--muted)]">
-        Saldo Anda: <b>{formatRupiah(saldo)}</b>. Maksimal pakai{" "}
-        <b>{formatRupiah(useAble)}</b> di order ini.
-      </div>
-      {willBeLunas && (
-        <div className="text-xs text-emerald-700 font-bold bg-emerald-50 rounded p-2">
-          ✓ Saldo cukup — order akan langsung LUNAS tanpa perlu bayar online.
+      <div className="text-xs text-[color:var(--muted)] space-y-0.5">
+        <div>
+          Saldo: <b>{formatRupiah(saldo)}</b> · Harga: Rp{" "}
+          {hargaPerGalon.toLocaleString("id-ID")}/galon
         </div>
-      )}
-      {pakaiN > 0 && !willBeLunas && (
+        <div>
+          Maks bisa redeem: <b>{maxGalon} galon</b>
+          {maxGalon > 0 && <span> ({formatRupiah(maxGalon * hargaPerGalon)})</span>}
+        </div>
+      </div>
+      {maxGalon === 0 && (
         <div className="text-xs text-amber-800 bg-amber-50 rounded p-2">
-          Sisa yang harus dibayar online: <b>{formatRupiah(sisa)}</b>
+          Saldo belum cukup untuk 1 galon ({formatRupiah(hargaPerGalon)}). Bayar online dulu untuk
+          dapat poin baru.
         </div>
       )}
-      <div className="flex gap-2">
-        <input
-          type="number"
-          min={0}
-          max={useAble}
-          placeholder="Jumlah saldo dipakai"
-          value={pakai}
-          onChange={(e) => setPakai(e.target.value)}
-          className="flex-1 px-3 py-2 border border-line rounded-md text-sm"
-        />
-        <button
-          onClick={() => setPakai(String(useAble))}
-          className="px-3 bg-[color:var(--surface2)] rounded-md text-xs"
-        >
-          Pakai semua
-        </button>
-      </div>
-      {msg && <p className="text-xs text-red-600">{msg}</p>}
-      <button
-        onClick={() => {
-          const n = Number(pakai);
-          if (!Number.isFinite(n) || n <= 0) {
-            setMsg("Masukkan angka > 0");
-            return;
-          }
-          setMsg(null);
-          startTransition(async () => {
-            const res = await pakaiLoyalty(orderId, n);
-            if ("error" in res) setMsg(res.error);
-            else window.location.reload();
-          });
-        }}
-        disabled={pending}
-        className="w-full py-2 bg-emerald-600 text-white rounded-md text-sm disabled:opacity-50"
-      >
-        {pending ? "Memproses..." : "Pakai Saldo"}
-      </button>
+      {maxGalon > 0 && (
+        <>
+          <div className="flex gap-2 items-center">
+            <input
+              type="number"
+              min={0}
+              max={maxGalon}
+              step={1}
+              placeholder="Jumlah galon"
+              value={galonRedeem || ""}
+              onChange={(e) => setGalonRedeem(Math.max(0, Math.floor(Number(e.target.value))))}
+              className="flex-1 px-3 py-2 border border-line rounded-md text-sm"
+            />
+            <span className="text-xs text-[color:var(--muted)]">galon</span>
+            <button
+              type="button"
+              onClick={() => setGalonRedeem(maxGalon)}
+              className="px-3 py-2 bg-[color:var(--surface2)] rounded-md text-xs font-bold"
+            >
+              MAX
+            </button>
+          </div>
+          {galonRedeemAktif > 0 && (
+            <div className="text-xs space-y-1">
+              <div className="text-emerald-800 font-bold">
+                {galonRedeemAktif} galon × Rp {hargaPerGalon.toLocaleString("id-ID")} ={" "}
+                {formatRupiah(redeemRupiah)}
+              </div>
+              {willBeLunas ? (
+                <div className="text-emerald-700 bg-emerald-50 rounded p-2">
+                  ✓ Saldo cukup — order akan langsung LUNAS tanpa perlu bayar online.
+                </div>
+              ) : (
+                <div className="text-amber-800 bg-amber-50 rounded p-2">
+                  Sisa harus dibayar online: <b>{formatRupiah(sisa)}</b>
+                </div>
+              )}
+              <div className="text-[10px] text-amber-700">
+                ⓘ Earn poin hanya dari {galonForEarn} galon yang dibayar tunai
+              </div>
+            </div>
+          )}
+          {msg && <p className="text-xs text-red-600">{msg}</p>}
+          <button
+            onClick={() => {
+              if (galonRedeemAktif <= 0) {
+                setMsg("Pilih jumlah galon dulu (minimum 1)");
+                return;
+              }
+              setMsg(null);
+              startTransition(async () => {
+                const res = await pakaiLoyalty(orderId, redeemRupiah);
+                if ("error" in res) setMsg(res.error);
+                else window.location.reload();
+              });
+            }}
+            disabled={pending || galonRedeemAktif <= 0}
+            className="w-full py-2 bg-emerald-600 text-white rounded-md text-sm font-bold disabled:opacity-50"
+          >
+            {pending ? "Memproses..." : "Pakai Saldo Loyalty"}
+          </button>
+        </>
+      )}
     </div>
   );
 }

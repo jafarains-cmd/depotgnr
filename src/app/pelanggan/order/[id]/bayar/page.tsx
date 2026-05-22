@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { ArrowLeft, CheckCircle2, Clock } from "lucide-react";
 import { db } from "@/db";
-import { orderHeader } from "@/db/schema/order";
+import { orderHeader, orderItem } from "@/db/schema/order";
 import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
 import { pengaturan } from "@/db/schema/pengaturan";
 // Loyalty info loaded from pelanggan record
@@ -37,6 +37,11 @@ export default async function BayarPage({
       </div>
     );
   }
+
+  const items = await db.query.orderItem.findMany({ where: eq(orderItem.orderId, orderId) });
+  const totalGalonOrder = items.reduce((s, it) => s + it.qty, 0);
+  const subtotalOrder = items.reduce((s, it) => s + it.hargaEstimasi * it.qty, 0);
+  const hargaPerGalon = totalGalonOrder > 0 ? Math.round(subtotalOrder / totalGalonOrder) : 0;
 
   const cfg = await db.query.pengaturan.findMany();
   const cfgMap = Object.fromEntries(cfg.map((r) => [r.key, r.value ?? ""]));
@@ -130,6 +135,8 @@ export default async function BayarPage({
           nomorDana={cfgMap.nomorDana ?? null}
           atasNamaDana={cfgMap.atasNamaDana ?? null}
           rekeningList={rekeningList}
+          totalGalon={totalGalonOrder}
+          hargaPerGalon={hargaPerGalon}
         />
       )}
     </div>

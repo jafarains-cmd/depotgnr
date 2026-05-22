@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { orderHeader } from "@/db/schema/order";
+import { orderHeader, orderItem } from "@/db/schema/order";
 import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
 import { requireSession } from "@/lib/permissions";
 import { uploadBuktiBayar } from "@/lib/drive";
@@ -117,9 +117,19 @@ export async function pakaiLoyalty(
   if (o.loyaltiDipakai > 0) {
     return { error: "Saldo sudah dipakai. Hubungi admin kalau salah." };
   }
-  const max = Math.max(0, o.totalEstimasi);
-  const used = Math.min(jumlah, max);
-  if (used <= 0) return { error: "Jumlah tidak valid" };
+  // Redeem harus kelipatan harga rata-rata per galon (sesuai kebijakan: 1 galon = 1 unit redeem)
+  const items = await db.query.orderItem.findMany({ where: eq(orderItem.orderId, orderId) });
+  const totalGalon = items.reduce((s, it) => s + it.qty, 0);
+  const subtotalOrder = items.reduce((s, it) => s + it.hargaEstimasi * it.qty, 0);
+  const hargaPerGalon = totalGalon > 0 ? Math.round(subtotalOrder / totalGalon) : 0;
+  if (hargaPerGalon === 0) return { error: "Harga galon tidak valid" };
+
+  const maxRupiah = Math.max(0, o.totalEstimasi);
+  // Bulatkan ke kelipatan harga galon (ke bawah)
+  const rawUsed = Math.min(jumlah, maxRupiah);
+  const galonRedeem = Math.floor(rawUsed / hargaPerGalon);
+  const used = galonRedeem * hargaPerGalon;
+  if (used <= 0) return { error: `Jumlah minimum 1 galon (Rp ${hargaPerGalon.toLocaleString("id-ID")})` };
 
   const r = await redeemLoyalty({
     pelangganId: o.pelangganId,

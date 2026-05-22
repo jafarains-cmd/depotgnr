@@ -38,7 +38,7 @@ export function POSClient({
   const [pelangganQ, setPelangganQ] = useState("");
   const [cart, setCart] = useState<CartItem[]>(preset?.cart ?? []);
   const [diskon, setDiskon] = useState(0);
-  const [redeemLoyalti, setRedeemLoyalti] = useState(0);
+  const [redeemGalon, setRedeemGalon] = useState(0);
   const [metodeBayar, setMetodeBayar] = useState<"cash" | "transfer" | "qris" | "piutang">("cash");
   const [pengantaran, setPengantaran] = useState<"pickup" | "antar">("pickup");
   const [alamatAntar, setAlamatAntar] = useState("");
@@ -61,20 +61,24 @@ export function POSClient({
     () => cart.reduce((s, it) => s + it.hargaSatuan * it.qty, 0),
     [cart],
   );
-  // Reset redeem saat pelanggan/metode berubah
+  // Reset redeem saat pelanggan/metode/cart berubah
   useEffect(() => {
-    setRedeemLoyalti(0);
-  }, [pelangganId, metodeBayar]);
+    setRedeemGalon(0);
+  }, [pelangganId, metodeBayar, cart.length]);
 
   const totalSebelumRedeem = Math.max(0, subtotal - diskon);
+  const totalQty = cart.reduce((s, it) => s + it.qty, 0);
+  const hargaPerGalon = totalQty > 0 ? Math.round(subtotal / totalQty) : 0;
   const pelSelected = pelangganList.find((p) => p.id === pelangganId);
   const saldoLoyalti = pelSelected?.saldoLoyalti ?? 0;
-  // Cap redeem: tidak melebihi saldo & tidak melebihi total
-  const redeemAktif =
-    metodeBayar === "cash" && pelangganId
-      ? Math.max(0, Math.min(redeemLoyalti, saldoLoyalti, totalSebelumRedeem))
+  const maxGalonRedeem =
+    metodeBayar === "cash" && pelangganId && hargaPerGalon > 0
+      ? Math.min(totalQty, Math.floor(saldoLoyalti / hargaPerGalon))
       : 0;
+  const galonRedeemAktif = Math.max(0, Math.min(redeemGalon, maxGalonRedeem));
+  const redeemAktif = galonRedeemAktif * hargaPerGalon;
   const total = Math.max(0, totalSebelumRedeem - redeemAktif);
+  const galonForEarn = Math.max(0, totalQty - galonRedeemAktif);
 
   const filteredPelanggan = pelangganList
     .filter(
@@ -149,7 +153,7 @@ export function POSClient({
         }
         setCart([]);
         setDiskon(0);
-        setRedeemLoyalti(0);
+        setRedeemGalon(0);
         setCatatan("");
         setPelangganId(null);
         setPelangganQ("");
@@ -337,32 +341,52 @@ export function POSClient({
                     <input
                       type="number"
                       min={0}
-                      max={Math.min(saldoLoyalti, totalSebelumRedeem)}
-                      value={redeemLoyalti}
-                      onChange={(e) => setRedeemLoyalti(Math.max(0, Number(e.target.value)))}
-                      className="w-24 px-2 py-1 border border-emerald-300 rounded text-right text-xs bg-white"
+                      max={maxGalonRedeem}
+                      step={1}
+                      value={redeemGalon}
+                      onChange={(e) => setRedeemGalon(Math.max(0, Math.floor(Number(e.target.value))))}
+                      className="w-16 px-2 py-1 border border-emerald-300 rounded text-right text-xs bg-white"
                     />
+                    <span className="text-[10px] text-emerald-800 font-bold">galon</span>
                     <button
                       type="button"
-                      onClick={() =>
-                        setRedeemLoyalti(Math.min(saldoLoyalti, totalSebelumRedeem))
-                      }
-                      className="text-[10px] px-1.5 py-1 bg-emerald-600 text-white rounded font-bold"
+                      onClick={() => setRedeemGalon(maxGalonRedeem)}
+                      disabled={maxGalonRedeem === 0}
+                      className="text-[10px] px-1.5 py-1 bg-emerald-600 text-white rounded font-bold disabled:opacity-50"
                       title="Pakai maksimum"
                     >
                       MAX
                     </button>
                   </div>
                 </div>
-                <div className="flex justify-between text-[10px] text-emerald-700">
-                  <span>Saldo: {formatRupiah(saldoLoyalti)}</span>
-                  <span>Sisa setelah pakai: {formatRupiah(saldoLoyalti - redeemAktif)}</span>
+                <div className="text-[10px] text-emerald-700 space-y-0.5">
+                  <div>
+                    Saldo {formatRupiah(saldoLoyalti)} · Harga rata-rata Rp {hargaPerGalon.toLocaleString("id-ID")}/galon
+                  </div>
+                  <div>
+                    Maks bisa redeem: <b>{maxGalonRedeem} galon</b>
+                    {maxGalonRedeem > 0 && (
+                      <span> ({formatRupiah(maxGalonRedeem * hargaPerGalon)})</span>
+                    )}
+                  </div>
                 </div>
-                {redeemAktif > 0 && (
-                  <div className="text-[10px] text-emerald-800 font-bold">
-                    {redeemAktif >= totalSebelumRedeem
-                      ? "✓ Loyalti cukup — tidak perlu bayar tunai"
-                      : `Sisa bayar tunai: ${formatRupiah(total)}`}
+                {galonRedeemAktif > 0 && (
+                  <div className="text-[10px] text-emerald-900 font-bold border-t border-emerald-200 pt-1.5">
+                    {galonRedeemAktif} galon × Rp {hargaPerGalon.toLocaleString("id-ID")} ={" "}
+                    {formatRupiah(redeemAktif)} dari loyalty
+                    <div className="font-normal mt-0.5">
+                      {total === 0
+                        ? "✓ Tidak perlu bayar tunai"
+                        : `Sisa bayar tunai: ${formatRupiah(total)}`}
+                    </div>
+                    <div className="text-[9px] text-amber-700 mt-0.5">
+                      ⓘ Earn poin hanya dari {galonForEarn} galon yang dibayar tunai
+                    </div>
+                  </div>
+                )}
+                {maxGalonRedeem === 0 && (
+                  <div className="text-[10px] text-[color:var(--muted)]">
+                    Saldo belum cukup untuk 1 galon ({formatRupiah(hargaPerGalon)}).
                   </div>
                 )}
               </div>
