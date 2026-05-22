@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql, inArray, isNull } from "drizzle-orm";
 import { ArrowLeft, Coins, Star, TrendingUp, TrendingDown } from "lucide-react";
 import { db } from "@/db";
 import {
@@ -12,9 +12,12 @@ import {
 import { produk as produkTable } from "@/db/schema/produk";
 import { user as userTableSchema } from "@/db/schema/auth";
 import { requireRole } from "@/lib/permissions";
+import { transaksi, transaksiItem } from "@/db/schema/transaksi";
+import { orderHeader, orderItem } from "@/db/schema/order";
 import { TitipanSection } from "./TitipanSection";
 import { LinkUserSection } from "./LinkUserSection";
 import { LoyaltyHistoryTable } from "./LoyaltyHistoryTable";
+import { RiwayatTransaksiTable, type RiwayatItem } from "./RiwayatTransaksiTable";
 import { formatRupiah } from "@/lib/utils";
 import { LoyaltyAdjustForm } from "./LoyaltyAdjustForm";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
@@ -66,6 +69,95 @@ export default async function PelangganDetailPage({
     .orderBy(desc(mutasiLoyalti.createdAt))
     .limit(limit)
     .offset(offset);
+
+  // ====== Riwayat Transaksi Unified (POS + Order Antar) ======
+  // Ambil 50 order terakhir + 50 transaksi non-order. Lalu merge & sort di JS.
+  const orderRows = await db
+    .select({
+      id: orderHeader.id,
+      nomorOrder: orderHeader.nomorOrder,
+      createdAt: orderHeader.createdAt,
+      total: orderHeader.totalEstimasi,
+      statusBayar: orderHeader.statusBayar,
+      statusOrder: orderHeader.status,
+      metodeBayar: orderHeader.metodeBayar,
+      sumber: orderHeader.sumber,
+      alamatAntar: orderHeader.alamatAntar,
+    })
+    .from(orderHeader)
+    .where(eq(orderHeader.pelangganId, pelangganId))
+    .orderBy(desc(orderHeader.createdAt))
+    .limit(50);
+
+  const trxRows = await db
+    .select({
+      id: transaksi.id,
+      nomorNota: transaksi.nomorNota,
+      createdAt: transaksi.createdAt,
+      total: transaksi.total,
+      metodeBayar: transaksi.metodeBayar,
+    })
+    .from(transaksi)
+    .where(
+      and(
+        eq(transaksi.pelangganId, pelangganId),
+        isNull(transaksi.refOrderId), // skip transaksi yang punya order (anti-duplikasi)
+        isNull(transaksi.voidedAt),
+      ),
+    )
+    .orderBy(desc(transaksi.createdAt))
+    .limit(50);
+
+  // Hitung galon per order & transaksi
+  const orderIds = orderRows.map((o) => o.id);
+  const trxIds = trxRows.map((t) => t.id);
+  const galonOrderMap = new Map<number, number>();
+  const galonTrxMap = new Map<number, number>();
+  if (orderIds.length) {
+    const r = await db
+      .select({ orderId: orderItem.orderId, qty: orderItem.qty })
+      .from(orderItem)
+      .where(inArray(orderItem.orderId, orderIds));
+    for (const it of r) galonOrderMap.set(it.orderId, (galonOrderMap.get(it.orderId) ?? 0) + it.qty);
+  }
+  if (trxIds.length) {
+    const r = await db
+      .select({ transaksiId: transaksiItem.transaksiId, qty: transaksiItem.qty })
+      .from(transaksiItem)
+      .where(inArray(transaksiItem.transaksiId, trxIds));
+    for (const it of r) galonTrxMap.set(it.transaksiId, (galonTrxMap.get(it.transaksiId) ?? 0) + it.qty);
+  }
+
+  const riwayatItems: RiwayatItem[] = [
+    ...orderRows.map((o) => ({
+      kind: "order" as const,
+      id: o.id,
+      nomor: o.nomorOrder,
+      createdAt: o.createdAt.toISOString(),
+      total: o.total,
+      statusBayar: o.statusBayar,
+      statusOrder: o.statusOrder,
+      metodeBayar: o.metodeBayar,
+      sumber:
+        o.sumber === "walk-in"
+          ? o.alamatAntar === "(diambil di depot)"
+            ? "POS depot"
+            : "Walk-in antar"
+          : `Order ${o.sumber}`,
+      qtyGalon: galonOrderMap.get(o.id) ?? 0,
+    })),
+    ...trxRows.map((t) => ({
+      kind: "transaksi" as const,
+      id: t.id,
+      nomor: t.nomorNota,
+      createdAt: t.createdAt.toISOString(),
+      total: t.total,
+      statusBayar: "lunas",
+      metodeBayar: t.metodeBayar,
+      sumber: "POS depot",
+      qtyGalon: galonTrxMap.get(t.id) ?? 0,
+    })),
+  ].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
   // Galon titipan + produk list + history mutasi titipan
   const titipanRows = await db
@@ -203,6 +295,16 @@ export default async function PelangganDetailPage({
           userName: m.userName,
         }))}
       />
+
+      <div className="bg-surface border border-line rounded-2xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-line">
+          <h2 className="font-bold">Riwayat Transaksi</h2>
+          <p className="text-xs text-[color:var(--muted)]">
+            Gabungan POS depot + order antar (50 terbaru). Klik baris untuk lihat detail.
+          </p>
+        </div>
+        <RiwayatTransaksiTable items={riwayatItems} />
+      </div>
 
       <div className="flex items-center justify-end">
         <PageSizeSelect value={limit} />
