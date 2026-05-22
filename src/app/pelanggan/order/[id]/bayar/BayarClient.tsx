@@ -292,8 +292,11 @@ function LoyaltyBlock({
   }
   if (saldo <= 0) return null;
 
-  const max = Math.max(0, totalAsli - 1);
+  const max = Math.max(0, totalAsli);
   const useAble = Math.min(saldo, max);
+  const pakaiN = Math.max(0, Math.min(useAble, Number(pakai) || 0));
+  const sisa = Math.max(0, totalAsli - pakaiN);
+  const willBeLunas = pakaiN > 0 && sisa === 0;
 
   return (
     <div className="bg-surface border border-line rounded-2xl p-4 space-y-2">
@@ -304,6 +307,16 @@ function LoyaltyBlock({
         Saldo Anda: <b>{formatRupiah(saldo)}</b>. Maksimal pakai{" "}
         <b>{formatRupiah(useAble)}</b> di order ini.
       </div>
+      {willBeLunas && (
+        <div className="text-xs text-emerald-700 font-bold bg-emerald-50 rounded p-2">
+          ✓ Saldo cukup — order akan langsung LUNAS tanpa perlu bayar online.
+        </div>
+      )}
+      {pakaiN > 0 && !willBeLunas && (
+        <div className="text-xs text-amber-800 bg-amber-50 rounded p-2">
+          Sisa yang harus dibayar online: <b>{formatRupiah(sisa)}</b>
+        </div>
+      )}
       <div className="flex gap-2">
         <input
           type="number"
