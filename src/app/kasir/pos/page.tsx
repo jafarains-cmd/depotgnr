@@ -70,6 +70,7 @@ export default async function POSPage({
           nama: p.nama,
           telp: p.telp,
           alamat: p.alamat,
+          saldoLoyalti: p.saldoLoyalti,
         }))}
         kurirList={kurirList}
         preset={preset}

@@ -9,7 +9,13 @@ import { createWalkInOrder, searchPelanggan } from "./actions";
 type Jenis = "isi_ulang" | "tukar" | "beli_baru";
 type LineKey = string;
 
-type Pel = { id: number; nama: string; telp: string | null; alamat: string | null };
+type Pel = {
+  id: number;
+  nama: string;
+  telp: string | null;
+  alamat: string | null;
+  saldoLoyalti: number;
+};
 
 export function OrderBaruClient({ produkList }: { produkList: Produk[] }) {
   const [qtyMap, setQtyMap] = useState<Record<LineKey, number>>({});
@@ -165,6 +171,20 @@ export function OrderBaruClient({ produkList }: { produkList: Produk[] }) {
                   {selected.alamat && (
                     <div className="text-xs text-[color:var(--muted)]">{selected.alamat}</div>
                   )}
+                  <div
+                    className={`text-[11px] mt-1 inline-flex items-center gap-1 ${
+                      selected.saldoLoyalti > 0
+                        ? "text-emerald-700 font-bold"
+                        : "text-[color:var(--muted)]"
+                    }`}
+                  >
+                    💎 Saldo Loyalti: <b>{formatRupiah(selected.saldoLoyalti)}</b>
+                    {selected.saldoLoyalti > 0 && (
+                      <span className="text-[10px] text-[color:var(--muted)] font-normal">
+                        — tanya pelanggan apakah ingin digunakan
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <button type="button" onClick={clearPel} className="text-[color:var(--muted)] hover:text-red-600">
                   <X size={16} />
@@ -197,7 +217,14 @@ export function OrderBaruClient({ produkList }: { produkList: Produk[] }) {
                         onClick={() => pickPel(r)}
                         className="w-full text-left p-2 hover:bg-[color:var(--surface2)]"
                       >
-                        <div className="font-medium">{r.nama}</div>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="font-medium">{r.nama}</div>
+                          {r.saldoLoyalti > 0 && (
+                            <span className="text-[10px] text-emerald-700 font-bold whitespace-nowrap">
+                              💎 {formatRupiah(r.saldoLoyalti)}
+                            </span>
+                          )}
+                        </div>
                         <div className="text-xs text-[color:var(--muted)]">
                           {r.telp ?? "-"} · {r.alamat ?? "-"}
                         </div>

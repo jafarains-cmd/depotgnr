@@ -29,7 +29,13 @@ export type WalkInOrderInput = {
 
 export async function searchPelanggan(
   q: string,
-): Promise<{ id: number; nama: string; telp: string | null; alamat: string | null }[]> {
+): Promise<{
+  id: number;
+  nama: string;
+  telp: string | null;
+  alamat: string | null;
+  saldoLoyalti: number;
+}[]> {
   await requireRole(["admin", "kasir"]);
   const term = `%${q.trim()}%`;
   if (!q.trim()) return [];
@@ -39,6 +45,7 @@ export async function searchPelanggan(
       nama: pelangganTable.nama,
       telp: pelangganTable.telp,
       alamat: pelangganTable.alamat,
+      saldoLoyalti: pelangganTable.saldoLoyalti,
     })
     .from(pelangganTable)
     .where(or(like(pelangganTable.nama, term), like(pelangganTable.telp, term)))

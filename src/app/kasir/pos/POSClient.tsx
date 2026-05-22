@@ -6,7 +6,13 @@ import type { Produk } from "@/db/schema/produk";
 import { formatRupiah } from "@/lib/utils";
 import { createTransaksi, type CartItem } from "./actions";
 
-type PelangganOpt = { id: number; nama: string; telp: string | null; alamat: string | null };
+type PelangganOpt = {
+  id: number;
+  nama: string;
+  telp: string | null;
+  alamat: string | null;
+  saldoLoyalti: number;
+};
 type KurirOpt = { id: string; name: string };
 type Jenis = "isi_ulang" | "tukar" | "beli_baru";
 
@@ -189,22 +195,38 @@ export function POSClient({
         <div className="bg-surface rounded-xl border border-line p-4 space-y-3">
           <div>
             <label className="block text-xs font-medium text-[color:var(--muted)] mb-0.5">Pelanggan</label>
-            {pelangganId ? (
-              <div className="flex justify-between items-center bg-[color:var(--surface2)] px-3 py-2 rounded-md">
-                <span className="text-sm">
-                  {pelangganList.find((p) => p.id === pelangganId)?.nama ?? "—"}
-                </span>
-                <button
-                  onClick={() => {
-                    setPelangganId(null);
-                    setPelangganQ("");
-                  }}
-                  className="text-xs text-[color:var(--muted)] hover:text-red-600"
-                >
-                  Ganti
-                </button>
-              </div>
-            ) : (
+            {pelangganId ? (() => {
+              const pel = pelangganList.find((p) => p.id === pelangganId);
+              const saldo = pel?.saldoLoyalti ?? 0;
+              return (
+                <div className="bg-[color:var(--surface2)] px-3 py-2 rounded-md">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">{pel?.nama ?? "—"}</span>
+                    <button
+                      onClick={() => {
+                        setPelangganId(null);
+                        setPelangganQ("");
+                      }}
+                      className="text-xs text-[color:var(--muted)] hover:text-red-600"
+                    >
+                      Ganti
+                    </button>
+                  </div>
+                  <div
+                    className={`text-[11px] mt-1 inline-flex items-center gap-1 ${
+                      saldo > 0 ? "text-emerald-700 font-bold" : "text-[color:var(--muted)]"
+                    }`}
+                  >
+                    💎 Saldo Loyalti: <b>{formatRupiah(saldo)}</b>
+                    {saldo > 0 && (
+                      <span className="text-[10px] text-[color:var(--muted)] font-normal">
+                        — tanya pelanggan apakah ingin digunakan
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })() : (
               <>
                 <input
                   value={pelangganQ}
@@ -224,9 +246,17 @@ export function POSClient({
                           setPelangganId(p.id);
                           setPelangganQ("");
                         }}
-                        className="w-full text-left px-2 py-1 hover:bg-[color:var(--surface2)]"
+                        className="w-full text-left px-2 py-1 hover:bg-[color:var(--surface2)] flex items-center justify-between gap-2"
                       >
-                        {p.nama} <span className="text-xs text-[color:var(--muted)]">{p.telp}</span>
+                        <span>
+                          {p.nama}{" "}
+                          <span className="text-xs text-[color:var(--muted)]">{p.telp}</span>
+                        </span>
+                        {p.saldoLoyalti > 0 && (
+                          <span className="text-[10px] text-emerald-700 font-bold whitespace-nowrap">
+                            💎 {formatRupiah(p.saldoLoyalti)}
+                          </span>
+                        )}
                       </button>
                     ))}
                   </div>
