@@ -366,7 +366,7 @@ async function createOrderPickupPiutang(args: {
     orderId,
     nomorOrder,
     total,
-    payUrl: `/pelanggan/order/${orderId}/bayar`,
+    payUrl: `/pembayaran?tab=piutang`,
   };
 }
 
@@ -467,7 +467,11 @@ async function createOrderAntar(args: {
     orderId,
     nomorOrder,
     total,
-    payUrl: isOnline ? `/pelanggan/order/${orderId}/bayar` : `/admin/order`,
+    payUrl: isOnline
+      ? `/pelanggan/order/${orderId}/bayar`
+      : isPiutang
+        ? `/pembayaran?tab=piutang`
+        : `/kasir/order`,
   };
 }
 

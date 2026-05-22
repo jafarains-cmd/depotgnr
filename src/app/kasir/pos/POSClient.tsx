@@ -46,6 +46,7 @@ export function POSClient({
     total: number;
     payUrl: string;
     metode: string;
+    pengantaran: "pickup" | "antar";
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -122,6 +123,7 @@ export function POSClient({
             total: res.total,
             payUrl: res.payUrl,
             metode: metodeBayar,
+            pengantaran,
           });
         }
         setCart([]);
@@ -420,59 +422,100 @@ export function POSClient({
           </div>
         )}
 
-        {pendingPayment && (
-          <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 text-sm space-y-2">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-[10px] font-bold tracking-widest text-amber-800">
-                  MENUNGGU PEMBAYARAN · {pendingPayment.metode.toUpperCase()}
+        {pendingPayment && (() => {
+          const isOnline = pendingPayment.metode === "transfer" || pendingPayment.metode === "qris";
+          const isPiutang = pendingPayment.metode === "piutang";
+          const isCashAntar =
+            pendingPayment.metode === "cash" && pendingPayment.pengantaran === "antar";
+
+          // Tentukan teks/warna/CTA per skenario
+          const config = isOnline
+            ? {
+                color: "amber",
+                badge: `MENUNGGU BUKTI · ${pendingPayment.metode.toUpperCase()}`,
+                desc: "Pelanggan upload bukti bayar di link ini. Setelah upload, konfirmasi di halaman Pembayaran.",
+                primaryLabel: "Buka Halaman Bayar →",
+                showSalin: true,
+              }
+            : isPiutang
+              ? {
+                  color: "amber",
+                  badge: "PIUTANG TERCATAT",
+                  desc:
+                    pendingPayment.pengantaran === "antar"
+                      ? "Order antar dibuat sebagai piutang. Tagih saat barang sampai atau setelahnya di Pembayaran."
+                      : "Galon sudah diserahkan. Tagih nanti & tandai lunas di Pembayaran.",
+                  primaryLabel: "Lihat di Piutang →",
+                  showSalin: false,
+                }
+              : isCashAntar
+                ? {
+                    color: "emerald",
+                    badge: "ORDER ANTAR · LUNAS",
+                    desc: "Pelanggan sudah bayar cash. Order masuk antrian kurir untuk diantar.",
+                    primaryLabel: "Lihat di Order →",
+                    showSalin: false,
+                  }
+                : {
+                    color: "amber",
+                    badge: `MENUNGGU PEMBAYARAN · ${pendingPayment.metode.toUpperCase()}`,
+                    desc: "Order tersimpan. Lanjut ke halaman pembayaran.",
+                    primaryLabel: "Buka →",
+                    showSalin: false,
+                  };
+
+          const bg = config.color === "emerald" ? "bg-emerald-50 border-emerald-300" : "bg-amber-50 border-amber-300";
+          const text = config.color === "emerald" ? "text-emerald-800" : "text-amber-800";
+          const text2 = config.color === "emerald" ? "text-emerald-900" : "text-amber-900";
+          const btnPrimary = config.color === "emerald" ? "bg-emerald-600" : "bg-brand-600";
+
+          return (
+            <div className={`${bg} border-2 rounded-xl p-4 text-sm space-y-2`}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className={`text-[10px] font-bold tracking-widest ${text}`}>
+                    {config.badge}
+                  </div>
+                  <div className={`font-extrabold ${text2} mt-0.5`}>
+                    {pendingPayment.nomorOrder}
+                  </div>
+                  <div className={`${text2} mt-1`}>
+                    Total: <b>{formatRupiah(pendingPayment.total)}</b>
+                  </div>
+                  <div className={`text-xs ${text} mt-2`}>{config.desc}</div>
                 </div>
-                <div className="font-extrabold text-amber-900 mt-0.5">
-                  {pendingPayment.nomorOrder}
-                </div>
-                <div className="text-amber-900 mt-1">
-                  Total: <b>{formatRupiah(pendingPayment.total)}</b>
-                </div>
-                <div className="text-xs text-amber-800 mt-2">
-                  Pelanggan upload bukti bayar di link ini. Setelah upload, konfirmasi di
-                  halaman <b>Pembayaran</b>.
-                </div>
+                <button
+                  onClick={() => setPendingPayment(null)}
+                  className={`${text} hover:${text2} text-xs font-bold`}
+                >
+                  ✕ Tutup
+                </button>
               </div>
-              <button
-                onClick={() => setPendingPayment(null)}
-                className="text-amber-800 hover:text-amber-900 text-xs font-bold"
-              >
-                ✕ Tutup
-              </button>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <a
+                  href={pendingPayment.payUrl}
+                  target={isOnline ? "_blank" : undefined}
+                  rel={isOnline ? "noopener" : undefined}
+                  className={`px-3 py-2 ${btnPrimary} text-white rounded-md text-xs font-bold`}
+                >
+                  {config.primaryLabel}
+                </a>
+                {config.showSalin && (
+                  <button
+                    onClick={async () => {
+                      const url = `${window.location.origin}${pendingPayment.payUrl}`;
+                      await navigator.clipboard.writeText(url);
+                      alert("Link tersalin. Kirim ke pelanggan lewat WA.");
+                    }}
+                    className="px-3 py-2 bg-amber-200 text-amber-900 rounded-md text-xs font-bold"
+                  >
+                    Salin Link
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2 pt-1">
-              <a
-                href={pendingPayment.payUrl}
-                target="_blank"
-                rel="noopener"
-                className="px-3 py-2 bg-brand-600 text-white rounded-md text-xs font-bold"
-              >
-                Buka Halaman Bayar →
-              </a>
-              <button
-                onClick={async () => {
-                  const url = `${window.location.origin}${pendingPayment.payUrl}`;
-                  await navigator.clipboard.writeText(url);
-                  alert("Link tersalin. Kirim ke pelanggan lewat WA.");
-                }}
-                className="px-3 py-2 bg-amber-200 text-amber-900 rounded-md text-xs font-bold"
-              >
-                Salin Link
-              </button>
-              <a
-                href="/pembayaran"
-                className="px-3 py-2 border border-amber-400 text-amber-900 rounded-md text-xs font-bold"
-              >
-                Lihat di /pembayaran
-              </a>
-            </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
     </div>
   );
