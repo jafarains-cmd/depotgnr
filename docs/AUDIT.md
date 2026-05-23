@@ -101,8 +101,12 @@
 - [ ] **20. Komplain — chat history** _(severity: minor)_
   Pelanggan submit, admin balas via WA. Riwayat tidak tersimpan di app.
 
-- [ ] **21. Quick reorder** _(severity: cosmetic)_
-  Fitur "order lagi seperti minggu lalu".
+- [x] ~~**21. Quick reorder**~~ _(severity: cosmetic)_ ✅
+  ~~Fitur "order lagi seperti minggu lalu".~~
+  Implementasi: tombol "Pesan ulang" di riwayat pelanggan kirim ke
+  /pelanggan/order-baru?clone=ID. Server fetch item order asli, prefill
+  qtyMap di OrderForm. Banner violet "🔁 Pesan ulang dari ORD-XXX".
+  Aman: hanya bisa clone order milik sendiri (filter by pelangganId).
 
 ## 🟣 SECURITY & ACCESS
 

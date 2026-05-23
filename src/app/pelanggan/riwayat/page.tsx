@@ -142,8 +142,9 @@ export default async function RiwayatPage({
                   </div>
                 </div>
                 <Link
-                  href="/pelanggan/order-baru"
+                  href={`/pelanggan/order-baru?clone=${o.id}`}
                   className="px-3 py-2 border-2 border-line rounded-full text-[11px] font-bold inline-flex items-center gap-1 hover:border-brand hover:text-brand transition"
+                  title="Salin item order ini sebagai pesanan baru"
                 >
                   <RefreshCw size={11} /> Pesan ulang
                 </Link>

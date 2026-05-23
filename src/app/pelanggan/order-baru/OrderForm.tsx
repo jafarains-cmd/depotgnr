@@ -19,11 +19,21 @@ const JENIS_LABEL: Record<Jenis, string> = {
 export function OrderForm({
   produkList,
   defaultAlamat,
+  prefillItems,
+  cloneNote,
 }: {
   produkList: Produk[];
   defaultAlamat: string;
+  prefillItems?: { produkId: number; jenis: Jenis; qty: number }[];
+  cloneNote?: string | null;
 }) {
-  const [qtyMap, setQtyMap] = useState<Record<LineKey, number>>({});
+  const initialQty: Record<LineKey, number> = {};
+  if (prefillItems) {
+    for (const it of prefillItems) {
+      initialQty[`${it.produkId}:${it.jenis}`] = it.qty;
+    }
+  }
+  const [qtyMap, setQtyMap] = useState<Record<LineKey, number>>(initialQty);
   const [alamatAntar, setAlamatAntar] = useState(defaultAlamat);
   const [jadwalAntar, setJadwalAntar] = useState("");
   const [catatan, setCatatan] = useState("");
@@ -96,6 +106,15 @@ export function OrderForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 pb-32 sm:pb-4">
+      {cloneNote && (
+        <div className="bg-violet-50 border border-violet-200 rounded-xl px-3 py-2 text-xs text-violet-800 inline-flex items-center gap-2">
+          <span>🔁</span>
+          <span>
+            <b>Pesan ulang</b> dari order {cloneNote}. Item sudah dimuat otomatis,
+            silakan sesuaikan & lanjutkan.
+          </span>
+        </div>
+      )}
       {/* Section: Pilih produk */}
       <section>
         <div className="text-[11px] font-bold tracking-widest text-[color:var(--muted)] mb-2 px-1">
