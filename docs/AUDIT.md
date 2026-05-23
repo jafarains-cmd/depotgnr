@@ -87,9 +87,14 @@
 
 ## 🔵 PELANGGAN-FACING
 
-- [ ] **18. ETA pengantaran** _(severity: minor)_
-  Pelanggan order, tidak tahu jam berapa kurir tiba. Halaman tracking ada
-  tapi tanpa estimasi.
+- [x] ~~**18. ETA pengantaran**~~ _(severity: minor)_ ✅
+  ~~Pelanggan order, tidak tahu jam berapa kurir tiba. Halaman tracking ada
+  tapi tanpa estimasi.~~
+  Implementasi: lib/eta.ts dengan jarak Haversine + asumsi kecepatan 25
+  km/jam. API /api/track return etaMenit + jadwalAntar. Track page tampil
+  card "ESTIMASI TIBA ± X menit" (emerald) saat kurir aktif, atau card
+  "DIJADWALKAN" (blue) saat masih pending dengan jadwal. Riwayat pelanggan
+  juga tampil chip jadwal antar untuk order yang belum selesai.
 
 - [x] ~~**19. Loyalty progress visual**~~ _(severity: minor)_ ✅
   ~~Progress bar / tier system. Pelanggan tidak tahu "tinggal berapa galon lagi

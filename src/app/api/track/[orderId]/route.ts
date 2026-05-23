@@ -3,6 +3,7 @@ import { eq, desc } from "drizzle-orm";
 import { db } from "@/db";
 import { orderHeader, lokasiKurir } from "@/db/schema/order";
 import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
+import { etaMenit } from "@/lib/eta";
 
 export async function GET(
   req: Request,
@@ -34,26 +35,41 @@ export async function GET(
     .orderBy(desc(lokasiKurir.createdAt))
     .limit(1);
 
+  const kurirData = latest[0];
+  const tujuanData =
+    pel?.koordinatLat && pel?.koordinatLng
+      ? { lat: pel.koordinatLat, lng: pel.koordinatLng, nama: pel.nama }
+      : null;
+
+  // Hitung ETA hanya saat sedang aktif diantar
+  const sedangBerjalan = ["diisi", "diantar", "diproses", "dijemput"].includes(o.status);
+  const eta =
+    sedangBerjalan && kurirData && tujuanData
+      ? etaMenit(
+          { lat: kurirData.lat, lng: kurirData.lng },
+          { lat: tujuanData.lat, lng: tujuanData.lng },
+        )
+      : null;
+
   return NextResponse.json({
     ok: true,
     order: {
       nomorOrder: o.nomorOrder,
       status: o.status,
       alamatAntar: o.alamatAntar,
+      jadwalAntar: o.jadwalAntar?.toISOString() ?? null,
     },
-    tujuan:
-      pel?.koordinatLat && pel?.koordinatLng
-        ? { lat: pel.koordinatLat, lng: pel.koordinatLng, nama: pel.nama }
-        : null,
-    kurir: latest[0]
+    tujuan: tujuanData,
+    kurir: kurirData
       ? {
-          lat: latest[0].lat,
-          lng: latest[0].lng,
-          accuracy: latest[0].accuracy,
-          speed: latest[0].speed,
-          heading: latest[0].heading,
-          updatedAt: latest[0].createdAt.toISOString(),
+          lat: kurirData.lat,
+          lng: kurirData.lng,
+          accuracy: kurirData.accuracy,
+          speed: kurirData.speed,
+          heading: kurirData.heading,
+          updatedAt: kurirData.createdAt.toISOString(),
         }
       : null,
+    etaMenit: eta,
   });
 }

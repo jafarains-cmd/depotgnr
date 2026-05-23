@@ -22,7 +22,12 @@ const kurirIcon = L.divIcon({
 
 type Data = {
   ok: boolean;
-  order: { nomorOrder: string; status: string; alamatAntar: string | null };
+  order: {
+    nomorOrder: string;
+    status: string;
+    alamatAntar: string | null;
+    jadwalAntar: string | null;
+  };
   tujuan: { lat: number; lng: number; nama: string } | null;
   kurir: {
     lat: number;
@@ -31,6 +36,7 @@ type Data = {
     speed: number | null;
     updatedAt: string;
   } | null;
+  etaMenit: number | null;
 };
 
 export function TrackMap({ orderId, token }: { orderId: number; token: string }) {
@@ -91,6 +97,42 @@ export function TrackMap({ orderId, token }: { orderId: number; token: string })
         {data.order.alamatAntar && (
           <div className="text-xs text-[color:var(--muted)]">📍 {data.order.alamatAntar}</div>
         )}
+
+        {/* ETA bila kurir sudah mulai tracking */}
+        {data.etaMenit !== null && !isFinished && (
+          <div className="mt-2 p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg">
+            <div className="text-[10px] font-bold tracking-widest text-emerald-700">
+              ESTIMASI TIBA
+            </div>
+            <div className="text-xl font-extrabold text-emerald-800">
+              ± {data.etaMenit < 60
+                ? `${data.etaMenit} menit`
+                : `${Math.floor(data.etaMenit / 60)} jam ${data.etaMenit % 60} menit`}
+            </div>
+            <div className="text-[10px] text-emerald-700/80 mt-0.5">
+              Berdasarkan jarak kurir → tujuan, asumsi 25 km/jam
+            </div>
+          </div>
+        )}
+
+        {/* Jadwal antar kalau ada (sebelum kurir jalan) */}
+        {!data.kurir && data.order.jadwalAntar && !isFinished && (
+          <div className="mt-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="text-[10px] font-bold tracking-widest text-blue-700">
+              DIJADWALKAN
+            </div>
+            <div className="text-sm font-extrabold text-blue-800">
+              {new Date(data.order.jadwalAntar).toLocaleString("id-ID", {
+                weekday: "long",
+                day: "2-digit",
+                month: "short",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </div>
+          </div>
+        )}
+
         {data.kurir && (
           <div className="text-xs text-[color:var(--muted)] mt-1">
             Kurir update terakhir:{" "}
@@ -101,7 +143,7 @@ export function TrackMap({ orderId, token }: { orderId: number; token: string })
             })}
           </div>
         )}
-        {!data.kurir && !isFinished && (
+        {!data.kurir && !isFinished && !data.order.jadwalAntar && (
           <div className="text-xs text-amber-700 mt-1">
             Kurir belum mulai tracking. Tunggu sebentar...
           </div>

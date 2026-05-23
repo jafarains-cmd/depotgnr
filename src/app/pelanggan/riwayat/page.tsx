@@ -131,6 +131,19 @@ export default async function RiwayatPage({
                 </span>
               </div>
 
+              {/* Jadwal antar / ETA chip */}
+              {o.jadwalAntar && !["selesai", "batal"].includes(o.status) && (
+                <div className="mb-2 inline-flex items-center gap-1 text-[10px] px-2 py-1 bg-blue-50 text-blue-700 rounded-md font-bold">
+                  🕐 Dijadwalkan:{" "}
+                  {new Date(o.jadwalAntar).toLocaleString("id-ID", {
+                    day: "2-digit",
+                    month: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </div>
+              )}
+
               <div className="flex items-center gap-3">
                 <div className="w-11 h-14 bg-[color:var(--surface2)] rounded-xl grid place-items-center flex-shrink-0">
                   <GallonArt size={36} />
