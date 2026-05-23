@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { db } from "@/db";
-import { eq, desc, and, gte, lte, like, or, sql } from "drizzle-orm";
+import { eq, desc, and, gte, lte, like, or, sql, isNull, isNotNull } from "drizzle-orm";
 import { TransaksiRow } from "./TransaksiRow";
 import { transaksi } from "@/db/schema/transaksi";
 import { user as userTable } from "@/db/schema/auth";
@@ -19,7 +19,15 @@ export const dynamic = "force-dynamic";
 export default async function RiwayatKasirPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; from?: string; to?: string; q?: string; limit?: string; page?: string }>;
+  searchParams: Promise<{
+    range?: string;
+    from?: string;
+    to?: string;
+    q?: string;
+    limit?: string;
+    page?: string;
+    tab?: string;
+  }>;
 }) {
   const session = await requireRole(["admin", "kasir"]);
   const role = session.user.role;
@@ -28,11 +36,17 @@ export default async function RiwayatKasirPage({
   const q = (sp.q ?? "").trim();
   const limit = parseLimit(sp.limit);
   const pageParam = parsePage(sp.page);
+  const tab = (["aktif", "batal", "semua"] as const).includes(sp.tab as never)
+    ? (sp.tab as "aktif" | "batal" | "semua")
+    : "aktif";
 
-  const conds = [];
-  if (role !== "admin") conds.push(eq(transaksi.kasirUserId, session.user.id));
-  if (range.from) conds.push(gte(transaksi.createdAt, range.from));
-  if (range.to) conds.push(lte(transaksi.createdAt, range.to));
+  // baseConds = filter tanpa tab status; tabConds = base + filter status
+  const baseConds = [];
+  if (role !== "admin") baseConds.push(eq(transaksi.kasirUserId, session.user.id));
+  if (range.from) baseConds.push(gte(transaksi.createdAt, range.from));
+  if (range.to) baseConds.push(lte(transaksi.createdAt, range.to));
+
+  const conds = [...baseConds];
   if (q) {
     const pat = `%${q}%`;
     conds.push(
@@ -43,6 +57,8 @@ export default async function RiwayatKasirPage({
       )!,
     );
   }
+  if (tab === "aktif") conds.push(isNull(transaksi.voidedAt));
+  else if (tab === "batal") conds.push(isNotNull(transaksi.voidedAt));
 
   const whereClause = conds.length > 0 ? and(...conds) : undefined;
 
@@ -58,6 +74,35 @@ export default async function RiwayatKasirPage({
   const total = aggRow?.n ?? 0;
   const totalOmzet = aggRow?.omzet ?? 0;
   const { page, totalPages, offset } = getPagination({ total, limit, page: pageParam });
+
+  // Count tiap tab — pakai baseConds + q saja, tanpa filter status
+  const countConds = [...baseConds];
+  if (q) {
+    const pat = `%${q}%`;
+    countConds.push(
+      or(
+        like(pelanggan.nama, pat),
+        like(pelanggan.telp, pat),
+        like(transaksi.nomorNota, pat),
+      )!,
+    );
+  }
+  const baseWhere = countConds.length > 0 ? and(...countConds) : undefined;
+  const [aktifCnt] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(transaksi)
+    .leftJoin(pelanggan, eq(transaksi.pelangganId, pelanggan.id))
+    .where(and(baseWhere, isNull(transaksi.voidedAt)));
+  const [batalCnt] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(transaksi)
+    .leftJoin(pelanggan, eq(transaksi.pelangganId, pelanggan.id))
+    .where(and(baseWhere, isNotNull(transaksi.voidedAt)));
+  const [semuaCnt] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(transaksi)
+    .leftJoin(pelanggan, eq(transaksi.pelangganId, pelanggan.id))
+    .where(baseWhere);
 
   const rows = await db
     .select({
@@ -91,10 +136,53 @@ export default async function RiwayatKasirPage({
           customTo={range.to}
           basePath="/kasir/transaksi"
         />
+        {/* Tab status: Aktif / Dibatalkan / Semua */}
+        <div className="flex gap-1 text-xs">
+          {(
+            [
+              { key: "aktif", label: "Aktif", count: aktifCnt?.n ?? 0, color: "emerald" },
+              { key: "batal", label: "Dibatalkan", count: batalCnt?.n ?? 0, color: "rose" },
+              { key: "semua", label: "Semua", count: semuaCnt?.n ?? 0, color: "slate" },
+            ] as const
+          ).map((t) => {
+            const params = new URLSearchParams();
+            if (t.key !== "aktif") params.set("tab", t.key);
+            if (range.key) params.set("range", range.key);
+            if (sp.from) params.set("from", sp.from);
+            if (sp.to) params.set("to", sp.to);
+            if (q) params.set("q", q);
+            const isActive = tab === t.key;
+            return (
+              <Link
+                key={t.key}
+                href={`/kasir/transaksi${params.toString() ? `?${params}` : ""}`}
+                className={`px-3 py-1.5 rounded-md font-bold inline-flex items-center gap-1.5 ${
+                  isActive
+                    ? t.color === "emerald"
+                      ? "bg-emerald-600 text-white"
+                      : t.color === "rose"
+                        ? "bg-rose-600 text-white"
+                        : "bg-slate-700 text-white"
+                    : "bg-[color:var(--surface2)] text-[color:var(--muted)] hover:text-ink"
+                }`}
+              >
+                {t.label}
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-extrabold ${
+                    isActive ? "bg-white/30" : "bg-[color:var(--surface)] text-ink"
+                  }`}
+                >
+                  {t.count}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
         <form className="flex gap-2 items-center">
           {range.key && <input type="hidden" name="range" value={range.key} />}
           {sp.from && <input type="hidden" name="from" value={sp.from} />}
           {sp.to && <input type="hidden" name="to" value={sp.to} />}
+          {tab !== "aktif" && <input type="hidden" name="tab" value={tab} />}
           <input
             type="search"
             name="q"
@@ -158,8 +246,8 @@ export default async function RiwayatKasirPage({
                   <td className="p-3 font-mono text-xs hidden sm:table-cell">
                     {r.nomorNota}
                     {r.voidedAt && (
-                      <span className="ml-1 text-[9px] px-1 py-0.5 bg-red-100 text-red-700 rounded font-bold">
-                        BATAL
+                      <span className="ml-1 text-[10px] px-1.5 py-0.5 bg-rose-600 text-white rounded font-extrabold tracking-wider">
+                        ⊗ BATAL
                       </span>
                     )}
                   </td>

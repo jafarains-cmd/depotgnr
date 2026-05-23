@@ -9,6 +9,7 @@ import { pengaturan } from "@/db/schema/pengaturan";
 import { requireRole } from "@/lib/permissions";
 import { formatRupiah } from "@/lib/utils";
 import { NotaActions } from "./NotaActions";
+import { BatalkanCard } from "./BatalkanCard";
 
 export const dynamic = "force-dynamic";
 
@@ -60,9 +61,6 @@ export default async function NotaPage({ params }: { params: Promise<{ id: strin
               trxId={t.id}
               pelangganTelp={pel?.telp ?? null}
               pelangganUserId={pel?.userId ?? null}
-              voided={!!t.voidedAt}
-              canVoid={isAdmin}
-              ageDays={Math.floor((Date.now() - t.createdAt.getTime()) / (1000 * 60 * 60 * 24))}
             />
           </div>
 
@@ -73,6 +71,17 @@ export default async function NotaPage({ params }: { params: Promise<{ id: strin
                 Dibatalkan {t.voidedAt.toLocaleString("id-ID")}
                 {t.voidedAlasan && ` · Alasan: ${t.voidedAlasan}`}
               </div>
+            </div>
+          )}
+
+          {isAdmin && !t.voidedAt && (
+            <div className="no-print mb-4">
+              <BatalkanCard
+                trxId={t.id}
+                ageDays={Math.floor(
+                  (Date.now() - t.createdAt.getTime()) / (1000 * 60 * 60 * 24),
+                )}
+              />
             </div>
           )}
 

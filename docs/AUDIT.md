@@ -25,8 +25,12 @@
   Saat ini set null, nama "—" di history laporan. Ganti: soft-delete /
   deaktivasi user dengan nama tetap.
 
-- [ ] **4. Refund / void transaksi UI tidak prominent** _(severity: minor)_
-  Logic ada di kode, tapi kasir kesulitan menemukan tombolnya.
+- [x] ~~**4. Refund / void transaksi UI tidak prominent**~~ _(severity: minor)_ ✅
+  ~~Logic ada di kode, tapi kasir kesulitan menemukan tombolnya.~~
+  Implementasi: (1) Card "Zona Bahaya" terpisah di detail nota, prominent
+  merah dengan peringatan + countdown sisa hari. (2) Tab filter Aktif/
+  Dibatalkan/Semua di list /kasir/transaksi dengan count badge. (3) Badge
+  "⊗ BATAL" lebih jelas di list row.
 
 ## 🟠 NOTIFIKASI & ALERT
 
@@ -138,8 +142,8 @@
 ## Progress
 
 - Total: **27 item**
-- Selesai: **1** (#2 Dashboard kasir)
+- Selesai: **2** (#2 Dashboard kasir, #4 Refund/void UI prominent)
 - Sedang dikerjakan: —
-- Tersisa: **26**
+- Tersisa: **25**
 
 _Update terakhir: 2026-05-23_
