@@ -84,9 +84,12 @@
   /admin/dashboard, /data-pelanggan, /pelanggan/beranda. Pulse animation
   Tailwind, no library tambahan.
 
-- [ ] **15. Empty state dengan CTA** _(severity: cosmetic)_
-  "Tidak ada data" terlalu polos. Tambah call-to-action: "[+ Buat order
-  pertama]" dll.
+- [x] ~~**15. Empty state dengan CTA**~~ _(severity: cosmetic)_ ✅
+  ~~"Tidak ada data" terlalu polos. Tambah call-to-action: "[+ Buat order
+  pertama]" dll.~~
+  Implementasi: emoji besar + judul + deskripsi + tombol CTA di 4 empty state
+  paling sering: /pelanggan/riwayat (💧 "Buat Pesanan Pertama"), /pelanggan/
+  komplain (😊 "Lapor Komplain"), /admin/produk (📦), /admin/pengeluaran (💸).
 
 - [x] ~~**16. Back-to-top button**~~ _(severity: cosmetic)_ ✅
   ~~Untuk list panjang di mobile.~~

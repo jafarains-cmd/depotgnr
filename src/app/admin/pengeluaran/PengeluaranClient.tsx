@@ -165,8 +165,13 @@ export function PengeluaranClient({
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="p-8 text-center text-[color:var(--muted)] text-sm">
-                  Belum ada pengeluaran sesuai filter.
+                <td colSpan={5} className="p-10 text-center">
+                  <div className="text-4xl mb-2">💸</div>
+                  <div className="font-bold">Belum ada pengeluaran</div>
+                  <p className="text-xs text-[color:var(--muted)] mt-1 max-w-sm mx-auto">
+                    Catat pengeluaran operasional (galon baru, biaya antar, dll)
+                    untuk lihat profit bersih di laporan.
+                  </p>
                 </td>
               </tr>
             )}

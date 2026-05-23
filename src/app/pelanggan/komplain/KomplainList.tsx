@@ -72,9 +72,19 @@ export function KomplainList({ rows }: { rows: KomplainRow[] }) {
 
   if (rows.length === 0) {
     return (
-      <div className="bg-surface border border-line rounded-2xl p-8 text-center text-sm text-[color:var(--muted)]">
-        Belum ada komplain. Klik "Komplain Baru" kalau ada masalah dengan produk
-        atau order.
+      <div className="bg-surface border border-line rounded-2xl p-10 text-center">
+        <div className="text-5xl mb-3">😊</div>
+        <div className="font-extrabold text-lg">Belum ada komplain</div>
+        <p className="text-sm text-[color:var(--muted)] mt-1 max-w-sm mx-auto">
+          Senang mendengarnya! Kalau ada masalah dengan produk atau pengantaran,
+          laporkan supaya kami bisa bantu cepat.
+        </p>
+        <Link
+          href="/pelanggan/komplain/baru"
+          className="inline-flex items-center gap-1.5 mt-4 px-5 py-2.5 border-2 border-line rounded-full font-bold text-sm hover:border-brand hover:text-brand"
+        >
+          + Lapor Komplain
+        </Link>
       </div>
     );
   }

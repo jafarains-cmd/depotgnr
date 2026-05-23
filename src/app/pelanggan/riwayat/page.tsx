@@ -101,8 +101,19 @@ export default async function RiwayatPage({
 
       <div className="space-y-2 mt-3">
         {filtered.length === 0 && (
-          <div className="bg-surface border border-line rounded-2xl p-8 text-center text-[color:var(--muted)] text-sm">
-            Belum ada pesanan.
+          <div className="bg-surface border border-line rounded-2xl p-10 text-center">
+            <div className="text-5xl mb-3">💧</div>
+            <div className="font-extrabold text-lg">Belum ada pesanan</div>
+            <p className="text-sm text-[color:var(--muted)] mt-1 max-w-sm mx-auto">
+              Pesan galon pertama Anda — antar ke alamat Anda atau ambil di
+              depot.
+            </p>
+            <Link
+              href="/pelanggan/order-baru"
+              className="inline-flex items-center gap-1.5 mt-4 px-5 py-2.5 bg-brand text-white rounded-full font-extrabold text-sm"
+            >
+              + Buat Pesanan Pertama
+            </Link>
           </div>
         )}
         {filtered.map((o) => {

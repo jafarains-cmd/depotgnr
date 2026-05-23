@@ -41,8 +41,12 @@ export default async function ProdukPage() {
               ))}
               {list.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-4 md:p-6 text-center text-[color:var(--muted)]">
-                    Belum ada produk.
+                  <td colSpan={6} className="p-8 text-center">
+                    <div className="text-4xl mb-2">📦</div>
+                    <div className="font-bold">Belum ada produk</div>
+                    <p className="text-xs text-[color:var(--muted)] mt-1">
+                      Tambahkan produk lewat form di samping/bawah supaya bisa dijual.
+                    </p>
                   </td>
                 </tr>
               )}
