@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   CheckCircle,
   XCircle,
@@ -143,11 +144,15 @@ export function KomplainList({ rows }: { rows: KomplainRow[] }) {
               </div>
             )}
 
-            {k.status === "baru" && (
-              <div className="pt-2 border-t border-line">
-                <TarikButton id={k.id} />
-              </div>
-            )}
+            <div className="pt-2 border-t border-line flex gap-2">
+              <Link
+                href={`/komplain/${k.id}`}
+                className="flex-1 py-2 bg-violet-100 text-violet-800 rounded-md text-xs font-bold inline-flex items-center justify-center gap-1"
+              >
+                💬 Chat dengan Admin
+              </Link>
+              {k.status === "baru" && <TarikButton id={k.id} />}
+            </div>
           </div>
         );
       })}

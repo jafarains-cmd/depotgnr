@@ -149,16 +149,22 @@ export function KomplainAdminClient({ rows }: { rows: Row[] }) {
               </div>
             )}
 
-            {!closed && (
-              <div className="pt-2 border-t border-line flex gap-2 flex-wrap">
+            <div className="pt-2 border-t border-line flex gap-2 flex-wrap">
+              <Link
+                href={`/komplain/${k.id}`}
+                className="px-3 py-1.5 bg-violet-100 text-violet-800 rounded-md text-xs font-bold inline-flex items-center gap-1"
+              >
+                💬 Chat
+              </Link>
+              {!closed && (
                 <button
                   onClick={() => setResolveFor(k)}
                   className="px-3 py-1.5 bg-brand-600 text-white rounded-md text-xs font-bold"
                 >
                   Tindak Lanjuti
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         );
       })}

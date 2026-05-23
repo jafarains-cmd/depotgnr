@@ -103,8 +103,14 @@
   (filled=💧, last=🎁, dashed=belum). (2) Mini progress bar di beranda
   pelanggan dengan badge "🔥 Hampir dapat!" kalau ≥80%.
 
-- [ ] **20. Komplain — chat history** _(severity: minor)_
-  Pelanggan submit, admin balas via WA. Riwayat tidak tersimpan di app.
+- [x] ~~**20. Komplain — chat history**~~ _(severity: minor)_ ✅
+  ~~Pelanggan submit, admin balas via WA. Riwayat tidak tersimpan di app.~~
+  Implementasi: schema baru `komplain_pesan` (append-only) + route bersama
+  /komplain/[id] dengan thread chat real-time (Enter=kirim, Shift+Enter=
+  baris baru). Pesan baru dari staff trigger notif WA + push ke pelanggan
+  (best-effort). Read-receipt: pesan lawan auto-mark dibaca saat mount.
+  Akses: pelanggan hanya milik sendiri, staff (admin/kasir) semua.
+  Tombol "💬 Chat" di list admin & list pelanggan.
 
 - [x] ~~**21. Quick reorder**~~ _(severity: cosmetic)_ ✅
   ~~Fitur "order lagi seperti minggu lalu".~~
@@ -154,8 +160,9 @@
 ## Progress
 
 - Total: **27 item**
-- Selesai: **2** (#2 Dashboard kasir, #4 Refund/void UI prominent)
+- Selesai: **6** (#2 Dashboard kasir, #4 Refund/void UI prominent,
+  #18 ETA pengantaran, #19 Loyalty progress, #20 Komplain chat, #21 Quick reorder)
 - Sedang dikerjakan: —
-- Tersisa: **25**
+- Tersisa: **21**
 
 _Update terakhir: 2026-05-23_

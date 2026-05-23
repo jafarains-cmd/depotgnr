@@ -41,3 +41,37 @@ export const komplain = sqliteTable(
 );
 
 export type Komplain = typeof komplain.$inferSelect;
+
+/**
+ * Thread pesan untuk tiap komplain — chat 2-arah antara pelanggan & admin.
+ * Bisa lampirkan foto opsional. Tidak ada delete: append-only untuk audit.
+ */
+export const komplainPesan = sqliteTable(
+  "komplain_pesan",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    komplainId: integer("komplain_id")
+      .notNull()
+      .references(() => komplain.id, { onDelete: "cascade" }),
+    /** Author role: pelanggan vs admin/kasir. Sumber user dari user.id */
+    senderUserId: text("sender_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    senderRole: text("sender_role", { enum: ["pelanggan", "staff"] }).notNull(),
+    pesan: text("pesan").notNull(),
+    fotoUrl: text("foto_url"),
+    /** Tanda admin sudah baca pesan pelanggan, atau sebaliknya */
+    readByOther: integer("read_by_other", { mode: "boolean" }).notNull().default(false),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => ({
+    komplainDateIdx: index("komplain_pesan_komplain_date_idx").on(
+      t.komplainId,
+      t.createdAt,
+    ),
+  }),
+);
+
+export type KomplainPesan = typeof komplainPesan.$inferSelect;
