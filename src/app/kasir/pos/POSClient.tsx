@@ -5,6 +5,7 @@ import { Plus, Trash2, Printer } from "lucide-react";
 import type { Produk } from "@/db/schema/produk";
 import { formatRupiah } from "@/lib/utils";
 import { createTransaksi, type CartItem } from "./actions";
+import { useToast } from "@/components/Toast";
 
 type PelangganOpt = {
   id: number;
@@ -46,6 +47,7 @@ export function POSClient({
   const [kurirUserId, setKurirUserId] = useState<string>("");
   const [catatan, setCatatan] = useState("");
   const [pending, startTransition] = useTransition();
+  const toast = useToast();
   const [lastNota, setLastNota] = useState<{ id: number; nota: string; total: number } | null>(null);
   const [pendingPayment, setPendingPayment] = useState<{
     orderId: number;
@@ -615,7 +617,7 @@ export function POSClient({
                     onClick={async () => {
                       const url = `${window.location.origin}${pendingPayment.payUrl}`;
                       await navigator.clipboard.writeText(url);
-                      alert("Link tersalin. Kirim ke pelanggan lewat WA.");
+                      toast.success("Link tersalin. Kirim ke pelanggan lewat WA.");
                     }}
                     className="px-3 py-2 bg-amber-200 text-amber-900 rounded-md text-xs font-bold"
                   >

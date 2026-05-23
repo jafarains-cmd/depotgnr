@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Bell, BellOff, X } from "lucide-react";
+import { useToast } from "@/components/Toast";
 
 const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
 
@@ -19,6 +20,7 @@ export function NotifSubscribe() {
   const [permission, setPermission] = useState<NotificationPermission>("default");
   const [subscribed, setSubscribed] = useState(false);
   const [busy, setBusy] = useState(false);
+  const toast = useToast();
   const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
@@ -37,7 +39,7 @@ export function NotifSubscribe() {
 
   async function subscribe() {
     if (!VAPID_PUBLIC) {
-      alert("VAPID key belum diset di server.");
+      toast.error("VAPID key belum diset di server.");
       return;
     }
     setBusy(true);

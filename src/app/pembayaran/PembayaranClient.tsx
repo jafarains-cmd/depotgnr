@@ -7,6 +7,7 @@ import { tandaiLunasBatch, lepasNotaGabungan } from "../admin/nota-gabungan/acti
 import { formatRupiah } from "@/lib/utils";
 import { normalizeDriveUrl, isPdfUrl } from "@/lib/drive-url";
 import { DetailModal } from "@/components/DetailModal";
+import { useToast } from "@/components/Toast";
 
 export type Row = {
   id: number;
@@ -31,6 +32,7 @@ type Item =
 
 export function PembayaranClient({ rows }: { rows: Row[] }) {
   const [pending, startTransition] = useTransition();
+  const toast = useToast();
   const [detailId, setDetailId] = useState<number | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set());
 
@@ -108,7 +110,8 @@ export function PembayaranClient({ rows }: { rows: Row[] }) {
       return;
     startTransition(async () => {
       const r = await lepasNotaGabungan(g.id);
-      if ("error" in r) alert(r.error);
+      if ("error" in r) toast.error(r.error);
+      else toast.success(`Grup ${g.kode} dilepas`);
     });
   }
 

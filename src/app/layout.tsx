@@ -5,6 +5,7 @@ import "./globals.css";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { COOKIE_PALETTE, COOKIE_MODE, isPalette, isMode } from "@/lib/theme";
 import { TimezoneProvider } from "@/components/TimezoneContext";
+import { ToastProvider } from "@/components/Toast";
 import { getZonaWaktu } from "@/lib/timezone-server";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -42,7 +43,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="id" data-palette={palette} data-mode={mode} className={jakarta.variable}>
       <body>
         <ServiceWorkerRegister />
-        <TimezoneProvider zona={zonaWaktu}>{children}</TimezoneProvider>
+        <TimezoneProvider zona={zonaWaktu}>
+          <ToastProvider>{children}</ToastProvider>
+        </TimezoneProvider>
       </body>
     </html>
   );

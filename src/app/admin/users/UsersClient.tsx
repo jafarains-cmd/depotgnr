@@ -13,6 +13,7 @@ import {
   generateResetLink,
 } from "./actions";
 import { PasswordInput } from "@/components/PasswordInput";
+import { useToast } from "@/components/Toast";
 
 type Row = {
   id: string;
@@ -66,6 +67,7 @@ export function UsersClient({ users }: { users: Row[] }) {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Row | null>(null);
   const [, startTransition] = useTransition();
+  const toast = useToast();
 
   return (
     <div className="space-y-4">
@@ -202,7 +204,8 @@ export function UsersClient({ users }: { users: Row[] }) {
                         ) {
                           startTransition(async () => {
                             const r = await deleteUser(u.id);
-                            if ("error" in r) alert(r.error);
+                            if ("error" in r) toast.error(r.error);
+                            else toast.success(`User ${u.name} dihapus`);
                           });
                         }
                       }}
@@ -418,6 +421,7 @@ function ResetLinkButton({ userId, userName }: { userId: string; userName: strin
   const [link, setLink] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const toast = useToast();
 
   function handleClick() {
     if (
@@ -429,7 +433,7 @@ function ResetLinkButton({ userId, userName }: { userId: string; userName: strin
     startTransition(async () => {
       const r = await generateResetLink(userId);
       if ("error" in r) {
-        alert(r.error);
+        toast.error(r.error);
         return;
       }
       setLink(r.url);

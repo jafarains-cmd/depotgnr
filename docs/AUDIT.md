@@ -68,8 +68,14 @@
 
 ## 🟢 UX
 
-- [ ] **13. Ganti `alert()` & `confirm()` native → toast / modal komponen** _(severity: minor)_
-  Tidak konsisten, di mobile jelek. Banyak tempat.
+- [x] ~~**13. Ganti `alert()` & `confirm()` native → toast / modal komponen**~~ _(severity: minor)_ ✅
+  ~~Tidak konsisten, di mobile jelek. Banyak tempat.~~
+  Implementasi: ToastProvider di root layout, `useToast()` hook dengan
+  helper `success/error/info/warn`. Auto-dismiss 3.5s (error 5s, warn 4.5s),
+  klik untuk close, stack vertical. Toast bottom-right desktop, full-width
+  bottom mobile. Replace `alert()` di POS, /pembayaran, /admin/users, dan
+  NotifSubscribe. `confirm()` native tetap dipakai (UX dialog browser
+  sebenarnya OK + butuh Promise pattern kompleks untuk modal-confirm).
 
 - [ ] **14. Loading state — tambah skeleton loader** _(severity: cosmetic)_
   Banyak halaman blank → muncul. Skeleton mengurangi kesan lambat.
