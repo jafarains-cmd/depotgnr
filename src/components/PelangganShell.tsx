@@ -6,6 +6,7 @@ import { Home, Plus, History, User, LogOut, Gift } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { DropFill } from "./GallonArt";
 import { useNotifPolling } from "./useNotifPolling";
+import { BackToTop } from "./BackToTop";
 
 type NavBadges = {
   pesanan?: number;
@@ -108,6 +109,7 @@ export function PelangganShell({
       )}
 
       <main className={isBeranda ? "" : "max-w-3xl mx-auto p-4"}>{children}</main>
+      <BackToTop />
 
       {/* Mobile bottom nav */}
       <nav className="sm:hidden fixed bottom-0 inset-x-0 bg-surface border-t border-line grid grid-cols-5 z-20 print:hidden">

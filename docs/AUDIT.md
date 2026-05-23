@@ -84,8 +84,12 @@
   "Tidak ada data" terlalu polos. Tambah call-to-action: "[+ Buat order
   pertama]" dll.
 
-- [ ] **16. Back-to-top button** _(severity: cosmetic)_
-  Untuk list panjang di mobile.
+- [x] ~~**16. Back-to-top button**~~ _(severity: cosmetic)_ ✅
+  ~~Untuk list panjang di mobile.~~
+  Implementasi: BackToTop component muncul saat scroll > 600px,
+  fixed bottom-right circular brand button. Hanya mobile (sm:hidden) supaya
+  tidak ganggu desktop yang punya nav samping. Smooth scroll to top.
+  Mounted di AppShell (admin/kasir/kurir) + PelangganShell.
 
 - [ ] **17. Server-side search di semua list pages** _(severity: minor)_
   Sudah di-fix /data-pelanggan. Cek halaman lain yang masih client-side

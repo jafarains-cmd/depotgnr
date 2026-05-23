@@ -7,6 +7,7 @@ import { authClient } from "@/lib/auth-client";
 import { LogOut, Menu, X } from "lucide-react";
 import { DropFill } from "./GallonArt";
 import { useNotifPolling } from "./useNotifPolling";
+import { BackToTop } from "./BackToTop";
 import type { NotifCounts } from "@/lib/notif-action";
 
 export type NavItem = {
@@ -153,6 +154,7 @@ export function AppShell({
       </aside>
 
       <main className="flex-1 overflow-auto min-w-0">{children}</main>
+      <BackToTop />
     </div>
   );
 }
