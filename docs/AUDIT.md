@@ -77,8 +77,12 @@
   NotifSubscribe. `confirm()` native tetap dipakai (UX dialog browser
   sebenarnya OK + butuh Promise pattern kompleks untuk modal-confirm).
 
-- [ ] **14. Loading state — tambah skeleton loader** _(severity: cosmetic)_
-  Banyak halaman blank → muncul. Skeleton mengurangi kesan lambat.
+- [x] ~~**14. Loading state — tambah skeleton loader**~~ _(severity: cosmetic)_ ✅
+  ~~Banyak halaman blank → muncul. Skeleton mengurangi kesan lambat.~~
+  Implementasi: components/Skeleton.tsx (primitive + Card + Table). Next.js
+  loading.tsx ditambahkan di 5 route paling sering: /pembayaran, /kasir,
+  /admin/dashboard, /data-pelanggan, /pelanggan/beranda. Pulse animation
+  Tailwind, no library tambahan.
 
 - [ ] **15. Empty state dengan CTA** _(severity: cosmetic)_
   "Tidak ada data" terlalu polos. Tambah call-to-action: "[+ Buat order
