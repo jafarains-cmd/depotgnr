@@ -16,38 +16,49 @@ type RowWithTitipan = Pelanggan & {
 export function PelangganTable({
   rows,
   canDelete,
+  q,
 }: {
   rows: RowWithTitipan[];
   canDelete: boolean;
+  q: string;
 }) {
   const [editing, setEditing] = useState<Pelanggan | null>(null);
   const [creating, setCreating] = useState(false);
   const [, startTransition] = useTransition();
-  const [q, setQ] = useState("");
 
-  const filtered = rows.filter(
-    (r) =>
-      r.nama.toLowerCase().includes(q.toLowerCase()) ||
-      (r.telp ?? "").includes(q) ||
-      (r.alamat ?? "").toLowerCase().includes(q.toLowerCase()),
-  );
+  const filtered = rows;
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-3">
+      <form method="GET" className="flex gap-3 items-center">
         <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
+          name="q"
+          defaultValue={q}
           placeholder="Cari nama, telp, alamat..."
           className="flex-1 px-3 py-2 border border-line rounded-md text-sm"
         />
         <button
+          type="submit"
+          className="px-4 py-2 bg-brand-600 text-white rounded-md text-sm font-bold"
+        >
+          Cari
+        </button>
+        {q && (
+          <a
+            href="/data-pelanggan"
+            className="px-2 py-2 text-xs text-[color:var(--muted)] hover:text-ink"
+          >
+            Reset
+          </a>
+        )}
+        <button
+          type="button"
           onClick={() => setCreating(true)}
           className="px-3 py-2 bg-brand-600 text-white rounded-md text-sm flex items-center gap-1"
         >
           <Plus size={16} /> Tambah
         </button>
-      </div>
+      </form>
 
       {(creating || editing) && (
         <div className="bg-surface rounded-xl border border-line p-4">

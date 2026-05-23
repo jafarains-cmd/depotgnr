@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Trophy } from "lucide-react";
-import { desc, gt, sql, inArray, eq } from "drizzle-orm";
+import { desc, gt, sql, inArray, eq, like, or } from "drizzle-orm";
 import { db } from "@/db";
 import { pelanggan as pelangganTable, galonPelanggan } from "@/db/schema/pelanggan";
 import { user as userTable } from "@/db/schema/auth";
@@ -18,21 +18,34 @@ const RANK_BG = ["bg-amber-400", "bg-slate-300", "bg-orange-400"];
 export default async function PelangganDataPage({
   searchParams,
 }: {
-  searchParams: Promise<{ limit?: string; page?: string }>;
+  searchParams: Promise<{ limit?: string; page?: string; q?: string }>;
 }) {
   const session = await requireRole(["admin", "kasir"]);
   const sp = await searchParams;
   const limit = parseLimit(sp.limit);
   const pageParam = parsePage(sp.page);
+  const q = (sp.q ?? "").trim();
+
+  // Filter pelanggan (server-side) — search berlaku untuk SELURUH data, bukan
+  // hanya halaman aktif. Pagination dijalankan setelah filter.
+  const whereClause = q
+    ? or(
+        like(pelangganTable.nama, `%${q}%`),
+        like(pelangganTable.telp, `%${q}%`),
+        like(pelangganTable.alamat, `%${q}%`),
+      )
+    : undefined;
 
   const [countRow] = await db
     .select({ n: sql<number>`count(*)` })
-    .from(pelangganTable);
+    .from(pelangganTable)
+    .where(whereClause);
   const total = countRow?.n ?? 0;
   const { page, totalPages, offset } = getPagination({ total, limit, page: pageParam });
 
   const [list, top, titipanTotals] = await Promise.all([
     db.query.pelanggan.findMany({
+      where: whereClause,
       orderBy: (p, { desc }) => [desc(p.createdAt)],
       limit,
       offset,
@@ -86,7 +99,7 @@ export default async function PelangganDataPage({
         <PageSizeSelect value={limit} />
       </div>
 
-      {top.length > 0 && (
+      {top.length > 0 && !q && (
         <div className="bg-surface border border-line rounded-2xl p-4 mb-4">
           <div className="flex items-center gap-2 mb-3">
             <Trophy size={16} className="text-amber-500" />
@@ -128,6 +141,7 @@ export default async function PelangganDataPage({
           };
         })}
         canDelete={session.user.role === "admin"}
+        q={q}
       />
       <Pagination page={page} totalPages={totalPages} total={total} />
     </div>
