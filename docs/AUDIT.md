@@ -98,9 +98,18 @@
   tidak ganggu desktop yang punya nav samping. Smooth scroll to top.
   Mounted di AppShell (admin/kasir/kurir) + PelangganShell.
 
-- [ ] **17. Server-side search di semua list pages** _(severity: minor)_
-  Sudah di-fix /data-pelanggan. Cek halaman lain yang masih client-side
-  filter.
+- [x] ~~**17. Server-side search di semua list pages**~~ _(severity: minor)_ ✅
+  ~~Sudah di-fix /data-pelanggan. Cek halaman lain yang masih client-side
+  filter.~~
+  Audit + fix tambahan:
+  * /pelanggan/riwayat: filter status (aktif/selesai/batal) di-pindah ke SQL
+    WHERE — sebelumnya filter di JS setelah paginasi (bug sama dengan
+    /data-pelanggan).
+  * /kasir/order: tab filter status (pending/diproses/dijemput/...) pindah
+    ke ?status= URL param + SQL WHERE.
+  Sisanya (FollowUpClient, PemeliharaanClient, OrderClient untuk count
+  summary) memang client-side untuk count badge — bukan bug karena
+  beroperasi pada data lengkap atau hanya untuk summary.
 
 ## 🔵 PELANGGAN-FACING
 
@@ -177,9 +186,8 @@
 ## Progress
 
 - Total: **27 item**
-- Selesai: **6** (#2 Dashboard kasir, #4 Refund/void UI prominent,
-  #18 ETA pengantaran, #19 Loyalty progress, #20 Komplain chat, #21 Quick reorder)
+- Selesai: **11** (#2, #4, #13, #14, #15, #16, #17, #18, #19, #20, #21)
 - Sedang dikerjakan: —
-- Tersisa: **21**
+- Tersisa: **16**
 
 _Update terakhir: 2026-05-23_

@@ -99,13 +99,15 @@ export function OrderClient({
   rows,
   kurirList,
   isAdmin = false,
+  statusFilter = "all",
 }: {
   rows: OrderRow[];
   kurirList: { id: string; name: string }[];
   isAdmin?: boolean;
+  statusFilter?: string;
 }) {
   const [pending, startTransition] = useTransition();
-  const [filter, setFilter] = useState<OrderStatus | "all">("all");
+  const filter = statusFilter as OrderStatus | "all";
   const [assignError, setAssignError] = useState<{ orderId: number; msg: string } | null>(null);
   const fmt = useFormatTanggal();
 
@@ -136,26 +138,28 @@ export function OrderClient({
     selesai: 5,
     batal: 6,
   };
+  // Filter status sudah diterapkan di SQL (server-side). Sort untuk tab "all"
+  // tetap di client supaya pending muncul dulu.
   const filtered =
     filter === "all"
       ? [...rows].sort(
           (a, b) => STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status],
         )
-      : rows.filter((r) => r.status === (filter as OrderStatus));
+      : rows;
 
   return (
     <div className="space-y-4">
       <div className="flex gap-1 text-sm flex-wrap">
         {(["all", "pending", "diproses", "dijemput", "diisi", "diantar", "selesai"] as const).map((f) => (
-          <button
+          <Link
             key={f}
-            onClick={() => setFilter(f)}
+            href={f === "all" ? "/kasir/order" : `/kasir/order?status=${f}`}
             className={`px-3 py-1.5 rounded-md ${
               filter === f ? "bg-brand-600 text-white" : "bg-surface border border-line"
             }`}
           >
             {f === "all" ? "Semua" : f}
-          </button>
+          </Link>
         ))}
       </div>
 

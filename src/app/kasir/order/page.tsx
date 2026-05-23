@@ -25,6 +25,7 @@ export default async function OrderKasirPage({
     limit?: string;
     page?: string;
     q?: string;
+    status?: string;
   }>;
 }) {
   const session = await requireRole(["admin", "kasir"]);
@@ -34,12 +35,16 @@ export default async function OrderKasirPage({
   const limit = parseLimit(sp.limit);
   const pageParam = parsePage(sp.page);
   const q = (sp.q ?? "").trim();
+  const statusFilter = sp.status?.trim() || "all";
 
   // Filter berdasarkan range tanggal user. Default 30 hari terakhir.
   // "Aktif" (non-selesai) selalu ditampilkan terlepas range kalau di-toggle "Semua".
   const conds = [];
   if (range.from) conds.push(gte(orderHeader.createdAt, range.from));
   if (range.to) conds.push(lte(orderHeader.createdAt, range.to));
+  if (statusFilter !== "all") {
+    conds.push(eq(orderHeader.status, statusFilter as "pending"));
+  }
   if (q) {
     const pat = `%${q}%`;
     conds.push(
@@ -175,7 +180,12 @@ export default async function OrderKasirPage({
           </a>
         )}
       </form>
-      <OrderClient rows={rows} kurirList={kurirList} isAdmin={isAdmin} />
+      <OrderClient
+        rows={rows}
+        kurirList={kurirList}
+        isAdmin={isAdmin}
+        statusFilter={statusFilter}
+      />
       <Pagination page={page} totalPages={totalPages} total={total} />
     </div>
   );

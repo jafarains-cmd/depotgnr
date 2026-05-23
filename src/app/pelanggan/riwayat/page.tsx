@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { eq, desc, inArray, and, isNull, sql } from "drizzle-orm";
+import { eq, desc, inArray, and, isNull, sql, ne, or } from "drizzle-orm";
 import { CreditCard, RefreshCw, FileText } from "lucide-react";
 import { db } from "@/db";
 import { orderHeader, orderItem } from "@/db/schema/order";
@@ -39,17 +39,35 @@ export default async function RiwayatPage({
   const session = await requireSession();
   const me = await getOrCreatePelanggan(session.user.id, session.user.name);
 
+  // Filter status di SQL supaya pagination & count akurat untuk filter aktif
+  const statusCond =
+    filter === "aktif"
+      ? and(
+          ne(orderHeader.status, "selesai"),
+          ne(orderHeader.status, "batal"),
+        )
+      : filter === "selesai"
+        ? eq(orderHeader.status, "selesai")
+        : filter === "batal"
+          ? eq(orderHeader.status, "batal")
+          : undefined;
+
+  const whereOrders = statusCond
+    ? and(eq(orderHeader.pelangganId, me.id), statusCond)
+    : eq(orderHeader.pelangganId, me.id);
+  void or;
+
   const [countRow] = await db
     .select({ n: sql<number>`count(*)` })
     .from(orderHeader)
-    .where(eq(orderHeader.pelangganId, me.id));
+    .where(whereOrders);
   const total = countRow?.n ?? 0;
   const { page, totalPages, offset } = getPagination({ total, limit, page: pageParam });
 
   const orders = await db
     .select()
     .from(orderHeader)
-    .where(eq(orderHeader.pelangganId, me.id))
+    .where(whereOrders)
     .orderBy(desc(orderHeader.createdAt))
     .limit(limit)
     .offset(offset);
@@ -82,12 +100,8 @@ export default async function RiwayatPage({
     .orderBy(desc(transaksi.createdAt))
     .limit(20);
 
-  const filtered = orders.filter((o) => {
-    if (filter === "aktif") return !["selesai", "batal"].includes(o.status);
-    if (filter === "selesai") return o.status === "selesai";
-    if (filter === "batal") return o.status === "batal";
-    return true;
-  });
+  // Server-side filter status sudah diterapkan di SQL above
+  const filtered = orders;
 
   return (
     <div>
