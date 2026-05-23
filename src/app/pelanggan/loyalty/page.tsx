@@ -94,9 +94,65 @@ export default async function LoyaltyPage() {
         </div>
       </div>
 
+      {/* Stamp Card Visual — 10 dots */}
+      {stampAktif && (
+        <section className="bg-surface border border-line rounded-2xl p-4 mt-4">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <h2 className="font-extrabold inline-flex items-center gap-1.5">
+                <Droplet size={16} className="text-brand" /> Kartu Stempel Galon
+              </h2>
+              <p className="text-[11px] text-[color:var(--muted)] mt-0.5">
+                Setiap {threshold} galon = gratis 1 galon ({formatRupiah(nilai)})
+              </p>
+            </div>
+            {stampNow >= Math.ceil(threshold * 0.8) && stampNow < threshold && (
+              <span className="text-[10px] px-2 py-1 bg-amber-100 text-amber-800 rounded-full font-bold animate-pulse">
+                🔥 Hampir dapat!
+              </span>
+            )}
+          </div>
+
+          {/* Grid stempel — adaptif: kalau threshold > 10 pakai 2 baris */}
+          <div
+            className={`grid gap-1.5 ${
+              threshold <= 10 ? "grid-cols-10" : threshold <= 12 ? "grid-cols-6" : "grid-cols-5"
+            }`}
+          >
+            {Array.from({ length: threshold }).map((_, i) => {
+              const filled = i < stampNow;
+              const isLast = i === threshold - 1;
+              return (
+                <div
+                  key={i}
+                  className={`aspect-square rounded-lg grid place-items-center text-base transition ${
+                    filled
+                      ? isLast
+                        ? "bg-amber-400 text-white shadow-md ring-2 ring-amber-300"
+                        : "bg-brand text-white shadow-sm"
+                      : "bg-[color:var(--surface2)] text-[color:var(--muted)]/40 border-2 border-dashed border-line"
+                  }`}
+                >
+                  {filled ? (isLast ? "🎁" : "💧") : ""}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-3 flex items-center justify-between text-xs">
+            <span className="font-bold">
+              {stampNow}/{threshold} stempel
+            </span>
+            <span className="text-[color:var(--muted)]">
+              Sisa <b className="text-ink">{threshold - stampNow} galon lagi</b>
+            </span>
+          </div>
+        </section>
+      )}
+
       {/* Stats stamp */}
       {stampAktif && (
-        <div className="grid grid-cols-2 gap-2 mt-4">
+        <div className="grid grid-cols-2 gap-2 mt-3">
           <div className="bg-surface border border-line rounded-2xl p-4">
             <div className="w-9 h-9 rounded-xl bg-brand-soft text-brand grid place-items-center">
               <Droplet size={18} />
@@ -107,7 +163,7 @@ export default async function LoyaltyPage() {
             <div className="text-2xl font-extrabold">{me.stampGalon}</div>
           </div>
           <div className="bg-surface border border-line rounded-2xl p-4">
-            <div className="w-9 h-9 rounded-xl bg-[color:var(--accent)]/30 text-ink grid place-items-center">
+            <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 grid place-items-center">
               <Gift size={18} />
             </div>
             <div className="text-[10px] text-[color:var(--muted)] mt-2 font-semibold uppercase tracking-wide">

@@ -152,6 +152,50 @@ export default async function BerandaPage() {
         <StatCard label="Total\nOrder" value={String(totalOrders.length)} accent="alt" />
       </div>
 
+      {/* Progress menuju reward stempel berikutnya */}
+      {stampAktif && (() => {
+        const stampNow = me.stampGalon % stampThreshold;
+        const pct = Math.round((stampNow / stampThreshold) * 100);
+        const sisa = stampThreshold - stampNow;
+        return (
+          <Link
+            href="/pelanggan/loyalty"
+            className="block px-4 mt-3"
+          >
+            <div className="bg-surface border border-line rounded-2xl p-3">
+              <div className="flex items-center justify-between text-xs mb-1.5">
+                <div className="font-bold inline-flex items-center gap-1">
+                  💧 Progress reward galon gratis
+                </div>
+                <div className="text-[color:var(--muted)]">
+                  {stampNow}/{stampThreshold}
+                </div>
+              </div>
+              <div className="h-2.5 bg-[color:var(--surface2)] rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${pct}%`,
+                    background:
+                      pct >= 80
+                        ? "linear-gradient(90deg, #f59e0b, #f97316)"
+                        : "var(--brand)",
+                  }}
+                />
+              </div>
+              <div className="text-[10px] text-[color:var(--muted)] mt-1.5 flex items-center justify-between">
+                <span>
+                  {sisa === 0
+                    ? "🎉 Reward siap diklaim di order berikutnya!"
+                    : `Sisa ${sisa} galon lagi → +${formatRupiah(stampNilai)}`}
+                </span>
+                <span className="text-brand font-bold">Lihat →</span>
+              </div>
+            </div>
+          </Link>
+        );
+      })()}
+
       {/* Order aktif */}
       {aktif.length > 0 && (
         <section className="px-4 mt-5">

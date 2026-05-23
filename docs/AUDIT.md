@@ -91,9 +91,12 @@
   Pelanggan order, tidak tahu jam berapa kurir tiba. Halaman tracking ada
   tapi tanpa estimasi.
 
-- [ ] **19. Loyalty progress visual** _(severity: minor)_
-  Progress bar / tier system. Pelanggan tidak tahu "tinggal berapa galon lagi
-  dapat hadiah".
+- [x] ~~**19. Loyalty progress visual**~~ _(severity: minor)_ ✅
+  ~~Progress bar / tier system. Pelanggan tidak tahu "tinggal berapa galon lagi
+  dapat hadiah".~~
+  Implementasi: (1) Stamp card visual 10-dot di /pelanggan/loyalty
+  (filled=💧, last=🎁, dashed=belum). (2) Mini progress bar di beranda
+  pelanggan dengan badge "🔥 Hampir dapat!" kalau ≥80%.
 
 - [ ] **20. Komplain — chat history** _(severity: minor)_
   Pelanggan submit, admin balas via WA. Riwayat tidak tersimpan di app.
