@@ -14,9 +14,12 @@
   Kasir tidak tahu omzet cash harian & jumlah di tangan. Akhir hari rawan
   selisih, tidak ada audit shift handoff.
 
-- [ ] **2. Dashboard kasir kosong** _(severity: major)_
-  Kasir login langsung ke POS. Tidak ada ringkasan "transaksi saya hari ini",
-  "omzet shift saya", "piutang yang saya tangani".
+- [x] ~~**2. Dashboard kasir kosong**~~ _(severity: major)_ ✅
+  ~~Kasir login langsung ke POS. Tidak ada ringkasan "transaksi saya hari ini",
+  "omzet shift saya", "piutang yang saya tangani".~~
+  Implementasi: stat cards (transaksi/omzet/galon/piutang hari ini), quick
+  actions, list piutang ditangani, transaksi terbaru. Nav "Dashboard" baru di
+  /kasir layout.
 
 - [ ] **3. Hapus user yang punya transaksi** _(severity: minor)_
   Saat ini set null, nama "—" di history laporan. Ganti: soft-delete /
@@ -135,8 +138,8 @@
 ## Progress
 
 - Total: **27 item**
-- Selesai: **0**
+- Selesai: **1** (#2 Dashboard kasir)
 - Sedang dikerjakan: —
-- Tersisa: **27**
+- Tersisa: **26**
 
 _Update terakhir: 2026-05-23_
