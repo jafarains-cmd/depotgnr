@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LayoutDashboard, Receipt, Truck, Wallet, Coins } from "lucide-react";
+import { LayoutDashboard, Receipt, Truck, Wallet, Coins, List } from "lucide-react";
 
 type Tab = {
   href: string;
@@ -9,6 +9,7 @@ type Tab = {
 
 const TABS: Tab[] = [
   { href: "/admin/laporan", label: "Ringkasan", icon: <LayoutDashboard size={14} /> },
+  { href: "/admin/laporan/semua", label: "Semua Aktivitas", icon: <List size={14} /> },
   { href: "/admin/laporan/penjualan", label: "Penjualan", icon: <Receipt size={14} /> },
   { href: "/admin/laporan/order-antar", label: "Order Antar", icon: <Truck size={14} /> },
   { href: "/admin/laporan/pengeluaran", label: "Pengeluaran", icon: <Wallet size={14} /> },

@@ -6,7 +6,7 @@ export function ExportActions({
   jenis,
   params,
 }: {
-  jenis: "ringkasan" | "penjualan" | "order-antar" | "pengeluaran" | "bonus-kurir";
+  jenis: "ringkasan" | "semua" | "penjualan" | "order-antar" | "pengeluaran" | "bonus-kurir";
   params: Record<string, string | undefined>;
 }) {
   const qs = new URLSearchParams();

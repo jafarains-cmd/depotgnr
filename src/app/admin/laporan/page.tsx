@@ -5,37 +5,27 @@ import { produk } from "@/db/schema/produk";
 import { pengeluaran } from "@/db/schema/pengeluaran";
 import { PageHeader } from "@/components/AppShell";
 import { formatRupiah } from "@/lib/utils";
+import { parseRange } from "@/lib/date-range";
+import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { ExportActions } from "./ExportActions";
 import { LaporanNav } from "./LaporanNav";
 
 export const dynamic = "force-dynamic";
 
-function parseDate(s: string | undefined, fallback: Date): Date {
-  if (!s) return fallback;
-  const d = new Date(s);
-  return isNaN(d.getTime()) ? fallback : d;
-}
-
 export default async function LaporanPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; to?: string }>;
+  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
 }) {
   const sp = await searchParams;
+  const range = parseRange(sp);
+  const from = range.from;
+  const to = range.to;
 
-  const today = new Date();
-  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const sevenDaysAgo = new Date(startOfToday);
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-
-  const from = parseDate(sp.from, sevenDaysAgo);
-  const to = parseDate(sp.to, new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59));
-
-  const where = and(
-    gte(transaksi.createdAt, from),
-    lte(transaksi.createdAt, to),
-    isNull(transaksi.voidedAt),
-  );
+  const conds = [isNull(transaksi.voidedAt)];
+  if (from) conds.push(gte(transaksi.createdAt, from));
+  if (to) conds.push(lte(transaksi.createdAt, to));
+  const where = and(...conds);
 
   const [ringkasan] = await db
     .select({
@@ -45,11 +35,10 @@ export default async function LaporanPage({
     .from(transaksi)
     .where(where);
 
-  // Pengeluaran dalam range yang sama
-  const wherePengeluaran = and(
-    gte(pengeluaran.tanggal, from),
-    lte(pengeluaran.tanggal, to),
-  );
+  const pengeluaranConds = [];
+  if (from) pengeluaranConds.push(gte(pengeluaran.tanggal, from));
+  if (to) pengeluaranConds.push(lte(pengeluaran.tanggal, to));
+  const wherePengeluaran = pengeluaranConds.length ? and(...pengeluaranConds) : undefined;
   const [ringkasanPengeluaran] = await db
     .select({
       total: sql<number>`coalesce(sum(${pengeluaran.jumlah}), 0)`,
@@ -98,8 +87,8 @@ export default async function LaporanPage({
 
   const maxOmzet = Math.max(...harian.map((h) => h.omzet), 1);
 
-  const fromStr = from.toISOString().slice(0, 10);
-  const toStr = to.toISOString().slice(0, 10);
+  const fromStr = from?.toISOString().slice(0, 10) ?? "";
+  const toStr = to?.toISOString().slice(0, 10) ?? "";
 
   return (
     <div className="p-4 md:p-6 space-y-6 laporan-print">
@@ -136,29 +125,14 @@ export default async function LaporanPage({
         </div>
       </div>
 
-      <form className="bg-surface border border-line rounded-2xl p-4 flex gap-3 items-end text-sm flex-wrap no-print">
-        <div className="flex-1 min-w-[140px]">
-          <label className="block text-xs text-[color:var(--muted)] mb-1">Dari</label>
-          <input
-            type="date"
-            name="from"
-            defaultValue={fromStr}
-            className="w-full px-3 py-1.5 border border-line rounded-md"
-          />
-        </div>
-        <div className="flex-1 min-w-[140px]">
-          <label className="block text-xs text-[color:var(--muted)] mb-1">Sampai</label>
-          <input
-            type="date"
-            name="to"
-            defaultValue={toStr}
-            className="w-full px-3 py-1.5 border border-line rounded-md"
-          />
-        </div>
-        <button className="px-4 py-1.5 bg-brand text-white rounded-md whitespace-nowrap">
-          Terapkan
-        </button>
-      </form>
+      <div className="no-print">
+        <DateRangeFilter
+          active={range.key}
+          customFrom={range.from}
+          customTo={range.to}
+          basePath="/admin/laporan"
+        />
+      </div>
 
       <ExportActions jenis="ringkasan" params={{ from: fromStr, to: toStr }} />
 
