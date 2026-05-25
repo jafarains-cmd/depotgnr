@@ -29,19 +29,21 @@ export async function getLoyaltyConfig(): Promise<{
   ratePerGalonAntar: number;
   ratePerGalonDepot: number;
   referralBonus: number;
+  welcomeBonus: number;
 }> {
   const rows = await db.query.pengaturan.findMany();
   const map = new Map(rows.map((r) => [r.key, r.value ?? ""]));
 
   const parse = (key: string, fallback: number) => {
     const v = Number(map.get(key));
-    return Number.isFinite(v) && v > 0 ? v : fallback;
+    return Number.isFinite(v) && v >= 0 ? v : fallback;
   };
 
   return {
     ratePerGalonAntar: parse("loyaltiPerGalonAntar", DEFAULT_RATE_ANTAR),
     ratePerGalonDepot: parse("loyaltiPerGalonDepot", DEFAULT_RATE_DEPOT),
     referralBonus: parse("nilaiReferralBonus", DEFAULT_REFERRAL_BONUS),
+    welcomeBonus: parse("welcomeBonus", 5000),
   };
 }
 

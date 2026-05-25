@@ -1,8 +1,8 @@
-import { eq } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import { db } from "@/db";
-import { pelanggan } from "@/db/schema/pelanggan";
+import { pelanggan, mutasiLoyalti } from "@/db/schema/pelanggan";
 import { user as userTable } from "@/db/schema/auth";
-import { generateUniqueKodeReferral, ensureKodeReferral } from "./loyalty";
+import { generateUniqueKodeReferral, ensureKodeReferral, getLoyaltyConfig } from "./loyalty";
 
 /**
  * Cari atau buat record `pelanggan` untuk user yang login.
@@ -58,5 +58,35 @@ export async function getOrCreatePelanggan(userId: string, fallbackName: string)
       kodeReferral,
     })
     .returning();
+
+  // Welcome bonus: beri saldo loyalty awal untuk semua pelanggan baru
+  giveWelcomeBonus(created.id).catch(() => {});
+
   return created;
+}
+
+async function giveWelcomeBonus(pelangganId: number): Promise<void> {
+  const cfg = await getLoyaltyConfig();
+  if (cfg.welcomeBonus <= 0) return;
+
+  // Idempoten: cek apakah sudah pernah dapat welcome bonus
+  const existing = await db.query.mutasiLoyalti.findFirst({
+    where: and(
+      eq(mutasiLoyalti.pelangganId, pelangganId),
+      eq(mutasiLoyalti.tipe, "adjust"),
+      sql`${mutasiLoyalti.deskripsi} LIKE '%Welcome bonus%'`,
+    ),
+  });
+  if (existing) return;
+
+  await db.insert(mutasiLoyalti).values({
+    pelangganId,
+    jumlah: cfg.welcomeBonus,
+    tipe: "adjust",
+    deskripsi: `Welcome bonus pendaftaran (+${cfg.welcomeBonus.toLocaleString("id-ID")})`,
+  });
+  await db
+    .update(pelanggan)
+    .set({ saldoLoyalti: sql`${pelanggan.saldoLoyalti} + ${cfg.welcomeBonus}` })
+    .where(eq(pelanggan.id, pelangganId));
 }

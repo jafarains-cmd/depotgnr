@@ -194,6 +194,11 @@ const ALL_FIELDS: Record<string, Field> = {
     label: "Loyalti per Galon — Datang ke Depot (Rp)",
     help: "Default: 500.",
   },
+  welcomeBonus: {
+    key: "welcomeBonus",
+    label: "Welcome Bonus Pendaftaran (Rp)",
+    help: "Saldo otomatis untuk SEMUA pelanggan baru saat register (default: 5000). Isi 0 untuk nonaktifkan.",
+  },
   nilaiReferralBonus: {
     key: "nilaiReferralBonus",
     label: "Bonus Referral (Rp)",
@@ -257,6 +262,7 @@ const TABS: Tab[] = [
     label: "Loyalty & Bonus",
     icon: <Gift size={14} />,
     fieldKeys: [
+      "welcomeBonus",
       "loyaltiPerGalonAntar",
       "loyaltiPerGalonDepot",
       "nilaiReferralBonus",
