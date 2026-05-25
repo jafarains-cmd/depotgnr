@@ -56,6 +56,7 @@ export default async function OrderBaruPage({
         defaultAlamat={pel.alamat ?? ""}
         prefillItems={prefillItems}
         cloneNote={cloneNote}
+        saldoLoyalti={pel.saldoLoyalti}
       />
     </div>
   );

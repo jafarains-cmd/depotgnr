@@ -9,6 +9,11 @@ import { produk } from "@/db/schema/produk";
 import { pengaturan } from "@/db/schema/pengaturan";
 import { requireSession } from "@/lib/permissions";
 import { getOrCreatePelanggan } from "@/lib/pelanggan";
+import { redeemLoyalty } from "@/lib/loyalty";
+import { earnFromOrderIfEligible } from "@/lib/loyalty";
+import { recordKurirBonus } from "@/lib/bonus";
+import { syncTransaksiFromOrder } from "@/lib/transaksi-sync";
+import { bestEffort } from "@/lib/best-effort";
 import { generateNomorNota } from "@/lib/utils";
 import { generateTrackingToken } from "@/lib/tracking";
 import { notifGrupOrder } from "@/lib/telegram";
@@ -23,6 +28,7 @@ export type OrderInput = {
   jadwalAntar?: string; // ISO date-time
   catatan?: string;
   tipePengantaran?: "antar-saja" | "jemput-antar";
+  redeemLoyalti?: number;
 };
 
 export async function createOrder(input: OrderInput): Promise<void> {
@@ -80,6 +86,40 @@ export async function createOrder(input: OrderInput): Promise<void> {
     }
     return o.id;
   });
+
+  // Redeem loyalty kalau diminta
+  const redeem = Math.max(0, Math.min(input.redeemLoyalti ?? 0, totalEstimasi));
+  if (redeem > 0) {
+    const r = await redeemLoyalty({
+      pelangganId: pel.id,
+      jumlah: redeem,
+      refOrderId: newOrderId,
+      deskripsi: `Redeem di order ${nomorOrder}`,
+    });
+    if (r.ok) {
+      const fullLunas = redeem >= totalEstimasi;
+      db.update(orderHeader)
+        .set({
+          loyaltiDipakai: redeem,
+          ...(fullLunas
+            ? {
+                statusBayar: "lunas" as const,
+                bayarAt: new Date(),
+                bayarDikonfirmasiOleh: session.user.id,
+              }
+            : {}),
+          updatedAt: new Date(),
+        })
+        .where(eq(orderHeader.id, newOrderId))
+        .run();
+
+      if (fullLunas) {
+        bestEffort(`earnFromOrder(${nomorOrder})`, earnFromOrderIfEligible(newOrderId));
+        bestEffort(`recordKurirBonus(${nomorOrder})`, recordKurirBonus(newOrderId));
+        bestEffort(`syncTransaksi(${nomorOrder})`, syncTransaksiFromOrder(newOrderId));
+      }
+    }
+  }
 
   pushOrder(newOrderId).catch((e) => console.warn("[sheets] pushOrder:", e));
 
