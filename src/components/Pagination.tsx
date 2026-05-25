@@ -32,6 +32,21 @@ export function Pagination({
   const canPrev = page > 1;
   const canNext = page < totalPages;
 
+  // Buat array nomor halaman: [1, 2, ..., 8] dengan ellipsis
+  // Tampilkan: first, last, current ± 1, dan "..." kalau ada gap
+  const pages: (number | "...")[] = [];
+  for (let i = 1; i <= totalPages; i++) {
+    if (
+      i === 1 ||
+      i === totalPages ||
+      (i >= page - 1 && i <= page + 1)
+    ) {
+      pages.push(i);
+    } else if (pages[pages.length - 1] !== "...") {
+      pages.push("...");
+    }
+  }
+
   return (
     <div className="flex items-center justify-between gap-3 flex-wrap pt-3">
       <div className="text-xs text-[color:var(--muted)]">
@@ -47,16 +62,43 @@ export function Pagination({
         <button
           onClick={() => goto(page - 1)}
           disabled={!canPrev || pending}
-          className="px-3 py-1.5 rounded-md border border-line text-xs font-bold inline-flex items-center gap-1 disabled:opacity-40 hover:border-brand hover:text-brand transition"
+          className="px-2 py-1.5 rounded-md border border-line text-xs font-bold inline-flex items-center gap-0.5 disabled:opacity-40 hover:border-brand hover:text-brand transition"
         >
-          <ChevronLeft size={14} /> Sebelumnya
+          <ChevronLeft size={14} />
+          <span className="hidden sm:inline">Sblm</span>
         </button>
+
+        {pages.map((p, idx) =>
+          p === "..." ? (
+            <span
+              key={`e${idx}`}
+              className="w-8 text-center text-xs text-[color:var(--muted)]"
+            >
+              ...
+            </span>
+          ) : (
+            <button
+              key={p}
+              onClick={() => goto(p)}
+              disabled={pending}
+              className={`w-8 h-8 rounded-md text-xs font-bold transition ${
+                p === page
+                  ? "bg-brand text-white"
+                  : "border border-line hover:border-brand hover:text-brand"
+              }`}
+            >
+              {p}
+            </button>
+          ),
+        )}
+
         <button
           onClick={() => goto(page + 1)}
           disabled={!canNext || pending}
-          className="px-3 py-1.5 rounded-md border border-line text-xs font-bold inline-flex items-center gap-1 disabled:opacity-40 hover:border-brand hover:text-brand transition"
+          className="px-2 py-1.5 rounded-md border border-line text-xs font-bold inline-flex items-center gap-0.5 disabled:opacity-40 hover:border-brand hover:text-brand transition"
         >
-          Berikutnya <ChevronRight size={14} />
+          <span className="hidden sm:inline">Lnjt</span>
+          <ChevronRight size={14} />
         </button>
       </div>
     </div>
