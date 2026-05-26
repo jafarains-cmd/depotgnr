@@ -1,8 +1,13 @@
 import { eq, desc, asc, ne, and, gte, lte, sql, like, or } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 import { db } from "@/db";
 import { orderHeader } from "@/db/schema/order";
 import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
+import { user as userTable } from "@/db/schema/auth";
 import { notaGabungan } from "@/db/schema/nota-gabungan";
+
+const pembuatUser = alias(userTable, "pembuat_user");
+const konfirmasiUser = alias(userTable, "konfirmasi_user");
 import { requireRole } from "@/lib/permissions";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { parseRange } from "@/lib/date-range";
@@ -129,10 +134,14 @@ export default async function PembayaranPage({
       pelangganTelp: pelangganTable.telp,
       notaGabunganId: orderHeader.notaGabunganId,
       notaGabunganKode: notaGabungan.kode,
+      pembuatNama: pembuatUser.name,
+      konfirmasiNama: konfirmasiUser.name,
     })
     .from(orderHeader)
     .leftJoin(pelangganTable, eq(orderHeader.pelangganId, pelangganTable.id))
     .leftJoin(notaGabungan, eq(orderHeader.notaGabunganId, notaGabungan.id))
+    .leftJoin(pembuatUser, eq(orderHeader.kurirUserId, pembuatUser.id))
+    .leftJoin(konfirmasiUser, eq(orderHeader.bayarDikonfirmasiOleh, konfirmasiUser.id))
     .where(whereClause)
     .orderBy(
       sortKey === "order-asc"
@@ -161,6 +170,8 @@ export default async function PembayaranPage({
     pelangganTelp: r.pelangganTelp,
     notaGabunganId: r.notaGabunganId,
     notaGabunganKode: r.notaGabunganKode,
+    pembuatNama: r.pembuatNama,
+    konfirmasiNama: r.konfirmasiNama,
   }));
 
   // Query string base untuk preserve filter di tab links

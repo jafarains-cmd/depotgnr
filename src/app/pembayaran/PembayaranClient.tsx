@@ -24,6 +24,8 @@ export type Row = {
   pelangganTelp: string | null;
   notaGabunganId: number | null;
   notaGabunganKode: string | null;
+  pembuatNama: string | null;
+  konfirmasiNama: string | null;
 };
 
 type Item =
@@ -203,6 +205,16 @@ export function PembayaranClient({ rows }: { rows: Row[] }) {
               </div>
             </button>
 
+            {/* Info kasir pembuat + petugas konfirmasi */}
+            <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[10px] text-[color:var(--muted)]">
+              {r.pembuatNama && (
+                <span>Dibuat: <b className="text-ink">{r.pembuatNama}</b></span>
+              )}
+              {r.konfirmasiNama && (
+                <span>Konfirmasi: <b className="text-ink">{r.konfirmasiNama}</b></span>
+              )}
+            </div>
+
             {r.buktiUrl && (
               <div>
                 <div className="text-[10px] text-[color:var(--muted)] mb-1.5 font-semibold uppercase tracking-wide">
@@ -290,6 +302,9 @@ export function PembayaranClient({ rows }: { rows: Row[] }) {
                   dateStyle: "medium",
                   timeStyle: "short",
                 })}
+                {r.konfirmasiNama && (
+                  <span> · oleh <b>{r.konfirmasiNama}</b></span>
+                )}
               </div>
             )}
             {r.notaGabunganKode && (

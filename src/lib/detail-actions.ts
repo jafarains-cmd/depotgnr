@@ -39,6 +39,7 @@ export type OrderDetail = {
   pelangganNama: string | null;
   pelangganTelp: string | null;
   kurirNama: string | null;
+  konfirmasiNama: string | null;
   items: DetailItem[];
 };
 
@@ -85,6 +86,9 @@ export async function getOrderDetail(orderId: number): Promise<OrderDetail | nul
   const kurir = o.kurirUserId
     ? await db.query.user.findFirst({ where: eq(userTable.id, o.kurirUserId) })
     : null;
+  const konfirmator = o.bayarDikonfirmasiOleh
+    ? await db.query.user.findFirst({ where: eq(userTable.id, o.bayarDikonfirmasiOleh) })
+    : null;
 
   return {
     kind: "order",
@@ -108,6 +112,7 @@ export async function getOrderDetail(orderId: number): Promise<OrderDetail | nul
     pelangganNama: pel?.nama ?? null,
     pelangganTelp: pel?.telp ?? null,
     kurirNama: kurir?.name ?? null,
+    konfirmasiNama: konfirmator?.name ?? null,
     items: items.map((it) => ({
       qty: it.qty,
       hargaSatuan: it.hargaEstimasi ?? 0,

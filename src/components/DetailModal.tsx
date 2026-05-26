@@ -128,7 +128,7 @@ function OrderView({ data }: { data: OrderDetail }) {
         {data.metodeBayar && <Row label="Metode" value={data.metodeBayar.toUpperCase()} />}
         <Row label="Sumber" value={data.sumber} />
         <Row label="Tipe" value={data.tipePengantaran} />
-        {data.kurirNama && <Row label="Kurir" value={data.kurirNama} />}
+        {data.kurirNama && <Row label="Kurir / Pembuat" value={data.kurirNama} />}
       </div>
 
       <div className="bg-[color:var(--surface2)] rounded-lg p-3 space-y-0.5">
@@ -140,7 +140,13 @@ function OrderView({ data }: { data: OrderDetail }) {
           <Row label="Selesai" value={fmt(data.selesaiAt, { dateStyle: "short", timeStyle: "short" })} />
         )}
         {data.bayarAt && (
-          <Row label="Bayar" value={fmt(data.bayarAt, { dateStyle: "short", timeStyle: "short" })} />
+          <Row
+            label="Bayar"
+            value={
+              fmt(data.bayarAt, { dateStyle: "short", timeStyle: "short" }) +
+              (data.konfirmasiNama ? ` · oleh ${data.konfirmasiNama}` : "")
+            }
+          />
         )}
       </div>
 
