@@ -8,6 +8,8 @@ import { requireSession } from "@/lib/permissions";
 import { AkunClient } from "./AkunClient";
 import { LogoutButton } from "./LogoutButton";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+import { DistanceWarning } from "@/components/DistanceWarning";
+import { getDepotConfig } from "@/lib/depot-config";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +33,7 @@ export default async function AkunPage() {
         where: eq(pelangganTable.userId, session.user.id),
       })
     : null;
+  const depotCfg = isPelanggan ? await getDepotConfig() : null;
   const homeHref =
     role === "admin" ? "/admin/dashboard" : role === "kasir" ? "/kasir/pos" : "/pelanggan/beranda";
 
@@ -59,6 +62,18 @@ export default async function AkunPage() {
         </div>
 
         <ThemeSwitcher />
+
+        {isPelanggan && depotCfg && (
+          <DistanceWarning
+            pelangganLat={pel?.koordinatLat ?? null}
+            pelangganLng={pel?.koordinatLng ?? null}
+            depotLat={depotCfg.depotLat}
+            depotLng={depotCfg.depotLng}
+            maxKm={depotCfg.maxJarakAntarKm}
+            kontakWA={depotCfg.kontakWA}
+            kontakTelegram={depotCfg.kontakTelegram}
+          />
+        )}
 
         <AkunClient
           currentNama={u?.name ?? session.user.name ?? ""}

@@ -5,6 +5,8 @@ import { orderHeader, orderItem } from "@/db/schema/order";
 import { requireSession } from "@/lib/permissions";
 import { getOrCreatePelanggan } from "@/lib/pelanggan";
 import { OrderForm } from "./OrderForm";
+import { DistanceWarning } from "@/components/DistanceWarning";
+import { getDepotConfig } from "@/lib/depot-config";
 
 export const dynamic = "force-dynamic";
 
@@ -45,12 +47,25 @@ export default async function OrderBaruPage({
     }
   }
 
+  const depotCfg = await getDepotConfig();
+
   return (
     <div className="space-y-4">
       <div>
         <h1 className="text-xl font-bold">Order Baru</h1>
         <p className="text-sm text-[color:var(--muted)]">Pilih produk, alamat antar, lalu kirim.</p>
       </div>
+
+      <DistanceWarning
+        pelangganLat={pel.koordinatLat}
+        pelangganLng={pel.koordinatLng}
+        depotLat={depotCfg.depotLat}
+        depotLng={depotCfg.depotLng}
+        maxKm={depotCfg.maxJarakAntarKm}
+        kontakWA={depotCfg.kontakWA}
+        kontakTelegram={depotCfg.kontakTelegram}
+      />
+
       <OrderForm
         produkList={produkList}
         defaultAlamat={pel.alamat ?? ""}

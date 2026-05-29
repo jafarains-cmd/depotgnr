@@ -9,6 +9,7 @@ import { PengaturanForm } from "./PengaturanForm";
 import { TelegramWebhook } from "./TelegramWebhook";
 import { SheetsSync } from "./SheetsSync";
 import { QrisUploader } from "./QrisUploader";
+import { DepotLocationPicker } from "./DepotLocationPicker";
 import { ZONA_OPTIONS } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,21 @@ const ALL_FIELDS: Record<string, Field> = {
     key: "sessionTimeoutMenit",
     label: "Auto-Logout Staff (menit)",
     help: "Setelah idle berapa menit, staff (admin/kasir/kurir) otomatis logout. Default: 30. Isi 0 untuk nonaktif.",
+  },
+  depotLat: {
+    key: "depotLat",
+    label: "Lokasi Depot — Latitude",
+    help: "Koordinat lintang lokasi depot fisik. Pakai picker di bawah untuk set otomatis.",
+  },
+  depotLng: {
+    key: "depotLng",
+    label: "Lokasi Depot — Longitude",
+    help: "Koordinat bujur lokasi depot fisik. Pakai picker di bawah untuk set otomatis.",
+  },
+  maxJarakAntarKm: {
+    key: "maxJarakAntarKm",
+    label: "Jarak Antar Maksimum (km)",
+    help: "Pelanggan dengan lokasi melebihi jarak ini akan diminta hubungi admin. Default: 10. Isi 0 untuk nonaktif (semua jarak OK).",
   },
   kontakWA: {
     key: "kontakWA",
@@ -255,6 +271,9 @@ const TABS: Tab[] = [
       "kontakWA",
       "kontakTelegram",
       "sessionTimeoutMenit",
+      "depotLat",
+      "depotLng",
+      "maxJarakAntarKm",
       "footerNota",
       "zonaWaktu",
     ],
@@ -383,6 +402,13 @@ export default async function PengaturanPage({
       {/* Tab content */}
       {activeTab.id === "pembayaran" && (
         <QrisUploader currentUrl={map.qrisFotoUrl ?? null} />
+      )}
+
+      {activeTab.id === "depot" && (
+        <DepotLocationPicker
+          currentLat={map.depotLat ? Number(map.depotLat) : null}
+          currentLng={map.depotLng ? Number(map.depotLng) : null}
+        />
       )}
 
       <PengaturanForm fields={fields} values={map} action={savePengaturan} />

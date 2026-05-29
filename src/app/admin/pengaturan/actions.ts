@@ -30,6 +30,26 @@ export async function deleteTelegramWebhook(): Promise<{ ok: boolean; descriptio
   return (await res.json()) as { ok: boolean; description?: string };
 }
 
+export async function setDepotLocationAction(
+  lat: number | null,
+  lng: number | null,
+): Promise<{ ok: true } | { error: string }> {
+  await requireRole(["admin"]);
+  const setVal = async (key: string, value: string) => {
+    await db
+      .insert(pengaturan)
+      .values({ key, value, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: pengaturan.key,
+        set: { value, updatedAt: new Date() },
+      });
+  };
+  await setVal("depotLat", lat !== null ? String(lat) : "");
+  await setVal("depotLng", lng !== null ? String(lng) : "");
+  revalidatePath("/admin/pengaturan");
+  return { ok: true };
+}
+
 export async function savePengaturan(formData: FormData) {
   await requireRole(["admin"]);
   const entries: { key: string; value: string }[] = [];
