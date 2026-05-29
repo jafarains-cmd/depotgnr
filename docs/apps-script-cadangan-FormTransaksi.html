@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<style>
+  body { font-family: Arial, sans-serif; padding: 10px; font-size: 13px; color: #1f2937; }
+  h2 { font-size: 16px; margin: 0 0 12px; color: #0ea5e9; }
+  label { display: block; font-size: 11px; font-weight: bold; margin-bottom: 3px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
+  input, select, textarea { width: 100%; padding: 7px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; font-size: 13px; }
+  .row { margin-bottom: 10px; }
+  .item-row { display: flex; gap: 4px; margin-bottom: 4px; align-items: center; }
+  .item-row select { flex: 2; }
+  .item-row input[type="number"] { flex: 1; min-width: 50px; }
+  .item-row button { background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+  button.primary { background: #0ea5e9; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; font-size: 14px; margin-top: 10px; }
+  button.add { background: #10b981; color: white; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+  .total { font-size: 20px; font-weight: bold; color: #0ea5e9; padding: 8px; background: #f0f9ff; border-radius: 6px; text-align: right; }
+  .msg { padding: 8px; border-radius: 6px; font-size: 12px; margin-top: 8px; }
+  .msg.ok { background: #d1fae5; color: #065f46; }
+  .msg.error { background: #fee2e2; color: #991b1b; }
+</style>
+</head>
+<body>
+
+<h2>📝 Transaksi POS</h2>
+
+<div class="row">
+  <label>Pelanggan</label>
+  <select id="pelanggan">
+    <option value="">-- Walk-in / Tanpa Pelanggan --</option>
+  </select>
+</div>
+
+<div class="row">
+  <label>Item Order</label>
+  <div id="items"></div>
+  <button type="button" class="add" onclick="addItem()">+ Tambah Item</button>
+</div>
+
+<div class="total" id="total">Total: Rp 0</div>
+
+<div class="row" style="margin-top: 10px;">
+  <label>Metode Bayar</label>
+  <select id="metodeBayar">
+    <option value="cash">Cash</option>
+    <option value="transfer">Transfer</option>
+    <option value="qris">QRIS</option>
+  </select>
+</div>
+
+<div class="row">
+  <label>Catatan (opsional)</label>
+  <textarea id="catatan" rows="2"></textarea>
+</div>
+
+<button type="button" class="primary" onclick="submitForm()">💾 Simpan ke Sheet</button>
+<div id="msg"></div>
+
+<script>
+let master = { pelanggan: [], produk: [] };
+
+google.script.run.withSuccessHandler((data) => {
+  master = data;
+  const pSel = document.getElementById('pelanggan');
+  data.pelanggan.forEach((p) => {
+    const opt = document.createElement('option');
+    opt.value = JSON.stringify({ id: p.id, nama: p.nama, telp: p.telp });
+    opt.textContent = `${p.nama}${p.telp ? ' · ' + p.telp : ''}`;
+    pSel.appendChild(opt);
+  });
+  addItem();
+}).getMasterData();
+
+function addItem() {
+  const div = document.createElement('div');
+  div.className = 'item-row';
+
+  const sel = document.createElement('select');
+  sel.innerHTML = '<option value="">Pilih produk</option>';
+  master.produk.filter((p) => p.aktif).forEach((p) => {
+    if (p.hargaIsiUlang > 0) sel.innerHTML += `<option value="${p.id}|isi_ulang|${p.hargaIsiUlang}">${p.nama} - Isi Ulang (Rp ${p.hargaIsiUlang.toLocaleString('id')})</option>`;
+    if (p.hargaTukar > 0) sel.innerHTML += `<option value="${p.id}|tukar|${p.hargaTukar}">${p.nama} - Tukar (Rp ${p.hargaTukar.toLocaleString('id')})</option>`;
+    if (p.hargaBeliBaru > 0) sel.innerHTML += `<option value="${p.id}|beli_baru|${p.hargaBeliBaru}">${p.nama} - Beli Baru (Rp ${p.hargaBeliBaru.toLocaleString('id')})</option>`;
+  });
+  sel.addEventListener('change', updateTotal);
+
+  const qty = document.createElement('input');
+  qty.type = 'number';
+  qty.min = 1;
+  qty.value = 1;
+  qty.addEventListener('input', updateTotal);
+
+  const del = document.createElement('button');
+  del.type = 'button';
+  del.textContent = '✕';
+  del.onclick = () => { div.remove(); updateTotal(); };
+
+  div.appendChild(sel);
+  div.appendChild(qty);
+  div.appendChild(del);
+  document.getElementById('items').appendChild(div);
+}
+
+function getItems() {
+  const items = [];
+  document.querySelectorAll('#items .item-row').forEach((row) => {
+    const sel = row.querySelector('select');
+    const qty = row.querySelector('input[type="number"]');
+    if (!sel.value || !qty.value) return;
+    const [pid, jenis, harga] = sel.value.split('|');
+    items.push({
+      produkId: Number(pid),
+      jenis,
+      qty: Number(qty.value),
+      hargaSatuan: Number(harga),
+    });
+  });
+  return items;
+}
+
+function updateTotal() {
+  const total = getItems().reduce((s, it) => s + it.hargaSatuan * it.qty, 0);
+  document.getElementById('total').textContent = `Total: Rp ${total.toLocaleString('id')}`;
+}
+
+function submitForm() {
+  const items = getItems();
+  if (items.length === 0) {
+    showMsg('error', 'Pilih minimal 1 item');
+    return;
+  }
+  const pelStr = document.getElementById('pelanggan').value;
+  const pel = pelStr ? JSON.parse(pelStr) : { id: null, nama: '', telp: '' };
+  const payload = {
+    pelangganNama: pel.nama,
+    pelangganTelp: pel.telp,
+    items,
+    metodeBayar: document.getElementById('metodeBayar').value,
+    catatan: document.getElementById('catatan').value,
+  };
+  document.querySelector('.primary').disabled = true;
+  document.querySelector('.primary').textContent = 'Menyimpan...';
+  google.script.run
+    .withSuccessHandler((res) => {
+      showMsg('ok', `✓ Tersimpan: ${res.nomorNota} — Rp ${res.total.toLocaleString('id')}`);
+      // Reset
+      document.getElementById('items').innerHTML = '';
+      addItem();
+      document.getElementById('catatan').value = '';
+      updateTotal();
+      document.querySelector('.primary').disabled = false;
+      document.querySelector('.primary').textContent = '💾 Simpan ke Sheet';
+    })
+    .withFailureHandler((e) => {
+      showMsg('error', e.message);
+      document.querySelector('.primary').disabled = false;
+      document.querySelector('.primary').textContent = '💾 Simpan ke Sheet';
+    })
+    .saveTransaksi(payload);
+}
+
+function showMsg(type, text) {
+  document.getElementById('msg').innerHTML = `<div class="msg ${type}">${text}</div>`;
+  if (type === 'ok') setTimeout(() => { document.getElementById('msg').innerHTML = ''; }, 3000);
+}
+</script>
+</body>
+</html>
