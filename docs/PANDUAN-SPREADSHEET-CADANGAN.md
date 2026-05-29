@@ -2,6 +2,8 @@
 
 Spreadsheet cadangan untuk catat transaksi/order saat aplikasi `depot.genster.my.id` down. Admin (1 orang) input di Sheet → sync otomatis ke aplikasi saat server pulih.
 
+> **Sudah setup? Lihat [CARA-PAKAI-SPREADSHEET-CADANGAN.md](CARA-PAKAI-SPREADSHEET-CADANGAN.md)** untuk panduan pemakaian harian.
+
 ---
 
 ## Langkah Setup (1x saja, sekitar 15 menit)

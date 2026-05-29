@@ -46,6 +46,7 @@ function onOpen() {
     .addItem('⬇️ Pull Master Data (Pelanggan + Produk)', 'pullMasterData')
     .addSeparator()
     .addItem('🧰 Setup Awal (Buat Sheet)', 'setupSheets')
+    .addItem('🔁 Refresh Dashboard', 'rebuildDashboard')
     .addItem('⚙️ Set API Secret', 'setApiSecret')
     .addToUi();
 }
@@ -76,35 +77,69 @@ function setupSheets() {
   });
 
   // Build Dashboard
-  const dash = ss.getSheetByName(SHEET_DASHBOARD);
-  dash.clear();
-  dash.getRange('A1').setValue('🪣 DEPOT GNR — Dashboard Cadangan').setFontSize(18).setFontWeight('bold');
-  dash.getRange('A3').setValue('Status Server:').setFontWeight('bold');
-  dash.getRange('B3').setValue('Klik menu → "📊 Cek Status Server"');
-  dash.getRange('A5').setValue('STATISTIK PENDING SYNC').setFontWeight('bold').setBackground('#fef3c7');
-  dash.getRange('A6').setValue('Transaksi pending:');
-  dash.getRange('B6').setFormula(`=COUNTIF(${SHEET_TRX}!I:I,"pending")`);
-  dash.getRange('A7').setValue('Order pending:');
-  dash.getRange('B7').setFormula(`=COUNTIF(${SHEET_ORDER}!K:K,"pending")`);
-  dash.getRange('A8').setValue('Pelanggan baru pending:');
-  dash.getRange('B8').setFormula(`=COUNTIF(${SHEET_PEL}!F:F,"pending")`);
-  dash.getRange('A10').setValue('TOTAL TERSINKRON').setFontWeight('bold').setBackground('#d1fae5');
-  dash.getRange('A11').setValue('Transaksi synced:');
-  dash.getRange('B11').setFormula(`=COUNTIF(${SHEET_TRX}!I:I,"synced")`);
-  dash.getRange('A12').setValue('Order synced:');
-  dash.getRange('B12').setFormula(`=COUNTIF(${SHEET_ORDER}!K:K,"synced")`);
-  dash.getRange('A14').setValue('OMZET HARI INI (dari sheet)').setFontWeight('bold').setBackground('#fef3c7');
-  dash.getRange('A15').setValue('Total transaksi hari ini:');
-  dash.getRange('B15').setFormula(`=SUMPRODUCT((INT(${SHEET_TRX}!A2:A1000)=TODAY())*${SHEET_TRX}!F2:F1000)`);
-  dash.getRange('A:A').setFontWeight('bold');
-  dash.setColumnWidth(1, 220);
-  dash.setColumnWidth(2, 200);
+  rebuildDashboard(true);
 
   SpreadsheetApp.getUi().alert(
     '✅ Setup Selesai',
     `${sheets.length} sheet sudah disiapkan.\n\nLangkah berikutnya:\n1. Set API Secret (menu → ⚙️ Set API Secret)\n2. Pull Master Data\n3. Mulai input transaksi`,
     SpreadsheetApp.getUi().ButtonSet.OK,
   );
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+// Pakai setFormulaLocal + separator `;` supaya kompatibel dgn
+// Google Sheets locale Indonesia (id_ID). Pakai `,` bikin #ERROR!
+function rebuildDashboard(silent) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let dash = ss.getSheetByName(SHEET_DASHBOARD);
+  if (!dash) dash = ss.insertSheet(SHEET_DASHBOARD);
+  dash.clear();
+
+  dash.getRange('A1').setValue('🪣 DEPOT GNR — Dashboard Cadangan').setFontSize(18).setFontWeight('bold');
+  dash.getRange('A3').setValue('Status Server:').setFontWeight('bold');
+  dash.getRange('B3').setValue('Klik menu → "📊 Cek Status Server"');
+
+  dash.getRange('A5').setValue('STATISTIK PENDING SYNC').setFontWeight('bold').setBackground('#fef3c7');
+  dash.getRange('A6').setValue('Transaksi pending:');
+  dash.getRange('B6').setFormulaLocal(`=COUNTIF(${SHEET_TRX}!I:I;"pending")`);
+  dash.getRange('A7').setValue('Order pending:');
+  dash.getRange('B7').setFormulaLocal(`=COUNTIF(${SHEET_ORDER}!K:K;"pending")`);
+  dash.getRange('A8').setValue('Pelanggan baru pending:');
+  dash.getRange('B8').setFormulaLocal(`=COUNTIF(${SHEET_PEL}!F:F;"pending")`);
+
+  dash.getRange('A10').setValue('TOTAL TERSINKRON').setFontWeight('bold').setBackground('#d1fae5');
+  dash.getRange('A11').setValue('Transaksi synced:');
+  dash.getRange('B11').setFormulaLocal(`=COUNTIF(${SHEET_TRX}!I:I;"synced")`);
+  dash.getRange('A12').setValue('Order synced:');
+  dash.getRange('B12').setFormulaLocal(`=COUNTIF(${SHEET_ORDER}!K:K;"synced")`);
+  dash.getRange('A13').setValue('Pelanggan synced:');
+  dash.getRange('B13').setFormulaLocal(`=COUNTIF(${SHEET_PEL}!F:F;"synced")`);
+
+  dash.getRange('A15').setValue('OMZET HARI INI (dari sheet)').setFontWeight('bold').setBackground('#fef3c7');
+  dash.getRange('A16').setValue('Total transaksi hari ini:');
+  dash.getRange('B16').setFormulaLocal(
+    `=SUMPRODUCT((INT(${SHEET_TRX}!A2:A1000)=TODAY())*${SHEET_TRX}!F2:F1000)`,
+  );
+  dash.getRange('B16').setNumberFormat('"Rp"#,##0');
+  dash.getRange('A17').setValue('Total order hari ini:');
+  dash.getRange('B17').setFormulaLocal(
+    `=SUMPRODUCT((INT(${SHEET_ORDER}!A2:A1000)=TODAY())*${SHEET_ORDER}!G2:G1000)`,
+  );
+  dash.getRange('B17').setNumberFormat('"Rp"#,##0');
+
+  dash.getRange('A19').setValue('TERAKHIR DIPERBARUI').setFontWeight('bold').setBackground('#e0e7ff');
+  dash.getRange('A20').setValue('Refresh terakhir:');
+  dash.getRange('B20').setValue(new Date()).setNumberFormat('dd/MM/yyyy HH:mm:ss');
+
+  dash.getRange('A:A').setFontWeight('bold');
+  dash.setColumnWidth(1, 240);
+  dash.setColumnWidth(2, 220);
+
+  if (!silent) {
+    SpreadsheetApp.getUi().alert('✅ Dashboard diperbarui.');
+  }
 }
 
 function setApiSecret() {
