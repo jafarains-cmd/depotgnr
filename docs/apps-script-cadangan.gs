@@ -89,15 +89,13 @@ function setupSheets() {
 // ============================================================
 // DASHBOARD
 // ============================================================
-// Apps Script `setFormula()` selalu pakai en_US syntax (separator `,`)
-// terlepas dari locale spreadsheet — Google translates ke locale user
-// saat render. Jangan pakai setFormulaLocal (tidak konsisten di runtime).
+// Hitung di Apps Script langsung (bukan pakai formula sheet) supaya
+// bebas dari masalah locale (Indonesian vs en_US: koma vs titik koma).
 function rebuildDashboard(silent) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let dash = ss.getSheetByName(SHEET_DASHBOARD);
   if (!dash) dash = ss.insertSheet(SHEET_DASHBOARD);
 
-  // Pastikan sheet referensi sudah ada — kalau belum, formula akan #REF!
   const required = [SHEET_TRX, SHEET_ORDER, SHEET_PEL];
   for (const name of required) {
     if (!ss.getSheetByName(name)) {
@@ -108,6 +106,35 @@ function rebuildDashboard(silent) {
     }
   }
 
+  // Helpers: hitung row by status & sum omzet hari ini
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+
+  function countAndSum(sheetName, statusColIdx, totalColIdx, tsColIdx) {
+    const sh = ss.getSheetByName(sheetName);
+    const out = { pending: 0, synced: 0, omzetToday: 0 };
+    if (!sh) return out;
+    const data = sh.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const status = String(row[statusColIdx] || '').toLowerCase().trim();
+      if (status === 'pending') out.pending++;
+      else if (status === 'synced') out.synced++;
+      if (totalColIdx != null && tsColIdx != null) {
+        const ts = row[tsColIdx];
+        if (ts instanceof Date && ts >= today && ts < tomorrow) {
+          out.omzetToday += Number(row[totalColIdx]) || 0;
+        }
+      }
+    }
+    return out;
+  }
+
+  const trx = countAndSum(SHEET_TRX, 8, 5, 0); // status=I(8), total=F(5), ts=A(0)
+  const ord = countAndSum(SHEET_ORDER, 10, 6, 0); // status=K(10), total=G(6), ts=A(0)
+  const pel = countAndSum(SHEET_PEL, 5, null, null); // status=F(5)
+
   dash.clear();
   dash.getRange('A1').setValue('🪣 DEPOT GNR — Dashboard Cadangan').setFontSize(18).setFontWeight('bold');
   dash.getRange('A3').setValue('Status Server:').setFontWeight('bold');
@@ -115,31 +142,25 @@ function rebuildDashboard(silent) {
 
   dash.getRange('A5').setValue('STATISTIK PENDING SYNC').setFontWeight('bold').setBackground('#fef3c7');
   dash.getRange('A6').setValue('Transaksi pending:');
-  dash.getRange('B6').setFormula(`=COUNTIF('${SHEET_TRX}'!I:I,"pending")`);
+  dash.getRange('B6').setValue(trx.pending);
   dash.getRange('A7').setValue('Order pending:');
-  dash.getRange('B7').setFormula(`=COUNTIF('${SHEET_ORDER}'!K:K,"pending")`);
+  dash.getRange('B7').setValue(ord.pending);
   dash.getRange('A8').setValue('Pelanggan baru pending:');
-  dash.getRange('B8').setFormula(`=COUNTIF('${SHEET_PEL}'!F:F,"pending")`);
+  dash.getRange('B8').setValue(pel.pending);
 
   dash.getRange('A10').setValue('TOTAL TERSINKRON').setFontWeight('bold').setBackground('#d1fae5');
   dash.getRange('A11').setValue('Transaksi synced:');
-  dash.getRange('B11').setFormula(`=COUNTIF('${SHEET_TRX}'!I:I,"synced")`);
+  dash.getRange('B11').setValue(trx.synced);
   dash.getRange('A12').setValue('Order synced:');
-  dash.getRange('B12').setFormula(`=COUNTIF('${SHEET_ORDER}'!K:K,"synced")`);
+  dash.getRange('B12').setValue(ord.synced);
   dash.getRange('A13').setValue('Pelanggan synced:');
-  dash.getRange('B13').setFormula(`=COUNTIF('${SHEET_PEL}'!F:F,"synced")`);
+  dash.getRange('B13').setValue(pel.synced);
 
   dash.getRange('A15').setValue('OMZET HARI INI (dari sheet)').setFontWeight('bold').setBackground('#fef3c7');
   dash.getRange('A16').setValue('Total transaksi hari ini:');
-  dash.getRange('B16').setFormula(
-    `=SUMPRODUCT((INT('${SHEET_TRX}'!A2:A1000)=TODAY())*'${SHEET_TRX}'!F2:F1000)`,
-  );
-  dash.getRange('B16').setNumberFormat('"Rp"#,##0');
+  dash.getRange('B16').setValue(trx.omzetToday).setNumberFormat('"Rp"#,##0');
   dash.getRange('A17').setValue('Total order hari ini:');
-  dash.getRange('B17').setFormula(
-    `=SUMPRODUCT((INT('${SHEET_ORDER}'!A2:A1000)=TODAY())*'${SHEET_ORDER}'!G2:G1000)`,
-  );
-  dash.getRange('B17').setNumberFormat('"Rp"#,##0');
+  dash.getRange('B17').setValue(ord.omzetToday).setNumberFormat('"Rp"#,##0');
 
   dash.getRange('A19').setValue('TERAKHIR DIPERBARUI').setFontWeight('bold').setBackground('#e0e7ff');
   dash.getRange('A20').setValue('Refresh terakhir:');
@@ -149,10 +170,14 @@ function rebuildDashboard(silent) {
   dash.setColumnWidth(1, 240);
   dash.setColumnWidth(2, 220);
 
-  SpreadsheetApp.flush();
-
   if (!silent) {
-    SpreadsheetApp.getUi().alert('✅ Dashboard diperbarui.');
+    SpreadsheetApp.getUi().alert(
+      '✅ Dashboard diperbarui',
+      `Pending: ${trx.pending} trx, ${ord.pending} order, ${pel.pending} pelanggan\n` +
+        `Synced: ${trx.synced} trx, ${ord.synced} order, ${pel.synced} pelanggan\n` +
+        `Omzet hari ini: Rp ${(trx.omzetToday + ord.omzetToday).toLocaleString('id-ID')}`,
+      SpreadsheetApp.getUi().ButtonSet.OK,
+    );
   }
 }
 
