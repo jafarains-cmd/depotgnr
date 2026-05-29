@@ -31,10 +31,11 @@ import {
   countKomplainBaru,
 } from "@/lib/notifications";
 import { countChurnRisk } from "@/lib/analytics";
+import { getIdleTimeoutMenit } from "@/lib/session-config";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await requireRole(["admin"]);
-  const [orderMasuk, pembayaran, kurirAktif, bonusPending, churn, komplainBaru] =
+  const [orderMasuk, pembayaran, kurirAktif, bonusPending, churn, komplainBaru, idleTimeoutMenit] =
     await Promise.all([
       countOrderMasuk(),
       countPembayaranMenunggu(),
@@ -42,6 +43,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       countKurirBonusPending(),
       countChurnRisk().catch(() => ({ due: 0, overdue: 0, churn: 0 })),
       countKomplainBaru(),
+      getIdleTimeoutMenit(),
     ]);
   const followUp = churn.due + churn.overdue + churn.churn;
 
@@ -229,6 +231,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         followUp,
         komplain: komplainBaru,
       }}
+      idleTimeoutMenit={idleTimeoutMenit}
     >
       {children}
     </AppShell>

@@ -25,6 +25,11 @@ const ALL_FIELDS: Record<string, Field> = {
   namaDepot: { key: "namaDepot", label: "Nama Depot" },
   alamatDepot: { key: "alamatDepot", label: "Alamat Depot", type: "textarea" },
   telpDepot: { key: "telpDepot", label: "Telp Depot" },
+  sessionTimeoutMenit: {
+    key: "sessionTimeoutMenit",
+    label: "Auto-Logout Staff (menit)",
+    help: "Setelah idle berapa menit, staff (admin/kasir/kurir) otomatis logout. Default: 30. Isi 0 untuk nonaktif.",
+  },
   kontakWA: {
     key: "kontakWA",
     label: "Kontak Admin (WhatsApp)",
@@ -249,6 +254,7 @@ const TABS: Tab[] = [
       "telpDepot",
       "kontakWA",
       "kontakTelegram",
+      "sessionTimeoutMenit",
       "footerNota",
       "zonaWaktu",
     ],

@@ -8,6 +8,7 @@ import { LogOut, Menu, X } from "lucide-react";
 import { DropFill } from "./GallonArt";
 import { useNotifPolling } from "./useNotifPolling";
 import { BackToTop } from "./BackToTop";
+import { IdleLogout } from "./IdleLogout";
 import type { NotifCounts } from "@/lib/notif-action";
 
 export type NavItem = {
@@ -36,12 +37,14 @@ export function AppShell({
   nav,
   userName,
   initialBadges,
+  idleTimeoutMenit = 30,
   children,
 }: {
   title: string;
   nav: NavItem[] | NavGroup[];
   userName: string;
   initialBadges?: NotifCounts;
+  idleTimeoutMenit?: number;
   children: React.ReactNode;
 }) {
   const liveBadges = useNotifPolling(initialBadges ?? {});
@@ -155,6 +158,7 @@ export function AppShell({
 
       <main className="flex-1 overflow-auto min-w-0">{children}</main>
       <BackToTop />
+      {idleTimeoutMenit > 0 && <IdleLogout timeoutMenit={idleTimeoutMenit} />}
     </div>
   );
 }

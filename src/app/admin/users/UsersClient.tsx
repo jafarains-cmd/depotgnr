@@ -199,19 +199,39 @@ export function UsersClient({ users }: { users: Row[] }) {
                       onClick={() => {
                         if (
                           confirm(
-                            `Hapus user ${u.name} (${u.email}) PERMANEN?\n\nData order/transaksi terkait akan jadi anonim (link ke user di-set NULL). Tindakan ini tidak bisa di-undo.`,
+                            `Nonaktifkan user ${u.name} (${u.email})?\n\nUser tidak bisa login lagi, semua sesi aktif dihapus. Data order/transaksi tetap utuh dengan nama asli. Bisa diaktifkan kembali kapan saja.`,
                           )
                         ) {
                           startTransition(async () => {
-                            const r = await deleteUser(u.id);
+                            const r = await deleteUser(u.id, "soft");
                             if ("error" in r) toast.error(r.error);
-                            else toast.success(`User ${u.name} dihapus`);
+                            else toast.success(`User ${u.name} dinonaktifkan`);
                           });
                         }
                       }}
-                      className="text-red-600 inline-flex items-center gap-1 hover:underline"
+                      className="text-amber-700 inline-flex items-center gap-1 hover:underline"
+                      title="Nonaktifkan (soft delete) — direkomendasikan"
                     >
-                      <Trash2 size={12} /> Hapus
+                      <Trash2 size={12} /> Nonaktifkan
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (
+                          confirm(
+                            `⚠ HAPUS PERMANEN user ${u.name} (${u.email})?\n\nData order/transaksi terkait akan jadi anonim (nama '—'). Tidak bisa di-undo.\n\nDirekomendasikan pakai "Nonaktifkan" sebagai gantinya.`,
+                          )
+                        ) {
+                          startTransition(async () => {
+                            const r = await deleteUser(u.id, "hard");
+                            if ("error" in r) toast.error(r.error);
+                            else toast.success(`User ${u.name} dihapus permanen`);
+                          });
+                        }
+                      }}
+                      className="text-red-600 inline-flex items-center gap-1 hover:underline text-[10px]"
+                      title="Hapus permanen dari database"
+                    >
+                      <Trash2 size={10} /> Hapus×
                     </button>
                   </div>
                 </td>

@@ -6,13 +6,15 @@ import {
   countPembayaranMenunggu,
   countKurirAktif,
 } from "@/lib/notifications";
+import { getIdleTimeoutMenit } from "@/lib/session-config";
 
 export default async function KasirLayout({ children }: { children: React.ReactNode }) {
   const session = await requireRole(["admin", "kasir"]);
-  const [orderMasuk, pembayaran, kurirAktif] = await Promise.all([
+  const [orderMasuk, pembayaran, kurirAktif, idleTimeoutMenit] = await Promise.all([
     countOrderMasuk(),
     countPembayaranMenunggu(),
     countKurirAktif(session.user.id),
+    getIdleTimeoutMenit(),
   ]);
 
   const NAV: NavGroup[] = [
@@ -47,6 +49,7 @@ export default async function KasirLayout({ children }: { children: React.ReactN
       nav={NAV}
       userName={session.user.name}
       initialBadges={{ orderMasuk, pembayaran, kurirAktif }}
+      idleTimeoutMenit={idleTimeoutMenit}
     >
       {children}
     </AppShell>

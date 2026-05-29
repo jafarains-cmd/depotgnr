@@ -21,9 +21,13 @@
   actions, list piutang ditangani, transaksi terbaru. Nav "Dashboard" baru di
   /kasir layout.
 
-- [ ] **3. Hapus user yang punya transaksi** _(severity: minor)_
-  Saat ini set null, nama "—" di history laporan. Ganti: soft-delete /
-  deaktivasi user dengan nama tetap.
+- [x] ~~**3. Hapus user yang punya transaksi**~~ _(severity: minor)_ ✅
+  ~~Saat ini set null, nama "—" di history laporan. Ganti: soft-delete /
+  deaktivasi user dengan nama tetap.~~
+  Implementasi: deleteUser() sekarang punya parameter mode "soft"|"hard".
+  Default soft = set banned=true + hapus sesi aktif. Hard = hapus permanen
+  (lama). UI ada 2 tombol: "Nonaktifkan" (amber, recommended) + "Hapus×"
+  (red kecil). Action reactivateUser() untuk batalkan ban.
 
 - [x] ~~**4. Refund / void transaksi UI tidak prominent**~~ _(severity: minor)_ ✅
   ~~Logic ada di kode, tapi kasir kesulitan menemukan tombolnya.~~
@@ -154,8 +158,15 @@
 - [ ] **23. 2FA / verification kedua untuk owner** _(severity: minor)_
   Akun owner cuma password.
 
-- [ ] **24. Session timeout / auto-logout** _(severity: minor)_
-  Kasir lupa logout di komputer warnet → siapa pun bisa input transaksi.
+- [x] ~~**24. Session timeout / auto-logout**~~ _(severity: minor)_ ✅
+  ~~Kasir lupa logout di komputer warnet → siapa pun bisa input transaksi.~~
+  Implementasi: components/IdleLogout track aktivitas (mouse/click/key/
+  touch/scroll). Idle > X menit → authClient.signOut() → redirect /login.
+  Warning toast amber 1 menit sebelum logout. Konfig di pengaturan
+  "Auto-Logout Staff (menit)" default 30, 0 = nonaktif. Mounted di
+  AppShell (admin/kasir) + KurirLayout. Pelanggan tidak diaffected.
+  Login page tampilkan banner "Sesi berakhir karena tidak aktif" kalau
+  ?reason=idle.
 
 ## ⚙️ INFRA & RELIABILITY
 
@@ -167,9 +178,12 @@
   Kalau credit Fonnte habis / API down, notif hilang silent. Queue + alert
   admin.
 
-- [ ] **27. Health check endpoint + monitoring** _(severity: minor)_
-  Endpoint `/api/health` + Uptime Robot / cron eksternal. Owner tahu kalau
-  app down.
+- [x] ~~**27. Health check endpoint + monitoring**~~ _(severity: minor)_ ✅
+  ~~Endpoint `/api/health` + Uptime Robot / cron eksternal. Owner tahu kalau
+  app down.~~
+  Implementasi: /api/health route. SELECT 1 ke DB → kalau respond 200 +
+  JSON {status, db, uptime, responseMs, timestamp}. Kalau DB down → 503.
+  Siap dipasang ke UptimeRobot / cron monitoring eksternal.
 
 ---
 
@@ -186,8 +200,8 @@
 ## Progress
 
 - Total: **27 item**
-- Selesai: **11** (#2, #4, #13, #14, #15, #16, #17, #18, #19, #20, #21)
+- Selesai: **14** (#2, #3, #4, #13, #14, #15, #16, #17, #18, #19, #20, #21, #24, #27)
 - Sedang dikerjakan: —
-- Tersisa: **16**
+- Tersisa: **13**
 
 _Update terakhir: 2026-05-23_

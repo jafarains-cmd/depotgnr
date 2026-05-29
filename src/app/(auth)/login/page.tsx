@@ -99,6 +99,12 @@ function LoginInner() {
         <p className="text-sm text-[color:var(--muted)]">Selamat datang kembali di Depot Air.</p>
       </div>
 
+      {params.get("reason") === "idle" && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
+          ⏱ Sesi Anda berakhir karena tidak aktif. Silakan login kembali.
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
           <label className="text-sm font-medium block mb-1">User</label>

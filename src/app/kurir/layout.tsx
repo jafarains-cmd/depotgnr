@@ -3,9 +3,12 @@ import { User, Truck } from "lucide-react";
 import { LogoutButton } from "../akun/LogoutButton";
 import { DropFill } from "@/components/GallonArt";
 import { requireRole } from "@/lib/permissions";
+import { IdleLogout } from "@/components/IdleLogout";
+import { getIdleTimeoutMenit } from "@/lib/session-config";
 
 export default async function KurirLayout({ children }: { children: React.ReactNode }) {
   const session = await requireRole(["admin", "kasir", "kurir"]);
+  const idleTimeoutMenit = await getIdleTimeoutMenit();
   const role = session.user.role ?? "kurir";
   const homeHref =
     role === "admin"
@@ -40,6 +43,7 @@ export default async function KurirLayout({ children }: { children: React.ReactN
         </div>
       </header>
       <main className="max-w-2xl mx-auto p-4 pb-20">{children}</main>
+      {idleTimeoutMenit > 0 && <IdleLogout timeoutMenit={idleTimeoutMenit} />}
     </div>
   );
 }

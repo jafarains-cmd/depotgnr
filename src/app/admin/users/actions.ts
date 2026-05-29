@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/db";
-import { user as userTable } from "@/db/schema/auth";
+import { user as userTable, session as sessionTable } from "@/db/schema/auth";
 import { requireRole } from "@/lib/permissions";
 import { auth } from "@/lib/auth";
 import { generateToken, createResetToken } from "@/lib/password-reset";
@@ -132,6 +132,7 @@ export async function editUser(
  */
 export async function deleteUser(
   id: string,
+  mode: "soft" | "hard" = "soft",
 ): Promise<{ ok: true } | { error: string }> {
   const session = await requireRole(["admin"]);
   if (id === session.user.id) {
@@ -151,7 +152,41 @@ export async function deleteUser(
     }
   }
 
-  await db.delete(userTable).where(eq(userTable.id, id));
+  if (mode === "soft") {
+    // Soft delete: nonaktifkan akun, history transaksi tetap tampil dengan nama asli
+    await db
+      .update(userTable)
+      .set({
+        banned: true,
+        banReason: `Dinonaktifkan oleh ${session.user.name} pada ${new Date().toISOString()}`,
+      })
+      .where(eq(userTable.id, id));
+
+    // Hapus semua sesi aktif user yang dinonaktifkan
+    await db.delete(sessionTable).where(eq(sessionTable.userId, id));
+  } else {
+    // Hard delete: hapus permanen dari DB (cascade ke session via FK)
+    // Data order/transaksi tetap ada (FK set null) tapi nama jadi "—"
+    await db.delete(userTable).where(eq(userTable.id, id));
+  }
+
+  revalidatePath("/admin/users");
+  return { ok: true };
+}
+
+/**
+ * Aktifkan kembali user yang sudah dinonaktifkan (banned=true → false).
+ */
+export async function reactivateUser(
+  id: string,
+): Promise<{ ok: true } | { error: string }> {
+  await requireRole(["admin"]);
+  const target = await db.query.user.findFirst({ where: eq(userTable.id, id) });
+  if (!target) return { error: "User tidak ditemukan" };
+  await db
+    .update(userTable)
+    .set({ banned: false, banReason: null })
+    .where(eq(userTable.id, id));
   revalidatePath("/admin/users");
   return { ok: true };
 }
