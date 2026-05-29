@@ -357,18 +357,21 @@ function pushSemuaPending() {
   const ordRows = ordSheet.getDataRange().getValues();
   const pelRows = pelSheet.getDataRange().getValues();
 
+  // Helper: cell value → string (Sheets sering kasih number untuk telp/nota)
+  const asStr = (v) => (v == null ? '' : String(v).trim());
+
   const transaksi = [];
   const transaksiRowIdx = [];
   for (let i = 1; i < trxRows.length; i++) {
-    if (trxRows[i][8] === 'pending') {
+    if (asStr(trxRows[i][8]) === 'pending') {
       try {
         transaksi.push({
-          nomorNota: trxRows[i][1],
-          pelangganNama: trxRows[i][2],
-          pelangganTelp: trxRows[i][3],
+          nomorNota: asStr(trxRows[i][1]),
+          pelangganNama: asStr(trxRows[i][2]),
+          pelangganTelp: asStr(trxRows[i][3]),
           items: JSON.parse(trxRows[i][4] || '[]'),
-          metodeBayar: trxRows[i][6] || 'cash',
-          catatan: trxRows[i][7],
+          metodeBayar: asStr(trxRows[i][6]) || 'cash',
+          catatan: asStr(trxRows[i][7]),
           createdAt: new Date(trxRows[i][0]).toISOString(),
         });
         transaksiRowIdx.push(i + 1);
@@ -381,17 +384,17 @@ function pushSemuaPending() {
   const orderAntar = [];
   const orderRowIdx = [];
   for (let i = 1; i < ordRows.length; i++) {
-    if (ordRows[i][10] === 'pending') {
+    if (asStr(ordRows[i][10]) === 'pending') {
       try {
         orderAntar.push({
-          nomorOrder: ordRows[i][1],
-          pelangganNama: ordRows[i][2],
-          pelangganTelp: ordRows[i][3],
-          alamatAntar: ordRows[i][4],
+          nomorOrder: asStr(ordRows[i][1]),
+          pelangganNama: asStr(ordRows[i][2]),
+          pelangganTelp: asStr(ordRows[i][3]),
+          alamatAntar: asStr(ordRows[i][4]),
           items: JSON.parse(ordRows[i][5] || '[]'),
-          metodeBayar: ordRows[i][7] || undefined,
-          statusBayar: ordRows[i][8] || 'belum',
-          catatan: ordRows[i][9],
+          metodeBayar: asStr(ordRows[i][7]) || undefined,
+          statusBayar: asStr(ordRows[i][8]) || 'belum',
+          catatan: asStr(ordRows[i][9]),
           createdAt: new Date(ordRows[i][0]).toISOString(),
         });
         orderRowIdx.push(i + 1);
@@ -404,12 +407,12 @@ function pushSemuaPending() {
   const pelangganBaru = [];
   const pelRowIdx = [];
   for (let i = 1; i < pelRows.length; i++) {
-    if (pelRows[i][5] === 'pending') {
+    if (asStr(pelRows[i][5]) === 'pending') {
       pelangganBaru.push({
-        nama: pelRows[i][1],
-        telp: pelRows[i][2],
-        alamat: pelRows[i][3],
-        tipe: pelRows[i][4] || 'umum',
+        nama: asStr(pelRows[i][1]),
+        telp: asStr(pelRows[i][2]),
+        alamat: asStr(pelRows[i][3]),
+        tipe: asStr(pelRows[i][4]) || 'umum',
       });
       pelRowIdx.push(i + 1);
     }

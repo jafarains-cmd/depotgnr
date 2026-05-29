@@ -58,6 +58,16 @@ type ItemResult = {
   reason?: string;
 };
 
+/** Coerce nilai jadi string + trim. Sheets sering kasih number untuk telp. */
+function s(v: unknown): string {
+  if (v == null) return "";
+  return String(v).trim();
+}
+function sOrNull(v: unknown): string | null {
+  const t = s(v);
+  return t || null;
+}
+
 /**
  * Sync data dari Google Spreadsheet ke aplikasi.
  * Dipanggil oleh Apps Script saat aplikasi recover dari downtime.
@@ -111,36 +121,38 @@ export async function POST(req: Request) {
 
   // 1. Pelanggan baru (proses dulu supaya transaksi/order bisa pakai)
   for (const p of body.pelangganBaru ?? []) {
-    if (!p.nama?.trim()) {
-      results.pelangganBaru.push({ ref: p.nama || "(kosong)", status: "error", reason: "nama wajib" });
+    const nama = s(p.nama);
+    if (!nama) {
+      results.pelangganBaru.push({ ref: nama || "(kosong)", status: "error", reason: "nama wajib" });
       continue;
     }
     try {
+      const telp = sOrNull(p.telp);
       // Cek by telp kalau ada
       let existing = null;
-      if (p.telp) {
+      if (telp) {
         existing = await db.query.pelanggan.findFirst({
-          where: eq(pelangganTable.telp, p.telp.trim()),
+          where: eq(pelangganTable.telp, telp),
         });
       }
       if (existing) {
-        results.pelangganBaru.push({ ref: p.nama, status: "skipped", reason: "telp sudah ada" });
+        results.pelangganBaru.push({ ref: nama, status: "skipped", reason: "telp sudah ada" });
         continue;
       }
       const [created] = await db
         .insert(pelangganTable)
         .values({
-          nama: p.nama.trim(),
-          telp: p.telp?.trim() || null,
-          alamat: p.alamat?.trim() || null,
+          nama,
+          telp,
+          alamat: sOrNull(p.alamat),
           tipe: p.tipe ?? "umum",
         })
         .returning();
       bestEffort(`ensureKodeReferral(${created.id})`, ensureKodeReferral(created.id));
-      results.pelangganBaru.push({ ref: p.nama, status: "synced" });
+      results.pelangganBaru.push({ ref: nama, status: "synced" });
     } catch (e) {
       results.pelangganBaru.push({
-        ref: p.nama,
+        ref: nama,
         status: "error",
         reason: e instanceof Error ? e.message : "unknown",
       });
@@ -341,21 +353,23 @@ async function resolveSyncUserId(): Promise<string | null> {
 }
 
 async function resolvePelangganId(
-  telp: string | null | undefined,
-  nama: string | null | undefined,
+  telpRaw: unknown,
+  namaRaw: unknown,
 ): Promise<number | null> {
-  if (telp?.trim()) {
+  const telp = s(telpRaw);
+  const nama = s(namaRaw);
+  if (telp) {
     const existing = await db.query.pelanggan.findFirst({
-      where: eq(pelangganTable.telp, telp.trim()),
+      where: eq(pelangganTable.telp, telp),
     });
     if (existing) return existing.id;
     // Auto-create kalau telp diberi tapi belum ada
-    if (nama?.trim()) {
+    if (nama) {
       const [created] = await db
         .insert(pelangganTable)
         .values({
-          nama: nama.trim(),
-          telp: telp.trim(),
+          nama,
+          telp,
           tipe: "umum",
         })
         .returning();
