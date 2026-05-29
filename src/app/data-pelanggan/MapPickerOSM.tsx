@@ -50,7 +50,8 @@ export function MapPickerOSM({
     }
   }, [lat, lng]);
 
-  const center: [number, number] = marker ?? [-6.2, 106.816]; // Jakarta default
+  // Default center: lokasi depot (Gorontalo). Pakai marker kalau sudah ada.
+  const center: [number, number] = marker ?? [0.5451158, 123.0397047];
 
   function handleClick(la: number, ln: number) {
     setMarker([la, ln]);
@@ -60,7 +61,7 @@ export function MapPickerOSM({
   return (
     <MapContainer
       center={center}
-      zoom={marker ? 16 : 11}
+      zoom={marker ? 16 : 14}
       style={{ height: "100%", width: "100%" }}
       scrollWheelZoom
     >

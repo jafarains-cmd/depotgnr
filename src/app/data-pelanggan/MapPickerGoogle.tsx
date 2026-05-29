@@ -20,13 +20,14 @@ export function MapPickerGoogle({
   const [marker, setMarker] = useState<{ lat: number; lng: number } | null>(
     lat !== null && lng !== null ? { lat, lng } : null,
   );
-  const center = marker ?? { lat: -6.2, lng: 106.816 };
+  // Default center: lokasi depot (Gorontalo)
+  const center = marker ?? { lat: 0.5451158, lng: 123.0397047 };
 
   return (
     <APIProvider apiKey={apiKey} onError={onFail}>
       <Map
         defaultCenter={center}
-        defaultZoom={marker ? 16 : 11}
+        defaultZoom={marker ? 16 : 14}
         mapId="depot-air-picker"
         gestureHandling="greedy"
         disableDefaultUI={false}
