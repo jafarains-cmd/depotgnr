@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { MapPin, X } from "lucide-react";
+import { LocationSearchBox } from "./LocationSearchBox";
 
 // Wrapper switcher Google ↔ OSM — load client-only
 const MapPicker = dynamic(() => import("./MapPicker").then((m) => m.MapPicker), {
@@ -55,12 +56,19 @@ export function LocationPicker({
               <div>
                 <div className="font-semibold">Pilih Lokasi Pelanggan</div>
                 <div className="text-xs text-[color:var(--muted)]">
-                  Klik di peta untuk set koordinat. Geser/zoom dulu kalau perlu.
+                  Cari alamat di bawah atau klik langsung di peta.
                 </div>
               </div>
               <button onClick={() => setOpen(false)} className="text-[color:var(--muted)] hover:text-ink">
                 <X size={20} />
               </button>
+            </div>
+            <div className="p-3 border-b border-line">
+              <LocationSearchBox
+                onPick={(la, ln) => {
+                  onChange(la, ln);
+                }}
+              />
             </div>
             <div className="flex-1 min-h-0">
               <MapPicker

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import { useEffect, useState } from "react";
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -20,6 +20,16 @@ function ClickHandler({ onClick }: { onClick: (lat: number, lng: number) => void
   return null;
 }
 
+function MapRecenter({ lat, lng }: { lat: number | null; lng: number | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (lat !== null && lng !== null) {
+      map.setView([lat, lng], 16, { animate: true });
+    }
+  }, [lat, lng, map]);
+  return null;
+}
+
 export function MapPickerOSM({
   lat,
   lng,
@@ -32,6 +42,13 @@ export function MapPickerOSM({
   const [marker, setMarker] = useState<[number, number] | null>(
     lat !== null && lng !== null ? [lat, lng] : null,
   );
+
+  // Sync marker dengan prop lat/lng (untuk hasil pencarian / external picker)
+  useEffect(() => {
+    if (lat !== null && lng !== null) {
+      setMarker([lat, lng]);
+    }
+  }, [lat, lng]);
 
   const center: [number, number] = marker ?? [-6.2, 106.816]; // Jakarta default
 
@@ -52,6 +69,7 @@ export function MapPickerOSM({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <ClickHandler onClick={handleClick} />
+      <MapRecenter lat={lat} lng={lng} />
       {marker && <Marker position={marker} icon={icon} />}
     </MapContainer>
   );

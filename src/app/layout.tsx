@@ -18,6 +18,14 @@ export const metadata: Metadata = {
   title: "DEPOT GNR — Air Isi Ulang",
   description: "Pesan galon isi ulang dari depot terdekat. Antar cepat, harga jujur.",
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon-192.svg", type: "image/svg+xml", sizes: "192x192" },
+    ],
+    shortcut: "/icon.svg",
+    apple: "/icon-192.svg",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

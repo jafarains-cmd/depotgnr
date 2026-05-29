@@ -81,6 +81,29 @@ export default async function ProfilPage() {
         <ChevronRight size={16} className="text-[color:var(--muted)]" />
       </Link>
 
+      {/* Warning lokasi belum diset */}
+      {(pel.koordinatLat === null || pel.koordinatLng === null) && (
+        <div className="mt-4">
+          <Link
+            href="/akun"
+            className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4 hover:bg-amber-100 transition"
+          >
+            <div className="w-10 h-10 rounded-full bg-amber-100 grid place-items-center flex-shrink-0">
+              <MapPin size={18} className="text-amber-700" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-amber-900 text-sm">
+                Tandai lokasi rumah di peta
+              </div>
+              <div className="text-xs text-amber-800 mt-0.5">
+                Supaya kurir antar tepat sasaran. Klik untuk set sekarang →
+              </div>
+            </div>
+            <ChevronRight size={18} className="text-amber-700 flex-shrink-0" />
+          </Link>
+        </div>
+      )}
+
       {/* Hubungi Admin */}
       <div className="mt-4">
         <div className="text-[11px] font-bold tracking-widest text-[color:var(--muted)] mb-2 px-1">

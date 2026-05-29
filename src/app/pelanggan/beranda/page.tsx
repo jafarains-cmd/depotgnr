@@ -196,6 +196,28 @@ export default async function BerandaPage() {
         );
       })()}
 
+      {/* Warning lokasi belum diset */}
+      {(me.koordinatLat === null || me.koordinatLng === null) && (
+        <div className="px-4 mt-4">
+          <Link
+            href="/akun"
+            className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-3 hover:bg-amber-100 transition"
+          >
+            <div className="w-9 h-9 rounded-full bg-amber-100 grid place-items-center flex-shrink-0">
+              <MapPin size={16} className="text-amber-700" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-amber-900 text-xs">
+                Tandai lokasi rumah di peta
+              </div>
+              <div className="text-[11px] text-amber-800 mt-0.5">
+                Supaya kurir antar tepat sasaran →
+              </div>
+            </div>
+          </Link>
+        </div>
+      )}
+
       {/* Order aktif */}
       {aktif.length > 0 && (
         <section className="px-4 mt-5">
