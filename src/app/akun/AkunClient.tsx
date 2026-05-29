@@ -11,6 +11,7 @@ import {
   setEmailAction,
 } from "./actions";
 import { PasswordInput } from "@/components/PasswordInput";
+import { LocationPicker } from "@/app/data-pelanggan/LocationPicker";
 
 export function AkunClient({
   currentNama,
@@ -20,6 +21,8 @@ export function AkunClient({
   currentUsername,
   hasPassword,
   showAlamat,
+  currentLat,
+  currentLng,
 }: {
   currentNama: string;
   currentAlamat: string;
@@ -28,11 +31,19 @@ export function AkunClient({
   currentUsername: string | null;
   hasPassword: boolean;
   showAlamat: boolean;
+  currentLat?: number | null;
+  currentLng?: number | null;
 }) {
   return (
     <div className="space-y-4">
       <NamaForm currentNama={currentNama} />
-      {showAlamat && <AlamatForm currentAlamat={currentAlamat} />}
+      {showAlamat && (
+        <AlamatForm
+          currentAlamat={currentAlamat}
+          currentLat={currentLat ?? null}
+          currentLng={currentLng ?? null}
+        />
+      )}
       <NomorWAForm currentNomor={currentNomor} />
       <EmailForm currentEmail={currentEmail} />
       <UsernameForm currentUsername={currentUsername} />
@@ -148,30 +159,45 @@ function NomorWAForm({ currentNomor }: { currentNomor: string }) {
   );
 }
 
-function AlamatForm({ currentAlamat }: { currentAlamat: string }) {
+function AlamatForm({
+  currentAlamat,
+  currentLat,
+  currentLng,
+}: {
+  currentAlamat: string;
+  currentLat: number | null;
+  currentLng: number | null;
+}) {
   const [alamat, setAlamat] = useState(currentAlamat);
+  const [lat, setLat] = useState<number | null>(currentLat);
+  const [lng, setLng] = useState<number | null>(currentLng);
   const [pending, startTransition] = useTransition();
   const [msg, setMsg] = useState<{ ok?: boolean; text: string } | null>(null);
+
+  const isDirty =
+    alamat.trim() !== currentAlamat ||
+    lat !== currentLat ||
+    lng !== currentLng;
 
   return (
     <div className="bg-surface border border-line rounded-2xl p-4 space-y-3">
       <h2 className="font-semibold inline-flex items-center gap-1.5">
-        <MapPin size={16} /> Alamat Pengantaran
+        <MapPin size={16} /> Alamat & Lokasi Pengantaran
       </h2>
       <p className="text-sm text-[color:var(--muted)]">
-        Akan terisi otomatis saat order baru. Anda bisa ubah alamat per pesanan.
+        Tandai lokasi rumah di peta supaya kurir bisa antar tepat sasaran.
       </p>
       <form
         onSubmit={(e) => {
           e.preventDefault();
           setMsg(null);
           startTransition(async () => {
-            const res = await setAlamatAction(alamat);
+            const res = await setAlamatAction(alamat, lat, lng);
             if ("error" in res) setMsg({ ok: false, text: res.error });
-            else setMsg({ ok: true, text: "Alamat tersimpan" });
+            else setMsg({ ok: true, text: "Alamat & lokasi tersimpan" });
           });
         }}
-        className="space-y-2"
+        className="space-y-3"
       >
         <textarea
           value={alamat}
@@ -181,6 +207,26 @@ function AlamatForm({ currentAlamat }: { currentAlamat: string }) {
           className="w-full px-3 py-2 border border-line rounded-md text-sm"
           maxLength={500}
         />
+
+        <div>
+          <label className="text-xs font-bold text-[color:var(--muted)] inline-flex items-center gap-1 mb-1">
+            <MapPin size={12} /> Titik Lokasi (Peta)
+          </label>
+          <LocationPicker
+            lat={lat}
+            lng={lng}
+            onChange={(la, ln) => {
+              if (isNaN(la) || isNaN(ln)) {
+                setLat(null);
+                setLng(null);
+              } else {
+                setLat(la);
+                setLng(ln);
+              }
+            }}
+          />
+        </div>
+
         {msg && (
           <p className={`text-xs ${msg.ok ? "text-emerald-700" : "text-red-600"}`}>
             {msg.ok && <Check className="inline" size={12} />} {msg.text}
@@ -188,10 +234,10 @@ function AlamatForm({ currentAlamat }: { currentAlamat: string }) {
         )}
         <button
           type="submit"
-          disabled={pending || alamat.trim() === currentAlamat}
+          disabled={pending || !isDirty}
           className="px-4 py-2 bg-brand text-white rounded-md text-sm disabled:opacity-50"
         >
-          {pending ? "Menyimpan..." : "Simpan Alamat"}
+          {pending ? "Menyimpan..." : "Simpan Alamat & Lokasi"}
         </button>
       </form>
     </div>

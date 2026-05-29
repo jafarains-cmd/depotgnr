@@ -3,10 +3,12 @@ import { Settings, Gift, ChevronRight, MapPin, AtSign, Phone, Mail, Send, Messag
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { user as userTable } from "@/db/schema/auth";
+import { pengaturan } from "@/db/schema/pengaturan";
 import { requireSession } from "@/lib/permissions";
 import { getOrCreatePelanggan } from "@/lib/pelanggan";
 import { formatRupiah } from "@/lib/utils";
 import { ProfilClient } from "./ProfilClient";
+import { HubungiAdmin } from "@/components/HubungiAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +16,9 @@ export default async function ProfilPage() {
   const session = await requireSession();
   const pel = await getOrCreatePelanggan(session.user.id, session.user.name);
   const u = await db.query.user.findFirst({ where: eq(userTable.id, session.user.id) });
+  const cfgRows = await db.query.pengaturan.findMany();
+  const cfg = Object.fromEntries(cfgRows.map((r) => [r.key, r.value ?? ""]));
+  void pengaturan;
 
   const initials = pel.nama
     .split(" ")
@@ -75,6 +80,14 @@ export default async function ProfilPage() {
         </div>
         <ChevronRight size={16} className="text-[color:var(--muted)]" />
       </Link>
+
+      {/* Hubungi Admin */}
+      <div className="mt-4">
+        <div className="text-[11px] font-bold tracking-widest text-[color:var(--muted)] mb-2 px-1">
+          BANTUAN
+        </div>
+        <HubungiAdmin kontakWA={cfg.kontakWA} kontakTelegram={cfg.kontakTelegram} />
+      </div>
 
       {/* Info detail */}
       <div className="mt-4">

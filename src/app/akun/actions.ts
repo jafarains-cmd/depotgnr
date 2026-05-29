@@ -42,10 +42,15 @@ export async function setNamaAction(
 
 export async function setAlamatAction(
   rawAlamat: string,
+  lat?: number | null,
+  lng?: number | null,
 ): Promise<{ ok: true } | { error: string }> {
   const session = await requireSession();
   const alamat = rawAlamat.trim();
   if (alamat.length > 500) return { error: "Alamat maksimal 500 karakter" };
+
+  const koordLat = typeof lat === "number" && Number.isFinite(lat) ? lat : null;
+  const koordLng = typeof lng === "number" && Number.isFinite(lng) ? lng : null;
 
   // Pastikan record pelanggan ada (auto-create kalau belum)
   let pel = await db.query.pelanggan.findFirst({
@@ -58,13 +63,20 @@ export async function setAlamatAction(
         userId: session.user.id,
         nama: session.user.name,
         alamat: alamat || null,
+        koordinatLat: koordLat,
+        koordinatLng: koordLng,
       })
       .returning();
     pel = created;
   } else {
     await db
       .update(pelangganTable)
-      .set({ alamat: alamat || null, updatedAt: new Date() })
+      .set({
+        alamat: alamat || null,
+        koordinatLat: koordLat,
+        koordinatLng: koordLng,
+        updatedAt: new Date(),
+      })
       .where(eq(pelangganTable.id, pel.id));
   }
 

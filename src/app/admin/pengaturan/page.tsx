@@ -25,6 +25,16 @@ const ALL_FIELDS: Record<string, Field> = {
   namaDepot: { key: "namaDepot", label: "Nama Depot" },
   alamatDepot: { key: "alamatDepot", label: "Alamat Depot", type: "textarea" },
   telpDepot: { key: "telpDepot", label: "Telp Depot" },
+  kontakWA: {
+    key: "kontakWA",
+    label: "Kontak Admin (WhatsApp)",
+    help: "Nomor WA admin yang dipakai untuk tombol 'Hubungi Admin' di pelanggan. Format: 0812xxxx atau +62812xxxx.",
+  },
+  kontakTelegram: {
+    key: "kontakTelegram",
+    label: "Kontak Admin (Telegram)",
+    help: "Username Telegram admin tanpa @ (mis. depotgnr) atau link t.me/xxx. Kosongkan untuk hide tombol.",
+  },
   footerNota: {
     key: "footerNota",
     label: "Footer Nota",
@@ -233,7 +243,15 @@ const TABS: Tab[] = [
     id: "depot",
     label: "Depot",
     icon: <Building2 size={14} />,
-    fieldKeys: ["namaDepot", "alamatDepot", "telpDepot", "footerNota", "zonaWaktu"],
+    fieldKeys: [
+      "namaDepot",
+      "alamatDepot",
+      "telpDepot",
+      "kontakWA",
+      "kontakTelegram",
+      "footerNota",
+      "zonaWaktu",
+    ],
   },
   {
     id: "tampilan",

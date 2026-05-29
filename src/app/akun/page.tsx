@@ -68,6 +68,8 @@ export default async function AkunPage() {
           currentUsername={u?.displayUsername ?? u?.username ?? null}
           hasPassword={hasPassword}
           showAlamat={isPelanggan}
+          currentLat={pel?.koordinatLat ?? null}
+          currentLng={pel?.koordinatLng ?? null}
         />
       </main>
     </div>
