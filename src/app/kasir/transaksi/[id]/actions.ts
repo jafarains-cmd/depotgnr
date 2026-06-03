@@ -12,8 +12,10 @@ import { requireRole } from "@/lib/permissions";
 import { sendWhatsApp } from "@/lib/whatsapp";
 import { sendTelegram } from "@/lib/telegram";
 import { formatRupiah } from "@/lib/utils";
-import { reverseLoyaltyForTransaksi } from "@/lib/loyalty";
-import { reverseStokForTransaksi } from "@/lib/inventory";
+import { reverseLoyaltyForTransaksi, reverseLoyaltyForOrder } from "@/lib/loyalty";
+import { reverseStokForTransaksi, reverseStokForOrder } from "@/lib/inventory";
+import { reverseBonusForOrder } from "@/lib/bonus";
+import { orderHeader } from "@/db/schema/order";
 import { bestEffort } from "@/lib/best-effort";
 
 async function buildNotaText(trxId: number): Promise<string | null> {
@@ -138,12 +140,43 @@ export async function batalkanTransaksi(
   bestEffort("reverseLoyaltyForTransaksi", reverseLoyaltyForTransaksi(trxId));
   bestEffort("reverseStokForTransaksi", reverseStokForTransaksi(trxId, session.user.id));
 
+  // Kalau transaksi auto-sync dari order, balikkan juga order asalnya supaya
+  // tidak inkonsisten: order tampil "selesai+lunas" padahal transaksi voided.
+  if (t.refOrderId) {
+    await db
+      .update(orderHeader)
+      .set({ status: "batal", updatedAt: new Date() })
+      .where(eq(orderHeader.id, t.refOrderId));
+    bestEffort("reverseLoyaltyForOrder", reverseLoyaltyForOrder(t.refOrderId));
+    bestEffort("reverseBonusForOrder", reverseBonusForOrder(t.refOrderId).then(() => {}));
+    bestEffort("reverseStokForOrder", reverseStokForOrder(t.refOrderId, session.user.id));
+    revalidatePath("/kasir/order");
+    revalidatePath("/admin/order");
+  }
+
   revalidatePath("/kasir/transaksi");
   revalidatePath(`/kasir/transaksi/${trxId}`);
   revalidatePath("/admin/laporan");
   revalidatePath("/admin/dashboard");
 
   return { ok: true };
+}
+
+/**
+ * Batalkan transaksi via orderId (shortcut dari halaman order). Cari
+ * transaksi yang ter-sync dari order tersebut, lalu panggil batalkanTransaksi.
+ * Admin only, 30-hari window sama dengan batalkanTransaksi.
+ */
+export async function batalkanOrderTuntas(
+  orderId: number,
+  alasan: string,
+): Promise<{ ok: true } | { error: string }> {
+  await requireRole(["admin"]);
+  const t = await db.query.transaksi.findFirst({
+    where: eq(transaksi.refOrderId, orderId),
+  });
+  if (!t) return { error: "Order ini belum punya transaksi ter-sync — batalkan dari halaman order biasa" };
+  return batalkanTransaksi(t.id, alasan);
 }
 
 // Suppress unused warning kalau pengaturan diakses lewat object

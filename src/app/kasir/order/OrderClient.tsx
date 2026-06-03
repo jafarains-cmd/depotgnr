@@ -5,6 +5,7 @@ import Link from "next/link";
 import { formatRupiah } from "@/lib/utils";
 import { normalizeDriveUrl } from "@/lib/drive-url";
 import { updateOrderStatus, assignKurir } from "./actions";
+import { batalkanOrderTuntas } from "../transaksi/[id]/actions";
 import { BuktiAntarUpload } from "./BuktiAntarUpload";
 import { useFormatTanggal } from "@/components/TimezoneContext";
 
@@ -397,6 +398,25 @@ export function OrderClient({
                     className="px-3 py-1.5 border border-red-200 text-red-600 rounded-md text-xs"
                   >
                     Batal
+                  </button>
+                )}
+                {o.status === "selesai" && o.statusBayar === "lunas" && isAdmin && (
+                  <button
+                    disabled={pending}
+                    onClick={() => {
+                      const alasan = prompt(
+                        `Batalkan order TUNTAS ${o.nomorOrder}?\nIni akan: void transaksi terkait, reverse loyalty, reverse bonus kurir, reverse stok.\n\nAlasan (wajib, min 3 karakter):`,
+                      );
+                      if (!alasan || alasan.trim().length < 3) return;
+                      startTransition(async () => {
+                        const r = await batalkanOrderTuntas(o.id, alasan.trim());
+                        if (r && "error" in r) alert(`❌ ${r.error}`);
+                      });
+                    }}
+                    className="px-3 py-1.5 border border-red-300 text-red-700 rounded-md text-xs font-bold"
+                    title="Admin only — batalkan order yang sudah tuntas + lunas"
+                  >
+                    🗑 Batalkan Tuntas
                   </button>
                 )}
               </div>
