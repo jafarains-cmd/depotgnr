@@ -35,14 +35,26 @@ export default async function OrderKasirPage({
   const limit = parseLimit(sp.limit);
   const pageParam = parsePage(sp.page);
   const q = (sp.q ?? "").trim();
-  const statusFilter = sp.status?.trim() || "all";
+  const statusFilter = sp.status?.trim() || "aktif";
 
-  // Filter berdasarkan range tanggal user. Default 30 hari terakhir.
-  // "Aktif" (non-selesai) selalu ditampilkan terlepas range kalau di-toggle "Semua".
+  // Filter berdasarkan range tanggal user. Default: "aktif" — exclude order
+  // yang sudah selesai+lunas (mereka sudah ada di /kasir/transaksi via sync).
   const conds = [];
   if (range.from) conds.push(gte(orderHeader.createdAt, range.from));
   if (range.to) conds.push(lte(orderHeader.createdAt, range.to));
-  if (statusFilter !== "all") {
+  if (statusFilter === "aktif") {
+    // Belum tuntas: status != selesai ATAU statusBayar != lunas
+    conds.push(
+      or(
+        ne(orderHeader.status, "selesai"),
+        ne(orderHeader.statusBayar, "lunas"),
+      )!,
+    );
+  } else if (statusFilter === "tuntas") {
+    // Sudah masuk transaksi: selesai + lunas
+    conds.push(eq(orderHeader.status, "selesai"));
+    conds.push(eq(orderHeader.statusBayar, "lunas"));
+  } else if (statusFilter !== "all") {
     conds.push(eq(orderHeader.status, statusFilter as "pending"));
   }
   if (q) {

@@ -107,7 +107,7 @@ export function OrderClient({
   statusFilter?: string;
 }) {
   const [pending, startTransition] = useTransition();
-  const filter = statusFilter as OrderStatus | "all";
+  const filter = statusFilter as OrderStatus | "all" | "aktif" | "tuntas";
   const [assignError, setAssignError] = useState<{ orderId: number; msg: string } | null>(null);
   const fmt = useFormatTanggal();
 
@@ -139,26 +139,38 @@ export function OrderClient({
     batal: 6,
   };
   // Filter status sudah diterapkan di SQL (server-side). Sort untuk tab "all"
-  // tetap di client supaya pending muncul dulu.
+  // dan "aktif" tetap di client supaya pending muncul dulu.
   const filtered =
-    filter === "all"
+    filter === "all" || filter === "aktif"
       ? [...rows].sort(
           (a, b) => STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status],
         )
       : rows;
 
+  const TAB_LABEL: Record<string, string> = {
+    aktif: "Aktif",
+    all: "Semua",
+    pending: "pending",
+    diproses: "diproses",
+    dijemput: "dijemput",
+    diisi: "diisi",
+    diantar: "diantar",
+    selesai: "selesai",
+    tuntas: "Tuntas",
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex gap-1 text-sm flex-wrap">
-        {(["all", "pending", "diproses", "dijemput", "diisi", "diantar", "selesai"] as const).map((f) => (
+        {(["aktif", "pending", "diproses", "dijemput", "diisi", "diantar", "selesai", "tuntas", "all"] as const).map((f) => (
           <Link
             key={f}
-            href={f === "all" ? "/kasir/order" : `/kasir/order?status=${f}`}
+            href={`/kasir/order?status=${f}`}
             className={`px-3 py-1.5 rounded-md ${
               filter === f ? "bg-brand-600 text-white" : "bg-surface border border-line"
             }`}
           >
-            {f === "all" ? "Semua" : f}
+            {TAB_LABEL[f]}
           </Link>
         ))}
       </div>
