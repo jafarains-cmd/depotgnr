@@ -75,6 +75,44 @@ export default async function OrderKasirPage({
     .leftJoin(pelanggan, eq(orderHeader.pelangganId, pelanggan.id))
     .where(whereClause);
   const total = countRow?.n ?? 0;
+
+  // Count per tab (untuk badge angka). Pakai range filter saja, tanpa filter
+  // status/q — supaya tab tampilkan total absolut per status di rentang itu.
+  const tabConds = [];
+  if (range.from) tabConds.push(gte(orderHeader.createdAt, range.from));
+  if (range.to) tabConds.push(lte(orderHeader.createdAt, range.to));
+  const tabWhere = tabConds.length > 0 ? and(...tabConds) : undefined;
+  const tabRows = await db
+    .select({
+      status: orderHeader.status,
+      statusBayar: orderHeader.statusBayar,
+      n: sql<number>`count(*)`,
+    })
+    .from(orderHeader)
+    .where(tabWhere)
+    .groupBy(orderHeader.status, orderHeader.statusBayar);
+
+  const tabCounts: Record<string, number> = {
+    aktif: 0,
+    pending: 0,
+    diproses: 0,
+    dijemput: 0,
+    diisi: 0,
+    diantar: 0,
+    selesai: 0,
+    tuntas: 0,
+    all: 0,
+  };
+  for (const r of tabRows) {
+    const n = Number(r.n);
+    tabCounts.all += n;
+    tabCounts[r.status] = (tabCounts[r.status] ?? 0) + n;
+    if (r.status === "selesai" && r.statusBayar === "lunas") {
+      tabCounts.tuntas += n;
+    } else if (r.status !== "batal") {
+      tabCounts.aktif += n;
+    }
+  }
   const { page, totalPages, offset } = getPagination({ total, limit, page: pageParam });
 
   const aktif = await db
@@ -197,6 +235,7 @@ export default async function OrderKasirPage({
         kurirList={kurirList}
         isAdmin={isAdmin}
         statusFilter={statusFilter}
+        tabCounts={tabCounts}
       />
       <Pagination page={page} totalPages={totalPages} total={total} />
     </div>

@@ -100,11 +100,13 @@ export function OrderClient({
   kurirList,
   isAdmin = false,
   statusFilter = "all",
+  tabCounts = {},
 }: {
   rows: OrderRow[];
   kurirList: { id: string; name: string }[];
   isAdmin?: boolean;
   statusFilter?: string;
+  tabCounts?: Record<string, number>;
 }) {
   const [pending, startTransition] = useTransition();
   const filter = statusFilter as OrderStatus | "all" | "aktif" | "tuntas";
@@ -162,17 +164,34 @@ export function OrderClient({
   return (
     <div className="space-y-4">
       <div className="flex gap-1 text-sm flex-wrap">
-        {(["aktif", "pending", "diproses", "dijemput", "diisi", "diantar", "selesai", "tuntas", "all"] as const).map((f) => (
-          <Link
-            key={f}
-            href={`/kasir/order?status=${f}`}
-            className={`px-3 py-1.5 rounded-md ${
-              filter === f ? "bg-brand-600 text-white" : "bg-surface border border-line"
-            }`}
-          >
-            {TAB_LABEL[f]}
-          </Link>
-        ))}
+        {(["aktif", "pending", "diproses", "dijemput", "diisi", "diantar", "selesai", "tuntas", "all"] as const).map((f) => {
+          const n = tabCounts[f] ?? 0;
+          const isActive = filter === f;
+          return (
+            <Link
+              key={f}
+              href={`/kasir/order?status=${f}`}
+              className={`px-3 py-1.5 rounded-md inline-flex items-center gap-1.5 ${
+                isActive ? "bg-brand-600 text-white" : "bg-surface border border-line"
+              }`}
+            >
+              <span>{TAB_LABEL[f]}</span>
+              {n > 0 && (
+                <span
+                  className={`px-1.5 rounded-full text-[10px] font-bold ${
+                    isActive
+                      ? "bg-white/20 text-white"
+                      : f === "aktif" || f === "pending"
+                        ? "bg-amber-100 text-amber-700"
+                        : "bg-[color:var(--surface2)] text-[color:var(--muted)]"
+                  }`}
+                >
+                  {n}
+                </span>
+              )}
+            </Link>
+          );
+        })}
       </div>
 
       <div className="grid lg:grid-cols-2 gap-3">
