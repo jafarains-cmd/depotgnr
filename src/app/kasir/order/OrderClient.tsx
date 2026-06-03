@@ -223,6 +223,21 @@ export function OrderClient({
                   >
                     {o.status}
                   </span>
+                  {(() => {
+                    const sb = o.statusBayar;
+                    const map: Record<string, { label: string; cls: string }> = {
+                      lunas: { label: "LUNAS", cls: "bg-emerald-100 text-emerald-700" },
+                      belum: { label: "BELUM LUNAS", cls: "bg-amber-100 text-amber-700" },
+                      menunggu: { label: "VERIFIKASI", cls: "bg-blue-100 text-blue-700" },
+                    };
+                    const cfg = map[sb];
+                    if (!cfg) return null;
+                    return (
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${cfg.cls}`}>
+                        {cfg.label}
+                      </span>
+                    );
+                  })()}
                   <span className="text-xs text-[color:var(--muted)]">via {o.sumber}</span>
                   {o.status === "pending" && (
                     <span className="text-[10px] font-bold text-amber-700 uppercase">
@@ -327,6 +342,14 @@ export function OrderClient({
                   >
                     Tandai: {next}
                   </button>
+                )}
+                {o.status === "selesai" && o.statusBayar !== "lunas" && (
+                  <Link
+                    href={`/pembayaran`}
+                    className="flex-1 py-1.5 bg-amber-600 text-white rounded-md text-xs text-center font-bold"
+                  >
+                    💰 Konfirmasi Lunas →
+                  </Link>
                 )}
                 {o.status === "diantar" && (
                   <Link
