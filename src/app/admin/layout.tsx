@@ -149,6 +149,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           icon: <Wrench size={16} />,
           iconColor: "text-orange-600",
         },
+        {
+          href: "/admin/galon-dipinjam",
+          label: "Galon Dipinjam",
+          icon: <Truck size={16} />,
+          iconColor: "text-amber-600",
+          badgeKey: "galonPinjam",
+        },
       ],
     },
     {

@@ -1,8 +1,9 @@
-import { eq, and, inArray, ne, sql } from "drizzle-orm";
+import { eq, and, inArray, ne, sql, gt } from "drizzle-orm";
 import { db } from "@/db";
 import { orderHeader } from "@/db/schema/order";
 import { bonusKurir } from "@/db/schema/bonus";
 import { komplain } from "@/db/schema/komplain";
+import { galonDipinjam } from "@/db/schema/pelanggan";
 
 /**
  * Hitung order yang masih in-flight (belum selesai/batal). Termasuk:
@@ -115,5 +116,17 @@ export async function countKomplainPelangganActive(pelangganId: number): Promise
         inArray(komplain.status, ["baru", "diproses"]),
       ),
     );
+  return row.n ?? 0;
+}
+
+/**
+ * Hitung berapa pelanggan yang sedang memegang galon depot (saldo > 0).
+ * Untuk badge admin nav "Galon Dipinjam".
+ */
+export async function countPelangganDenganGalonPinjam(): Promise<number> {
+  const [row] = await db
+    .select({ n: sql<number>`count(distinct ${galonDipinjam.pelangganId})` })
+    .from(galonDipinjam)
+    .where(gt(galonDipinjam.jumlah, 0));
   return row.n ?? 0;
 }

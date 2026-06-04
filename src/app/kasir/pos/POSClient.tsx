@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { Plus, Trash2, Printer } from "lucide-react";
 import type { Produk } from "@/db/schema/produk";
 import { formatRupiah } from "@/lib/utils";
-import { createTransaksi, type CartItem } from "./actions";
+import { createTransaksi, getSaldoGalonPinjamForPOS, type CartItem } from "./actions";
 import { useToast } from "@/components/Toast";
 
 type PelangganOpt = {
@@ -46,6 +46,12 @@ export function POSClient({
   const [jadwalAntar, setJadwalAntar] = useState("");
   const [kurirUserId, setKurirUserId] = useState<string>("");
   const [catatan, setCatatan] = useState("");
+  const [galonPinjamTambah, setGalonPinjamTambah] = useState(0);
+  const [galonKembalikan, setGalonKembalikan] = useState(0);
+  const [saldoGalonPinjam, setSaldoGalonPinjam] = useState<{
+    total: number;
+    perProduk: Array<{ produkId: number; namaProduk: string; jumlah: number }>;
+  } | null>(null);
   const [pending, startTransition] = useTransition();
   const toast = useToast();
   const [lastNota, setLastNota] = useState<{ id: number; nota: string; total: number } | null>(null);
@@ -67,6 +73,29 @@ export function POSClient({
   useEffect(() => {
     setRedeemGalon(0);
   }, [pelangganId, metodeBayar, cart.length]);
+
+  // Fetch saldo galon depot dipinjam saat pelanggan berubah
+  useEffect(() => {
+    if (!pelangganId) {
+      setSaldoGalonPinjam(null);
+      return;
+    }
+    let cancelled = false;
+    getSaldoGalonPinjamForPOS(pelangganId)
+      .then((res) => {
+        if (!cancelled) setSaldoGalonPinjam(res);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [pelangganId]);
+
+  // Reset field galon pinjam saat pelanggan berubah
+  useEffect(() => {
+    setGalonPinjamTambah(0);
+    setGalonKembalikan(0);
+  }, [pelangganId]);
 
   const totalSebelumRedeem = Math.max(0, subtotal - diskon);
   const totalQty = cart.reduce((s, it) => s + it.qty, 0);
@@ -140,6 +169,9 @@ export function POSClient({
           catatan: catatan || undefined,
           refOrderId: preset?.refOrderId,
           redeemLoyalti: redeemAktif > 0 ? redeemAktif : undefined,
+          // Galon depot hanya untuk pickup; kalau antar, kurir yang input nanti
+          galonPinjamTambah: pengantaran === "pickup" ? galonPinjamTambah : 0,
+          galonKembalikan: pengantaran === "pickup" ? galonKembalikan : 0,
         });
         if (res.type === "transaksi") {
           setLastNota({ id: res.id, nota: res.nomorNota, total: res.total });
@@ -164,6 +196,8 @@ export function POSClient({
         setKurirUserId("");
         setPengantaran("pickup");
         setMetodeBayar("cash");
+        setGalonPinjamTambah(0);
+        setGalonKembalikan(0);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Gagal");
       }
@@ -494,6 +528,42 @@ export function POSClient({
                 </div>
               )}
             </div>
+
+            {/* Galon depot dipinjam — hanya untuk pickup, antar diinput kurir */}
+            {pengantaran === "pickup" && pelangganId && (
+              <div className="border border-line rounded-md p-2 space-y-1.5 bg-[color:var(--surface2)]">
+                {saldoGalonPinjam && saldoGalonPinjam.total > 0 && (
+                  <div className="text-[11px] bg-amber-50 border border-amber-200 text-amber-800 rounded p-1.5">
+                    ⚠ Pelanggan ini sedang pegang <b>{saldoGalonPinjam.total} galon depot</b>
+                  </div>
+                )}
+                <div className="text-[10px] text-[color:var(--muted)] uppercase font-bold">
+                  Galon Depot (opsional)
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <label className="text-[11px]">
+                    <span className="text-[color:var(--muted)]">Pinjam tambah</span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={galonPinjamTambah}
+                      onChange={(e) => setGalonPinjamTambah(Math.max(0, Number(e.target.value) || 0))}
+                      className="w-full px-2 py-1 border border-line rounded text-xs"
+                    />
+                  </label>
+                  <label className="text-[11px]">
+                    <span className="text-[color:var(--muted)]">Dikembalikan</span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={galonKembalikan}
+                      onChange={(e) => setGalonKembalikan(Math.max(0, Number(e.target.value) || 0))}
+                      className="w-full px-2 py-1 border border-line rounded text-xs"
+                    />
+                  </label>
+                </div>
+              </div>
+            )}
 
             <textarea
               placeholder="Catatan (opsional)"

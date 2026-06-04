@@ -8,7 +8,10 @@ import {
   mutasiLoyalti,
   galonPelanggan,
   mutasiTitipan,
+  galonDipinjam,
+  mutasiGalonPinjam,
 } from "@/db/schema/pelanggan";
+import { catatMutasiGalonPinjam } from "@/lib/galon-pinjam";
 import { transaksi } from "@/db/schema/transaksi";
 import { orderHeader } from "@/db/schema/order";
 import { komplain } from "@/db/schema/komplain";
@@ -351,6 +354,42 @@ export async function mergePelanggan(
   }
   db.delete(galonPelanggan).where(eq(galonPelanggan.pelangganId, sourceId)).run();
 
+  // 4b. Galon depot dipinjam — merge qty ke target
+  const sourcePinjam = await db
+    .select()
+    .from(galonDipinjam)
+    .where(eq(galonDipinjam.pelangganId, sourceId));
+  for (const sp of sourcePinjam) {
+    const existing = await db
+      .select()
+      .from(galonDipinjam)
+      .where(
+        and(
+          eq(galonDipinjam.pelangganId, targetId),
+          eq(galonDipinjam.produkId, sp.produkId),
+        ),
+      );
+    if (existing.length) {
+      db.update(galonDipinjam)
+        .set({ jumlah: existing[0].jumlah + sp.jumlah, updatedAt: new Date() })
+        .where(eq(galonDipinjam.id, existing[0].id))
+        .run();
+    } else {
+      db.insert(galonDipinjam)
+        .values({
+          pelangganId: targetId,
+          produkId: sp.produkId,
+          jumlah: sp.jumlah,
+        })
+        .run();
+    }
+  }
+  db.delete(galonDipinjam).where(eq(galonDipinjam.pelangganId, sourceId)).run();
+  db.update(mutasiGalonPinjam)
+    .set({ pelangganId: targetId })
+    .where(eq(mutasiGalonPinjam.pelangganId, sourceId))
+    .run();
+
   // 5. Mutasi titipan
   db.update(mutasiTitipan)
     .set({ pelangganId: targetId })
@@ -411,3 +450,35 @@ export async function mergePelanggan(
 
   return { ok: true, summary: summary || "Tidak ada data untuk dipindahkan" };
 }
+
+/**
+ * Adjust manual saldo galon depot dipinjam (admin only). Pakai untuk koreksi
+ * stok yang tidak ter-catat lewat transaksi (mis. galon hilang, salah hitung).
+ */
+export async function adjustGalonPinjamManual(args: {
+  pelangganId: number;
+  produkId: number;
+  perubahan: number;
+  alasan: string;
+}): Promise<{ ok: true; jumlahBaru: number } | { error: string }> {
+  const session = await requireRole(["admin"]);
+  const alasan = args.alasan.trim();
+  if (alasan.length < 3) return { error: "Alasan wajib diisi (min 3 karakter)" };
+  if (alasan.length > 500) return { error: "Alasan terlalu panjang (max 500 karakter)" };
+
+  const result = await catatMutasiGalonPinjam({
+    pelangganId: args.pelangganId,
+    produkId: args.produkId,
+    perubahan: args.perubahan,
+    tipe: "adjust",
+    alasan,
+    userId: session.user.id,
+  });
+
+  if ("error" in result) return result;
+
+  revalidatePath(`/data-pelanggan/${args.pelangganId}`);
+  revalidatePath("/admin/galon-dipinjam");
+  return result;
+}
+

@@ -15,6 +15,7 @@ import { earnFromOrderIfEligible, reverseLoyaltyForOrder } from "@/lib/loyalty";
 import { reverseBonusForOrder, recordKurirBonus } from "@/lib/bonus";
 import { bonusKurir } from "@/db/schema/bonus";
 import { syncTransaksiFromOrder, voidTransaksiFromOrder } from "@/lib/transaksi-sync";
+import { reverseGalonPinjamForOrder } from "@/lib/galon-pinjam";
 import { sendPushToUser } from "@/lib/push";
 import { bestEffort } from "@/lib/best-effort";
 import { uploadBuktiKurir } from "@/lib/drive";
@@ -101,6 +102,10 @@ export async function updateOrderStatus(orderId: number, status: Status) {
   if (status === "batal") {
     bestEffort("reverseLoyaltyForOrder", reverseLoyaltyForOrder(orderId));
     bestEffort("reverseBonusForOrder", reverseBonusForOrder(orderId).then(() => {}));
+    bestEffort(
+      "reverseGalonPinjamForOrder",
+      reverseGalonPinjamForOrder(orderId, session.user.id),
+    );
     // Void transaksi kalau pernah ter-sync (mis. order lunas tapi nanti dibatalkan)
     bestEffort(
       "voidTransaksiFromOrder",

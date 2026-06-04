@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, Check, Loader2, Truck, ArrowDownToLine, Droplet } from "lucide-react";
 import { compressImage } from "@/lib/image-compress";
@@ -9,6 +9,7 @@ import {
   mulaiAntar,
   konfirmasiJemput,
   tandaiDiisi,
+  getSaldoGalonPinjamForKurir,
 } from "../actions";
 
 type Tipe = "antar-saja" | "jemput-antar";
@@ -17,16 +18,36 @@ export function KonfirmasiClient({
   orderId,
   status,
   tipe,
+  qtyOrder = 0,
+  pelangganId = null,
 }: {
   orderId: number;
   status: string;
   tipe: Tipe;
+  qtyOrder?: number;
+  pelangganId?: number | null;
 }) {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [msg, setMsg] = useState<{ ok?: boolean; text: string } | null>(null);
+  const [galonDiantar, setGalonDiantar] = useState<number>(qtyOrder);
+  const [galonDiterima, setGalonDiterima] = useState<number>(qtyOrder);
+  const [saldoPinjam, setSaldoPinjam] = useState<number>(0);
+
+  useEffect(() => {
+    if (!pelangganId) return;
+    let cancelled = false;
+    getSaldoGalonPinjamForKurir(pelangganId)
+      .then((r) => {
+        if (!cancelled) setSaldoPinjam(r.total);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [pelangganId]);
 
   function handlePick(f: File) {
     setFile(f);
@@ -194,6 +215,7 @@ export function KonfirmasiClient({
 
   // === Status diantar (sama untuk kedua tipe) ===
   if (status === "diantar") {
+    const saldoBaru = saldoPinjam + galonDiantar - galonDiterima;
     return (
       <div className="bg-surface border border-line rounded-2xl p-4 space-y-3">
         <div className="text-sm font-semibold inline-flex items-center gap-1.5">
@@ -227,6 +249,41 @@ export function KonfirmasiClient({
           </div>
         </label>
 
+        {/* Galon depot: input qty antar/terima */}
+        <div className="border border-line rounded-lg p-2.5 space-y-2 bg-[color:var(--surface2)]">
+          <div className="text-xs font-bold text-ink">Galon Depot</div>
+          {saldoPinjam > 0 && (
+            <div className="text-[11px] bg-amber-50 border border-amber-200 text-amber-800 rounded p-1.5">
+              ℹ Pelanggan saat ini pegang <b>{saldoPinjam}</b> galon depot
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-xs">
+              <span className="text-[color:var(--muted)] block mb-1">Diantar (terisi)</span>
+              <input
+                type="number"
+                min={0}
+                value={galonDiantar}
+                onChange={(e) => setGalonDiantar(Math.max(0, Number(e.target.value) || 0))}
+                className="w-full px-2 py-1.5 border border-line rounded text-sm"
+              />
+            </label>
+            <label className="text-xs">
+              <span className="text-[color:var(--muted)] block mb-1">Diterima (kosong)</span>
+              <input
+                type="number"
+                min={0}
+                value={galonDiterima}
+                onChange={(e) => setGalonDiterima(Math.max(0, Number(e.target.value) || 0))}
+                className="w-full px-2 py-1.5 border border-line rounded text-sm"
+              />
+            </label>
+          </div>
+          <div className="text-[11px] text-[color:var(--muted)]">
+            Saldo galon dipegang pelanggan setelah ini: <b className="text-ink">{Math.max(0, saldoBaru)}</b>
+          </div>
+        </div>
+
         {msg && (
           <p className={`text-xs ${msg.ok ? "text-emerald-700" : "text-red-600"}`}>{msg.text}</p>
         )}
@@ -246,6 +303,8 @@ export function KonfirmasiClient({
                   orderId,
                   buktiBase64: base64,
                   mimeType: f.type || "image/jpeg",
+                  galonDiantar,
+                  galonDiterima,
                 });
                 if ("error" in res) {
                   setMsg({ ok: false, text: res.error });

@@ -12,6 +12,7 @@ import {
   countPesananBelumTuntas,
   countKomplainBaru,
   countKomplainPelangganActive,
+  countPelangganDenganGalonPinjam,
 } from "./notifications";
 import { countChurnRisk } from "./analytics";
 
@@ -23,6 +24,7 @@ export type NotifCounts = {
   followUp?: number;
   pesanan?: number;
   komplain?: number;
+  galonPinjam?: number;
 };
 
 /**
@@ -35,7 +37,7 @@ export async function getNotifCountsForCurrentUser(): Promise<NotifCounts> {
   const role = session.user.role ?? "pelanggan";
 
   if (role === "admin") {
-    const [orderMasuk, pembayaran, kurirAktif, bonusPending, churn, komplainBaru] =
+    const [orderMasuk, pembayaran, kurirAktif, bonusPending, churn, komplainBaru, galonPinjam] =
       await Promise.all([
         countOrderMasuk(),
         countPembayaranMenunggu(),
@@ -43,6 +45,7 @@ export async function getNotifCountsForCurrentUser(): Promise<NotifCounts> {
         countKurirBonusPending(),
         countChurnRisk().catch(() => ({ due: 0, overdue: 0, churn: 0 })),
         countKomplainBaru(),
+        countPelangganDenganGalonPinjam(),
       ]);
     return {
       orderMasuk,
@@ -51,6 +54,7 @@ export async function getNotifCountsForCurrentUser(): Promise<NotifCounts> {
       bonusPending,
       followUp: churn.due + churn.overdue + churn.churn,
       komplain: komplainBaru,
+      galonPinjam,
     };
   }
 

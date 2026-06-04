@@ -15,6 +15,10 @@ import { formatRupiah } from "@/lib/utils";
 import { reverseLoyaltyForTransaksi, reverseLoyaltyForOrder } from "@/lib/loyalty";
 import { reverseStokForTransaksi, reverseStokForOrder } from "@/lib/inventory";
 import { reverseBonusForOrder } from "@/lib/bonus";
+import {
+  reverseGalonPinjamForTransaksi,
+  reverseGalonPinjamForOrder,
+} from "@/lib/galon-pinjam";
 import { orderHeader } from "@/db/schema/order";
 import { bestEffort } from "@/lib/best-effort";
 
@@ -139,6 +143,10 @@ export async function batalkanTransaksi(
 
   bestEffort("reverseLoyaltyForTransaksi", reverseLoyaltyForTransaksi(trxId));
   bestEffort("reverseStokForTransaksi", reverseStokForTransaksi(trxId, session.user.id));
+  bestEffort(
+    "reverseGalonPinjamForTransaksi",
+    reverseGalonPinjamForTransaksi(trxId, session.user.id),
+  );
 
   // Kalau transaksi auto-sync dari order, balikkan juga order asalnya supaya
   // tidak inkonsisten: order tampil "selesai+lunas" padahal transaksi voided.
@@ -150,6 +158,10 @@ export async function batalkanTransaksi(
     bestEffort("reverseLoyaltyForOrder", reverseLoyaltyForOrder(t.refOrderId));
     bestEffort("reverseBonusForOrder", reverseBonusForOrder(t.refOrderId).then(() => {}));
     bestEffort("reverseStokForOrder", reverseStokForOrder(t.refOrderId, session.user.id));
+    bestEffort(
+      "reverseGalonPinjamForOrder",
+      reverseGalonPinjamForOrder(t.refOrderId, session.user.id),
+    );
     revalidatePath("/kasir/order");
     revalidatePath("/admin/order");
   }

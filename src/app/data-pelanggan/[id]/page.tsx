@@ -15,7 +15,9 @@ import { requireRole } from "@/lib/permissions";
 import { transaksi, transaksiItem } from "@/db/schema/transaksi";
 import { orderHeader, orderItem } from "@/db/schema/order";
 import { TitipanSection } from "./TitipanSection";
+import { GalonPinjamSection } from "./GalonPinjamSection";
 import { LinkUserSection } from "./LinkUserSection";
+import { getSaldoGalonPinjam, getHistoryGalonPinjam } from "@/lib/galon-pinjam";
 import { LoyaltyHistoryTable } from "./LoyaltyHistoryTable";
 import { RiwayatTransaksiTable, type RiwayatItem } from "./RiwayatTransaksiTable";
 import { formatRupiah } from "@/lib/utils";
@@ -204,6 +206,18 @@ export default async function PelangganDetailPage({
   const totalEarn = earnRow.total;
   const totalRedeem = Math.abs(redeemRow.total);
 
+  // Galon depot dipinjam + history
+  const saldoGalonPinjam = await getSaldoGalonPinjam(pelangganId);
+  const historyGalonPinjam = await getHistoryGalonPinjam(pelangganId, 30);
+  const historyGalonPinjamWithUser = await Promise.all(
+    historyGalonPinjam.map(async (m) => {
+      const u = m.userId
+        ? await db.query.user.findFirst({ where: eq(userTableSchema.id, m.userId) })
+        : null;
+      return { ...m, userName: u?.name ?? null };
+    }),
+  );
+
   return (
     <div className="p-4 md:p-6 max-w-3xl space-y-4">
       <Link
@@ -294,6 +308,31 @@ export default async function PelangganDetailPage({
           createdAt: m.createdAt.toISOString(),
           userName: m.userName,
         }))}
+      />
+
+      <GalonPinjamSection
+        pelangganId={pel.id}
+        pelangganNama={pel.nama}
+        saldo={saldoGalonPinjam.perProduk.map((p) => ({
+          produkId: p.produkId,
+          produkNama: p.namaProduk,
+          jumlah: p.jumlah,
+        }))}
+        semuaProduk={semuaProduk}
+        recentMutasi={historyGalonPinjamWithUser.map((m) => ({
+          id: m.id,
+          produkId: m.produkId,
+          produkNama: m.namaProduk ?? `#${m.produkId}`,
+          perubahan: m.perubahan,
+          tipe: m.tipe,
+          alasan: m.alasan,
+          refTransaksiId: m.refTransaksiId,
+          refOrderId: m.refOrderId,
+          galonSerial: m.galonSerial,
+          userName: m.userName,
+          createdAt: m.createdAt.toISOString(),
+        }))}
+        isAdmin={isAdmin}
       />
 
       <div className="bg-surface border border-line rounded-2xl overflow-hidden">

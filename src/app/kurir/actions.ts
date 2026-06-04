@@ -11,6 +11,17 @@ import { earnFromOrderIfEligible } from "@/lib/loyalty";
 import { bestEffort } from "@/lib/best-effort";
 import { recordKurirBonus } from "@/lib/bonus";
 import { syncTransaksiFromOrder } from "@/lib/transaksi-sync";
+import { applyGalonPinjamFromTransaksi, getSaldoGalonPinjam } from "@/lib/galon-pinjam";
+import { orderItem } from "@/db/schema/order";
+
+/**
+ * Server action — return saldo galon depot dipinjam pelanggan. Dipanggil
+ * dari KonfirmasiClient supaya kurir bisa lihat saldo current pelanggan.
+ */
+export async function getSaldoGalonPinjamForKurir(pelangganId: number) {
+  await requireRole(["admin", "kasir", "kurir"]);
+  return getSaldoGalonPinjam(pelangganId);
+}
 
 export async function mulaiAntar(
   orderId: number,
@@ -126,6 +137,8 @@ export async function konfirmasiDiantar(args: {
   orderId: number;
   buktiBase64: string;
   mimeType: string;
+  galonDiantar?: number; // qty galon depot terisi yang kurir antarkan
+  galonDiterima?: number; // qty galon depot kosong yang kurir terima dari pelanggan
 }): Promise<{ ok: true; url: string } | { error: string }> {
   const session = await requireRole(["admin", "kasir", "kurir"]);
   const o = await db.query.orderHeader.findFirst({
@@ -180,8 +193,35 @@ export async function konfirmasiDiantar(args: {
     bestEffort("recordKurirBonus(cod)", recordKurirBonus(args.orderId));
     bestEffort("syncTransaksiFromOrder(cod)", syncTransaksiFromOrder(args.orderId));
   }
+
+  // Catat mutasi galon depot dipinjam (kurir antar + terima dari pelanggan)
+  // Pakai produkId dari order item dengan qty terbesar (asumsi 1 produk dominan
+  // per order untuk depot air). Skip kalau no pelanggan atau dua-duanya 0.
+  const pinjam = Math.max(0, args.galonDiantar ?? 0);
+  const kembali = Math.max(0, args.galonDiterima ?? 0);
+  if (o.pelangganId && (pinjam > 0 || kembali > 0)) {
+    const items = await db.query.orderItem.findMany({
+      where: eq(orderItem.orderId, args.orderId),
+    });
+    if (items.length > 0) {
+      const dominanItem = items.reduce((max, it) => (it.qty > max.qty ? it : max), items[0]);
+      bestEffort(
+        `applyGalonPinjam(order-${args.orderId})`,
+        applyGalonPinjamFromTransaksi({
+          pelangganId: o.pelangganId,
+          produkId: dominanItem.produkId,
+          pinjam,
+          kembali,
+          refOrderId: args.orderId,
+          userId: session.user.id,
+        }),
+      );
+    }
+  }
+
   revalidatePath(`/kurir/${args.orderId}`);
   revalidatePath("/kurir");
   if (codAutoLunas) revalidatePath("/pembayaran");
+  revalidatePath(`/data-pelanggan/${o.pelangganId ?? ""}`);
   return { ok: true, url: up.url };
 }

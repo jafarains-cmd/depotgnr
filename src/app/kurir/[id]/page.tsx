@@ -162,7 +162,13 @@ export default async function KurirOrderDetail({
 
       <TrackingButton orderId={o.id} status={o.status} />
 
-      <KonfirmasiClient orderId={o.id} status={o.status} tipe={o.tipePengantaran} />
+      <KonfirmasiClient
+        orderId={o.id}
+        status={o.status}
+        tipe={o.tipePengantaran}
+        qtyOrder={items.reduce((s, it) => s + it.qty, 0)}
+        pelangganId={o.pelangganId}
+      />
 
       {o.buktiJemputUrl && (
         <div className="bg-surface border border-line rounded-2xl p-4">

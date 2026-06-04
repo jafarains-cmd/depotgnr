@@ -21,6 +21,16 @@ import {
   getLoyaltyConfig,
 } from "@/lib/loyalty";
 import { bestEffort } from "@/lib/best-effort";
+import { applyGalonPinjamFromTransaksi, getSaldoGalonPinjam } from "@/lib/galon-pinjam";
+
+/**
+ * Server action — return saldo galon depot dipinjam pelanggan. Dipanggil
+ * dari POSClient saat user pilih pelanggan supaya bisa tampil badge warning.
+ */
+export async function getSaldoGalonPinjamForPOS(pelangganId: number) {
+  await requireRole(["admin", "kasir"]);
+  return getSaldoGalonPinjam(pelangganId);
+}
 
 type Jenis = "isi_ulang" | "tukar" | "beli_baru";
 
@@ -43,6 +53,10 @@ export type CreateTransaksiInput = {
   catatan?: string;
   refOrderId?: number;
   redeemLoyalti?: number; // saldo yang dipakai oleh pelanggan
+  // Tracking galon depot di tangan pelanggan. Hanya untuk pickup (pengantaran="pickup").
+  // Untuk order antar, diinput kurir di halaman konfirmasi antar.
+  galonPinjamTambah?: number;   // galon depot yang dibawa pulang pelanggan extra
+  galonKembalikan?: number;     // galon depot yang pelanggan kembalikan ke depot
 };
 
 export async function createTransaksi(input: CreateTransaksiInput) {
@@ -208,10 +222,30 @@ export async function createTransaksi(input: CreateTransaksiInput) {
   // Push ke Sheets (best-effort)
   pushTransaksi(trxId).catch((e) => console.warn("[sheets] pushTransaksi:", e));
 
+  // Catat mutasi galon depot dipinjam (kalau ada). Apply ke produkId pertama
+  // di cart (asumsi cart umumnya 1 produk).
+  if (
+    input.pelangganId &&
+    ((input.galonPinjamTambah ?? 0) > 0 || (input.galonKembalikan ?? 0) > 0)
+  ) {
+    bestEffort(
+      `applyGalonPinjam(${nomorNota})`,
+      applyGalonPinjamFromTransaksi({
+        pelangganId: input.pelangganId,
+        produkId: input.items[0].produkId,
+        pinjam: input.galonPinjamTambah ?? 0,
+        kembali: input.galonKembalikan ?? 0,
+        refTransaksiId: trxId,
+        userId: session.user.id,
+      }),
+    );
+  }
+
   revalidatePath("/kasir/pos");
   revalidatePath("/kasir/transaksi");
   revalidatePath("/admin/transaksi");
   revalidatePath("/admin/dashboard");
+  revalidatePath(`/data-pelanggan/${input.pelangganId ?? ""}`);
 
   return { type: "transaksi" as const, id: trxId as number, nomorNota, total };
 }
@@ -285,8 +319,27 @@ async function createOrderUntukBayarOnline(args: {
     ),
   );
 
+  // Catat mutasi galon depot dipinjam (POS pickup non-cash)
+  if (
+    input.pelangganId &&
+    ((input.galonPinjamTambah ?? 0) > 0 || (input.galonKembalikan ?? 0) > 0)
+  ) {
+    bestEffort(
+      `applyGalonPinjam(${nomorOrder})`,
+      applyGalonPinjamFromTransaksi({
+        pelangganId: input.pelangganId,
+        produkId: input.items[0].produkId,
+        pinjam: input.galonPinjamTambah ?? 0,
+        kembali: input.galonKembalikan ?? 0,
+        refOrderId: orderId,
+        userId: session.user.id,
+      }),
+    );
+  }
+
   revalidatePath("/kasir/pos");
   revalidatePath("/pembayaran");
+  revalidatePath(`/data-pelanggan/${input.pelangganId ?? ""}`);
 
   return {
     type: "order",
@@ -368,10 +421,29 @@ async function createOrderPickupPiutang(args: {
   bestEffort("notifGrupOrder(pos-piutang)", notifGrupOrder("pending", notifText));
   bestEffort("notifWaGroup(pos-piutang)", notifWaGroupOrder(notifText));
 
+  // Catat mutasi galon depot dipinjam (POS pickup piutang)
+  if (
+    input.pelangganId &&
+    ((input.galonPinjamTambah ?? 0) > 0 || (input.galonKembalikan ?? 0) > 0)
+  ) {
+    bestEffort(
+      `applyGalonPinjam(${nomorOrder})`,
+      applyGalonPinjamFromTransaksi({
+        pelangganId: input.pelangganId,
+        produkId: input.items[0].produkId,
+        pinjam: input.galonPinjamTambah ?? 0,
+        kembali: input.galonKembalikan ?? 0,
+        refOrderId: orderId,
+        userId: session.user.id,
+      }),
+    );
+  }
+
   revalidatePath("/kasir/pos");
   revalidatePath("/pembayaran");
   revalidatePath("/admin/transaksi");
   revalidatePath("/admin/dashboard");
+  revalidatePath(`/data-pelanggan/${input.pelangganId ?? ""}`);
 
   return {
     type: "order",

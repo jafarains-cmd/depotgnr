@@ -105,7 +105,68 @@ export const mutasiTitipan = sqliteTable(
   }),
 );
 
+/**
+ * Saldo running galon DEPOT yang sedang dipegang pelanggan (kebalikan dari
+ * galonPelanggan/titipan). Auto-increment lewat catatMutasiGalonPinjam.
+ */
+export const galonDipinjam = sqliteTable(
+  "galon_dipinjam",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    pelangganId: integer("pelanggan_id")
+      .notNull()
+      .references(() => pelanggan.id, { onDelete: "cascade" }),
+    produkId: integer("produk_id").notNull(),
+    jumlah: integer("jumlah").notNull().default(0),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => ({
+    pelangganProdukIdx: index("galon_dipinjam_pelanggan_produk_idx").on(
+      t.pelangganId,
+      t.produkId,
+    ),
+  }),
+);
+
+/**
+ * Audit trail tiap perubahan galon dipinjam.
+ * Kolom `galonSerial` reserved untuk fitur QR/nomor unik fisik galon (nullable
+ * sekarang, akan diisi saat fitur tersebut diimplement).
+ */
+export const mutasiGalonPinjam = sqliteTable(
+  "mutasi_galon_pinjam",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    pelangganId: integer("pelanggan_id")
+      .notNull()
+      .references(() => pelanggan.id, { onDelete: "cascade" }),
+    produkId: integer("produk_id").notNull(),
+    perubahan: integer("perubahan").notNull(), // + pinjam (galon depot keluar), - kembali (galon depot masuk)
+    tipe: text("tipe", { enum: ["pinjam", "kembali", "adjust", "reverse"] }).notNull(),
+    alasan: text("alasan"),
+    refTransaksiId: integer("ref_transaksi_id"),
+    refOrderId: integer("ref_order_id"),
+    galonSerial: text("galon_serial"), // reserved untuk fitur QR/nomor unik nanti
+    userId: text("user_id"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => ({
+    pelangganDateIdx: index("mutasi_galon_pinjam_pelanggan_date_idx").on(
+      t.pelangganId,
+      t.createdAt,
+    ),
+    refTrxIdx: index("mutasi_galon_pinjam_ref_trx_idx").on(t.refTransaksiId),
+    refOrderIdx: index("mutasi_galon_pinjam_ref_order_idx").on(t.refOrderId),
+  }),
+);
+
 export type Pelanggan = typeof pelanggan.$inferSelect;
 export type NewPelanggan = typeof pelanggan.$inferInsert;
 export type GalonPelanggan = typeof galonPelanggan.$inferSelect;
 export type MutasiTitipan = typeof mutasiTitipan.$inferSelect;
+export type GalonDipinjam = typeof galonDipinjam.$inferSelect;
+export type MutasiGalonPinjam = typeof mutasiGalonPinjam.$inferSelect;
