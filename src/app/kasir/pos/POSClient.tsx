@@ -544,6 +544,17 @@ export function POSClient({
               )}
             </div>
 
+            {/* Antar: input galon dilakukan kurir di halaman konfirmasi antar */}
+            {pengantaran === "antar" && pelangganId && (
+              <div className="text-[11px] bg-[color:var(--surface2)] border border-line text-[color:var(--muted)] rounded-md p-2">
+                {saldoGalonPinjam && saldoGalonPinjam.total > 0 ? (
+                  <>
+                    ℹ Pelanggan sedang pegang <b>{saldoGalonPinjam.total} galon depot</b>.{" "}
+                  </>
+                ) : null}
+                Pencatatan galon depot dilakukan kurir saat upload bukti antar di halaman <code>/kurir/[order]</code>.
+              </div>
+            )}
             {/* Galon depot dipinjam — hanya untuk pickup, antar diinput kurir */}
             {pengantaran === "pickup" && pelangganId && (
               <div className="border border-line rounded-md p-2 space-y-1.5 bg-[color:var(--surface2)]">
