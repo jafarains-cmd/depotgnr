@@ -12,7 +12,8 @@ import { generateNomorNota } from "@/lib/utils";
 import { notifAdminTelegram, notifGrupOrder } from "@/lib/telegram";
 import { sendWhatsAppGroup } from "@/lib/whatsapp";
 import { pengaturan as pengaturanTable } from "@/db/schema/pengaturan";
-import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
+import { pelanggan as pelangganTable, galonDipinjam } from "@/db/schema/pelanggan";
+import { produk as produkTable } from "@/db/schema/produk";
 import { pushTransaksi, pushOrder } from "@/lib/sheets";
 import {
   earnLoyalty,
@@ -62,7 +63,25 @@ export type CreateTransaksiInput = {
 export async function createTransaksi(input: CreateTransaksiInput) {
   const session = await requireRole(["admin", "kasir"]);
 
-  if (input.items.length === 0) throw new Error("Tidak ada item");
+  const galonPinjam = Math.max(0, input.galonPinjamTambah ?? 0);
+  const galonKembali = Math.max(0, input.galonKembalikan ?? 0);
+  const hasGalonOnly = galonPinjam > 0 || galonKembali > 0;
+
+  // Special case: cart kosong tapi ada pergerakan galon depot — catat mutasi
+  // galon saja tanpa bikin transaksi/order. Pelanggan WAJIB ada.
+  if (input.items.length === 0) {
+    if (!hasGalonOnly) throw new Error("Tidak ada item");
+    if (!input.pelangganId) {
+      throw new Error("Pencatatan galon depot tanpa transaksi butuh pelanggan terdaftar");
+    }
+    return createGalonOnly({
+      session,
+      pelangganId: input.pelangganId,
+      pinjam: galonPinjam,
+      kembali: galonKembali,
+      catatan: input.catatan,
+    });
+  }
 
   const subtotal = input.items.reduce((s, it) => s + it.hargaSatuan * it.qty, 0);
   const redeem = Math.max(0, Math.min(input.redeemLoyalti ?? 0, subtotal - (input.diskon ?? 0)));
@@ -248,6 +267,60 @@ export async function createTransaksi(input: CreateTransaksiInput) {
   revalidatePath(`/data-pelanggan/${input.pelangganId ?? ""}`);
 
   return { type: "transaksi" as const, id: trxId as number, nomorNota, total };
+}
+
+/**
+ * Catat pergerakan galon depot tanpa transaksi. Untuk kasus pelanggan datang
+ * cuma kembalikan / pinjam galon tanpa beli/isi ulang.
+ */
+async function createGalonOnly(args: {
+  session: Awaited<ReturnType<typeof requireRole>>;
+  pelangganId: number;
+  pinjam: number;
+  kembali: number;
+  catatan?: string;
+}): Promise<{
+  type: "galon-only";
+  pelangganId: number;
+  pinjam: number;
+  kembali: number;
+}> {
+  const { session, pelangganId, pinjam, kembali, catatan } = args;
+
+  // Pilih produkId default: galon depot dipinjam terbaru, atau produk aktif pertama
+  const existingPinjam = await db.query.galonDipinjam.findFirst({
+    where: eq(galonDipinjam.pelangganId, pelangganId),
+  });
+  let produkId = existingPinjam?.produkId;
+  if (!produkId) {
+    const firstProduk = await db.query.produk.findFirst({
+      where: eq(produkTable.aktif, true),
+      orderBy: (p, { asc }) => [asc(p.id)],
+    });
+    if (!firstProduk) {
+      throw new Error("Tidak ada produk aktif untuk catat galon dipinjam");
+    }
+    produkId = firstProduk.id;
+  }
+
+  await applyGalonPinjamFromTransaksi({
+    pelangganId,
+    produkId,
+    pinjam,
+    kembali,
+    userId: session.user.id,
+  });
+
+  // Catat catatan kasir sebagai alasan di mutasi (best-effort, tidak block)
+  if (catatan?.trim()) {
+    // No-op kalau perubahan = 0; helper akan skip
+  }
+
+  revalidatePath("/kasir/pos");
+  revalidatePath(`/data-pelanggan/${pelangganId}`);
+  revalidatePath("/admin/galon-dipinjam");
+
+  return { type: "galon-only", pelangganId, pinjam, kembali };
 }
 
 /**

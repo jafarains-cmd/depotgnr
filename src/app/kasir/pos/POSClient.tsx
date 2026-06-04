@@ -140,11 +140,22 @@ export function POSClient({
     setCart((c) => c.filter((_, i) => i !== idx));
   }
 
+  const isGalonOnlyMode =
+    cart.length === 0 &&
+    pengantaran === "pickup" &&
+    (galonPinjamTambah > 0 || galonKembalikan > 0);
+
   function handleSimpan() {
     setError(null);
     if (cart.length === 0) {
-      setError("Tambahkan item dulu");
-      return;
+      if (!isGalonOnlyMode) {
+        setError("Tambahkan item dulu, atau isi 'Galon Depot' untuk catat pergerakan saja");
+        return;
+      }
+      if (!pelangganId) {
+        setError("Catat galon depot tanpa transaksi butuh pelanggan terdaftar");
+        return;
+      }
     }
     if (metodeBayar === "piutang" && !pelangganId) {
       setError("Bayar nanti (piutang) wajib pilih pelanggan terdaftar");
@@ -175,7 +186,7 @@ export function POSClient({
         });
         if (res.type === "transaksi") {
           setLastNota({ id: res.id, nota: res.nomorNota, total: res.total });
-        } else {
+        } else if (res.type === "order") {
           setPendingPayment({
             orderId: res.orderId,
             nomorOrder: res.nomorOrder,
@@ -184,6 +195,10 @@ export function POSClient({
             metode: metodeBayar,
             pengantaran,
           });
+        } else if (res.type === "galon-only") {
+          toast.show(
+            `✓ Galon depot ${res.pinjam > 0 ? `pinjam +${res.pinjam}` : ""}${res.pinjam > 0 && res.kembali > 0 ? ", " : ""}${res.kembali > 0 ? `kembali ${res.kembali}` : ""}`.trim(),
+          );
         }
         setCart([]);
         setDiskon(0);
@@ -537,6 +552,11 @@ export function POSClient({
                     ⚠ Pelanggan ini sedang pegang <b>{saldoGalonPinjam.total} galon depot</b>
                   </div>
                 )}
+                {isGalonOnlyMode && (
+                  <div className="text-[11px] bg-sky-50 border border-sky-200 text-sky-800 rounded p-1.5">
+                    Mode catat galon saja (tanpa transaksi). Klik tombol di bawah untuk simpan.
+                  </div>
+                )}
                 <div className="text-[10px] text-[color:var(--muted)] uppercase font-bold">
                   Galon Depot (opsional)
                 </div>
@@ -577,10 +597,14 @@ export function POSClient({
 
             <button
               onClick={handleSimpan}
-              disabled={pending || cart.length === 0}
+              disabled={pending || (cart.length === 0 && !isGalonOnlyMode)}
               className="w-full py-2.5 bg-brand-600 text-white rounded-md font-medium disabled:opacity-50"
             >
-              {pending ? "Menyimpan..." : "Simpan & Bayar"}
+              {pending
+                ? "Menyimpan..."
+                : isGalonOnlyMode
+                  ? "Catat Galon Depot"
+                  : "Simpan & Bayar"}
             </button>
           </div>
         </div>
