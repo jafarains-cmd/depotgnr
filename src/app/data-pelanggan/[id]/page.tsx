@@ -332,7 +332,7 @@ export default async function PelangganDetailPage({
           userName: m.userName,
           createdAt: m.createdAt.toISOString(),
         }))}
-        isAdmin={isAdmin}
+        canEdit
       />
 
       <div className="bg-surface border border-line rounded-2xl overflow-hidden">

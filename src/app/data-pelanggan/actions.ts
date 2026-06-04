@@ -461,7 +461,7 @@ export async function adjustGalonPinjamManual(args: {
   perubahan: number;
   alasan: string;
 }): Promise<{ ok: true; jumlahBaru: number } | { error: string }> {
-  const session = await requireRole(["admin"]);
+  const session = await requireRole(["admin", "kasir"]);
   const alasan = args.alasan.trim();
   if (alasan.length < 3) return { error: "Alasan wajib diisi (min 3 karakter)" };
   if (alasan.length > 500) return { error: "Alasan terlalu panjang (max 500 karakter)" };

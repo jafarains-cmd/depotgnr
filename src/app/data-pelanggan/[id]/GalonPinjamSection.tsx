@@ -32,14 +32,14 @@ export function GalonPinjamSection({
   saldo,
   semuaProduk,
   recentMutasi,
-  isAdmin,
+  canEdit,
 }: {
   pelangganId: number;
   pelangganNama: string;
   saldo: SaldoRow[];
   semuaProduk: { id: number; nama: string }[];
   recentMutasi: GalonMutasiRow[];
-  isAdmin: boolean;
+  canEdit: boolean;
 }) {
   const fmt = useFormatTanggal();
   const [formFor, setFormFor] = useState<{
@@ -72,7 +72,7 @@ export function GalonPinjamSection({
               <tr>
                 <th className="p-3">Produk</th>
                 <th className="p-3 text-right">Dipinjam</th>
-                {isAdmin && <th className="p-3 text-right"></th>}
+                {canEdit && <th className="p-3 text-right"></th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -82,7 +82,7 @@ export function GalonPinjamSection({
                   <td className="p-3 text-right font-mono font-bold text-amber-700">
                     {t.jumlah} galon
                   </td>
-                  {isAdmin && (
+                  {canEdit && (
                     <td className="p-3 text-right whitespace-nowrap">
                       <button
                         onClick={() =>
@@ -104,7 +104,7 @@ export function GalonPinjamSection({
           </table>
         )}
 
-        {isAdmin && saldo.length === 0 && semuaProduk.length > 0 && (
+        {canEdit && saldo.length === 0 && semuaProduk.length > 0 && (
           <div className="border-t border-line p-3 flex flex-wrap gap-2">
             {semuaProduk.map((p) => (
               <button

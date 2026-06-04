@@ -12,8 +12,13 @@ import { generateNomorNota } from "@/lib/utils";
 import { notifAdminTelegram, notifGrupOrder } from "@/lib/telegram";
 import { sendWhatsAppGroup } from "@/lib/whatsapp";
 import { pengaturan as pengaturanTable } from "@/db/schema/pengaturan";
-import { pelanggan as pelangganTable, galonDipinjam } from "@/db/schema/pelanggan";
+import {
+  pelanggan as pelangganTable,
+  galonDipinjam,
+  galonPelanggan,
+} from "@/db/schema/pelanggan";
 import { produk as produkTable } from "@/db/schema/produk";
+import { sql } from "drizzle-orm";
 import { pushTransaksi, pushOrder } from "@/lib/sheets";
 import {
   earnLoyalty,
@@ -25,12 +30,22 @@ import { bestEffort } from "@/lib/best-effort";
 import { applyGalonPinjamFromTransaksi, getSaldoGalonPinjam } from "@/lib/galon-pinjam";
 
 /**
- * Server action — return saldo galon depot dipinjam pelanggan. Dipanggil
- * dari POSClient saat user pilih pelanggan supaya bisa tampil badge warning.
+ * Server action — return info galon pelanggan untuk display di POS:
+ *  - saldoGalonPinjam: total galon depot di tangan pelanggan
+ *  - saldoGalonTitip: total galon pelanggan dititip di depot
+ *  - perProduk dipinjam: untuk detail/tooltip
  */
 export async function getSaldoGalonPinjamForPOS(pelangganId: number) {
   await requireRole(["admin", "kasir"]);
-  return getSaldoGalonPinjam(pelangganId);
+  const pinjam = await getSaldoGalonPinjam(pelangganId);
+  const [titipRow] = await db
+    .select({ total: sql<number>`coalesce(sum(${galonPelanggan.jumlahDititip}), 0)` })
+    .from(galonPelanggan)
+    .where(eq(galonPelanggan.pelangganId, pelangganId));
+  return {
+    ...pinjam,
+    saldoTitip: Number(titipRow?.total ?? 0),
+  };
 }
 
 type Jenis = "isi_ulang" | "tukar" | "beli_baru";

@@ -50,6 +50,7 @@ export function POSClient({
   const [galonKembalikan, setGalonKembalikan] = useState(0);
   const [saldoGalonPinjam, setSaldoGalonPinjam] = useState<{
     total: number;
+    saldoTitip: number;
     perProduk: Array<{ produkId: number; namaProduk: string; jumlah: number }>;
   } | null>(null);
   const [pending, startTransition] = useTransition();
@@ -269,8 +270,10 @@ export function POSClient({
             {pelangganId ? (() => {
               const pel = pelangganList.find((p) => p.id === pelangganId);
               const saldo = pel?.saldoLoyalti ?? 0;
+              const pinjam = saldoGalonPinjam?.total ?? 0;
+              const titip = saldoGalonPinjam?.saldoTitip ?? 0;
               return (
-                <div className="bg-[color:var(--surface2)] px-3 py-2 rounded-md">
+                <div className="bg-[color:var(--surface2)] px-3 py-2 rounded-md space-y-1.5">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">{pel?.nama ?? "—"}</span>
                     <button
@@ -284,7 +287,7 @@ export function POSClient({
                     </button>
                   </div>
                   <div
-                    className={`text-[11px] mt-1 inline-flex items-center gap-1 ${
+                    className={`text-[11px] inline-flex items-center gap-1 ${
                       saldo > 0 ? "text-emerald-700 font-bold" : "text-[color:var(--muted)]"
                     }`}
                   >
@@ -293,6 +296,45 @@ export function POSClient({
                       <span className="text-[10px] text-[color:var(--muted)] font-normal">
                         — tanya pelanggan apakah ingin digunakan
                       </span>
+                    )}
+                  </div>
+                  {/* Info galon: pinjam (depot di pelanggan) + titip (pelanggan di depot) */}
+                  <div className="flex flex-wrap gap-1.5 items-center text-[10px]">
+                    {pinjam > 0 ? (
+                      <span
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold"
+                        title="Galon milik depot yang sedang dipegang pelanggan"
+                      >
+                        🚛 Pinjam: {pinjam} galon
+                      </span>
+                    ) : (
+                      <a
+                        href={`/data-pelanggan/${pelangganId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-line text-[color:var(--muted)] hover:border-amber-300 hover:text-amber-700"
+                        title="Catat pinjaman galon awal pelanggan"
+                      >
+                        🚛 Pinjam: 0 galon · + Baseline
+                      </a>
+                    )}
+                    {titip > 0 && (
+                      <span
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 font-bold"
+                        title="Galon milik pelanggan yang dititipkan di depot"
+                      >
+                        💧 Titip: {titip} galon
+                      </span>
+                    )}
+                    {pinjam > 0 && (
+                      <a
+                        href={`/data-pelanggan/${pelangganId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[10px] text-[color:var(--muted)] hover:underline"
+                      >
+                        Detail →
+                      </a>
                     )}
                   </div>
                 </div>
@@ -593,6 +635,16 @@ export function POSClient({
                     />
                   </label>
                 </div>
+                {(galonPinjamTambah > 0 || galonKembalikan > 0) && (() => {
+                  const saldoLama = saldoGalonPinjam?.total ?? 0;
+                  const saldoBaru = Math.max(0, saldoLama + galonPinjamTambah - galonKembalikan);
+                  return (
+                    <div className="text-[10px] text-[color:var(--muted)] pt-1 border-t border-line">
+                      Saldo galon dipinjam: <b className="text-ink">{saldoLama}</b> →{" "}
+                      <b className="text-amber-700">{saldoBaru}</b> setelah disimpan
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
