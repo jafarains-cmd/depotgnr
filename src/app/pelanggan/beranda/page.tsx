@@ -201,27 +201,36 @@ export default async function BerandaPage() {
       })()}
 
       {/* Status galon depot dipinjam — reminder kembalikan */}
-      {galonPinjam.total > 0 && (
-        <div className="px-4 mt-4">
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 flex items-start gap-3">
-            <div className="w-9 h-9 rounded-full bg-amber-100 grid place-items-center flex-shrink-0">
-              <Truck size={16} className="text-amber-700" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-bold text-amber-900 text-xs">
-                Kamu sedang pinjam {galonPinjam.total} galon depot
+      {galonPinjam.total > 0 && (() => {
+        const detail = galonPinjam.perProduk
+          .filter((p) => p.jumlah > 0)
+          .map((p) => `${p.jumlah}× ${p.namaProduk ?? "Galon"}`)
+          .join(" · ");
+        const titleTpl =
+          cfg.galonPinjamTitle?.trim() || "Kamu sedang pinjam {jumlah} galon depot";
+        const subtitleTpl =
+          cfg.galonPinjamSubtitle?.trim() ||
+          "{detail}. Mohon dikembalikan saat order berikutnya 🙏";
+        const title = titleTpl.replaceAll("{jumlah}", String(galonPinjam.total));
+        const subtitle = subtitleTpl
+          .replaceAll("{detail}", detail)
+          .replaceAll("{jumlah}", String(galonPinjam.total));
+        return (
+          <div className="px-4 mt-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 flex items-start gap-3">
+              <div className="w-9 h-9 rounded-full bg-amber-100 grid place-items-center flex-shrink-0">
+                <Truck size={16} className="text-amber-700" />
               </div>
-              <div className="text-[11px] text-amber-800 mt-0.5 leading-snug">
-                {galonPinjam.perProduk
-                  .filter((p) => p.jumlah > 0)
-                  .map((p) => `${p.jumlah}× ${p.namaProduk ?? "Galon"}`)
-                  .join(" · ")}
-                . Mohon dikembalikan saat order berikutnya 🙏
+              <div className="flex-1 min-w-0">
+                <div className="font-bold text-amber-900 text-xs">{title}</div>
+                <div className="text-[11px] text-amber-800 mt-0.5 leading-snug whitespace-pre-line">
+                  {subtitle}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Warning lokasi belum diset */}
       {(me.koordinatLat === null || me.koordinatLng === null) && (

@@ -89,6 +89,18 @@ const ALL_FIELDS: Record<string, Field> = {
   },
   heroCta: { key: "heroCta", label: "Hero · Tombol CTA", help: "Default: 'Pesan sekarang'." },
 
+  galonPinjamTitle: {
+    key: "galonPinjamTitle",
+    label: "Galon Dipinjam · Judul",
+    help: "Default: 'Kamu sedang pinjam {jumlah} galon depot'. Placeholder {jumlah} otomatis diganti angka pinjaman.",
+  },
+  galonPinjamSubtitle: {
+    key: "galonPinjamSubtitle",
+    label: "Galon Dipinjam · Subtitle",
+    type: "textarea",
+    help: "Default: 'Mohon dikembalikan saat order berikutnya 🙏'. Placeholder {detail} otomatis diganti rincian per produk (mis. '2× Galon 19L').",
+  },
+
   promoAktif: {
     key: "promoAktif",
     label: "Tampilkan Banner Promo Pelanggan Baru",
@@ -287,6 +299,8 @@ const TABS: Tab[] = [
       "heroTitle",
       "heroSubtitle",
       "heroCta",
+      "galonPinjamTitle",
+      "galonPinjamSubtitle",
       "promoAktif",
       "promoBadge",
       "promoTitle",
