@@ -11,6 +11,7 @@ import { formatRupiah } from "@/lib/utils";
 import { CancelOrderButton } from "../order-baru/CancelOrderButton";
 import { NotifSubscribe } from "@/components/NotifSubscribe";
 import { GallonArt, DropFill } from "@/components/GallonArt";
+import { getSaldoGalonPinjam } from "@/lib/galon-pinjam";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +73,9 @@ export default async function BerandaPage() {
     .from(orderHeader)
     .where(and(eq(orderHeader.pelangganId, me.id), ne(orderHeader.status, "batal")));
   const totalGalon = me.stampGalon;
+
+  // Saldo galon depot yang sedang dipegang pelanggan (untuk reminder kembalikan)
+  const galonPinjam = await getSaldoGalonPinjam(me.id);
 
   return (
     <div className="max-w-3xl mx-auto pb-4">
@@ -195,6 +199,29 @@ export default async function BerandaPage() {
           </Link>
         );
       })()}
+
+      {/* Status galon depot dipinjam — reminder kembalikan */}
+      {galonPinjam.total > 0 && (
+        <div className="px-4 mt-4">
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 flex items-start gap-3">
+            <div className="w-9 h-9 rounded-full bg-amber-100 grid place-items-center flex-shrink-0">
+              <Truck size={16} className="text-amber-700" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-amber-900 text-xs">
+                Kamu sedang pinjam {galonPinjam.total} galon depot
+              </div>
+              <div className="text-[11px] text-amber-800 mt-0.5 leading-snug">
+                {galonPinjam.perProduk
+                  .filter((p) => p.jumlah > 0)
+                  .map((p) => `${p.jumlah}× ${p.namaProduk ?? "Galon"}`)
+                  .join(" · ")}
+                . Mohon dikembalikan saat order berikutnya 🙏
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Warning lokasi belum diset */}
       {(me.koordinatLat === null || me.koordinatLng === null) && (

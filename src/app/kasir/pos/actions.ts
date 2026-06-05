@@ -8,8 +8,9 @@ import { stokGalon, mutasiStok } from "@/db/schema/inventory";
 import { orderHeader, orderItem } from "@/db/schema/order";
 import { generateTrackingToken } from "@/lib/tracking";
 import { requireRole } from "@/lib/permissions";
-import { generateNomorNota } from "@/lib/utils";
+import { generateNomorNota, formatRupiah } from "@/lib/utils";
 import { notifAdminTelegram, notifGrupOrder } from "@/lib/telegram";
+import { formatTransaksiDetail } from "@/lib/transaksi-format";
 import { sendWhatsAppGroup } from "@/lib/whatsapp";
 import { pengaturan as pengaturanTable } from "@/db/schema/pengaturan";
 import {
@@ -211,11 +212,12 @@ export async function createTransaksi(input: CreateTransaksiInput) {
     return trx.id;
   });
 
-  // Notifikasi admin (best-effort)
+  // Notifikasi grup Telegram dengan detail (best-effort). Fallback DM admin
+  // kalau grup belum dikonfigurasi (lihat notifGrupOrder fallback logic).
   bestEffort(
-    "notifAdminTelegram(transaksi)",
-    notifAdminTelegram(
-      `🧾 Transaksi *${nomorNota}*\nTotal: ${total.toLocaleString("id-ID")}\nKasir: ${session.user.name}`,
+    "notifGrupTransaksi(cash)",
+    formatTransaksiDetail(trxId as number).then((text) =>
+      text ? notifGrupOrder("selesai", text) : Promise.resolve(),
     ),
   );
 
@@ -400,12 +402,9 @@ async function createOrderUntukBayarOnline(args: {
     return o.id;
   });
 
-  bestEffort(
-    "notifAdminTelegram(pos-online)",
-    notifAdminTelegram(
-      `🧾 *${nomorOrder}* (POS · ${(input.metodeBayar ?? "").toUpperCase()})\nTotal: ${total.toLocaleString("id-ID")}\nKasir: ${session.user.name}\nMenunggu pelanggan upload bukti bayar.`,
-    ),
-  );
+  // Kirim ke grup Telegram (POS online — masih menunggu bukti bayar)
+  const notifTextOnline = `🧾 *POS Online — ${nomorOrder}*\nMetode: *${(input.metodeBayar ?? "").toUpperCase()}*\nTotal: ${formatRupiah(total)}\nKasir: ${session.user.name}\nStatus: menunggu pelanggan upload bukti bayar`;
+  bestEffort("notifGrupOrder(pos-online)", notifGrupOrder("pending", notifTextOnline));
 
   // Catat mutasi galon depot dipinjam (POS pickup non-cash)
   if (
