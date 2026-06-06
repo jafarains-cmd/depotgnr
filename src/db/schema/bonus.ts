@@ -17,6 +17,11 @@ export const bonusKurir = sqliteTable(
     jumlahGalon: integer("jumlah_galon").notNull(),
     ratePerGalon: integer("rate_per_galon").notNull(),
     total: integer("total").notNull(),
+    // Partial payment: berapa rupiah yang sudah dibayar dari `total`. Untuk
+    // dukung pembayaran "uang pas". Kalau paidPartial < total → status tetap
+    // pending dengan saldo (total - paidPartial). Saat paidPartial = total →
+    // status berubah ke dibayar.
+    paidPartial: integer("paid_partial").notNull().default(0),
     status: text("status", { enum: ["pending", "dibayar"] }).notNull().default("pending"),
     paidAt: integer("paid_at", { mode: "timestamp" }),
     paidBy: text("paid_by").references(() => user.id, { onDelete: "set null" }),

@@ -103,6 +103,7 @@ export async function summaryBonusKurir(kurirUserId: string): Promise<{
   const rows = await db
     .select({
       total: bonusKurir.total,
+      paidPartial: bonusKurir.paidPartial,
       status: bonusKurir.status,
       createdAt: bonusKurir.createdAt,
     })
@@ -114,23 +115,119 @@ export async function summaryBonusKurir(kurirUserId: string): Promise<{
   let totalDibayar = 0;
   for (const r of rows) {
     if (r.createdAt >= startOfDay) hariIni += r.total;
-    if (r.status === "pending") pending += r.total;
-    if (r.status === "dibayar") totalDibayar += r.total;
+    if (r.status === "pending") {
+      // Pending effective = total - paidPartial; sisa paidPartial sudah masuk ke "dibayar"
+      pending += r.total - r.paidPartial;
+      totalDibayar += r.paidPartial;
+    } else if (r.status === "dibayar") {
+      totalDibayar += r.total;
+    }
   }
   return { hariIni, pending, totalDibayar };
 }
 
 /**
- * Tandai semua bonus pending milik kurir tertentu jadi "dibayar".
+ * Bayar bonus kurir dengan jumlah pas. Untuk dukung uang tunai pembulatan
+ * (mis. pending Rp 80.500, bayar Rp 80.000, sisa Rp 500 tetap pending).
+ *
+ * Logic: baris pending diurutkan paling lama dulu. Untuk tiap baris:
+ *  - effectivePending = total - paidPartial
+ *  - kalau sisa bayar >= effectivePending → mark dibayar penuh
+ *  - kalau sisa bayar < effectivePending → tambah ke paidPartial, status
+ *    tetap pending, stop loop
+ *
+ * Returns count baris yang fully dibayar, totalPaid (yg benar2 dialokasi),
+ * dan sisaTidakTerpakai (kalau jumlahBayar > total pending).
+ */
+export async function bayarBonusKurirPartial(args: {
+  kurirUserId: string;
+  jumlahBayar: number;
+  paidBy: string;
+  catatan?: string;
+}): Promise<{ count: number; totalPaid: number; sisaTidakTerpakai: number }> {
+  if (args.jumlahBayar <= 0) return { count: 0, totalPaid: 0, sisaTidakTerpakai: 0 };
+
+  const pendingRows = await db
+    .select({
+      id: bonusKurir.id,
+      total: bonusKurir.total,
+      paidPartial: bonusKurir.paidPartial,
+    })
+    .from(bonusKurir)
+    .where(
+      and(
+        eq(bonusKurir.kurirUserId, args.kurirUserId),
+        eq(bonusKurir.status, "pending"),
+      ),
+    )
+    .orderBy(bonusKurir.createdAt);
+
+  if (pendingRows.length === 0) {
+    return { count: 0, totalPaid: 0, sisaTidakTerpakai: args.jumlahBayar };
+  }
+
+  let sisa = args.jumlahBayar;
+  let totalPaid = 0;
+  let count = 0;
+  const now = new Date();
+
+  for (const row of pendingRows) {
+    if (sisa <= 0) break;
+    const effectivePending = row.total - row.paidPartial;
+    if (effectivePending <= 0) continue;
+
+    if (sisa >= effectivePending) {
+      // Bayar penuh baris ini
+      await db
+        .update(bonusKurir)
+        .set({
+          status: "dibayar",
+          paidPartial: row.total,
+          paidAt: now,
+          paidBy: args.paidBy,
+          catatan: args.catatan,
+        })
+        .where(eq(bonusKurir.id, row.id));
+      sisa -= effectivePending;
+      totalPaid += effectivePending;
+      count++;
+    } else {
+      // Partial: tambah ke paidPartial, status tetap pending
+      await db
+        .update(bonusKurir)
+        .set({
+          paidPartial: row.paidPartial + sisa,
+          // Tetap catat paidBy + catatan terakhir + paidAt sebagai indikator
+          // pernah ada sebagian dibayar
+          paidBy: args.paidBy,
+          catatan: args.catatan,
+          paidAt: now,
+        })
+        .where(eq(bonusKurir.id, row.id));
+      totalPaid += sisa;
+      sisa = 0;
+    }
+  }
+
+  return { count, totalPaid, sisaTidakTerpakai: sisa };
+}
+
+/**
+ * Tandai semua bonus pending milik kurir tertentu jadi "dibayar" (full payment).
+ * Shortcut untuk skenario umum.
  */
 export async function bayarBonusKurir(args: {
   kurirUserId: string;
   paidBy: string;
   catatan?: string;
 }): Promise<{ count: number; total: number }> {
-  // Hitung dulu yang pending
+  // Hitung total pending effective (consider paidPartial)
   const pendingRows = await db
-    .select({ id: bonusKurir.id, total: bonusKurir.total })
+    .select({
+      id: bonusKurir.id,
+      total: bonusKurir.total,
+      paidPartial: bonusKurir.paidPartial,
+    })
     .from(bonusKurir)
     .where(
       and(
@@ -141,22 +238,17 @@ export async function bayarBonusKurir(args: {
 
   if (pendingRows.length === 0) return { count: 0, total: 0 };
 
-  const totalAmount = pendingRows.reduce((s, r) => s + r.total, 0);
+  const totalAmount = pendingRows.reduce(
+    (s, r) => s + (r.total - r.paidPartial),
+    0,
+  );
 
-  await db
-    .update(bonusKurir)
-    .set({
-      status: "dibayar",
-      paidAt: new Date(),
-      paidBy: args.paidBy,
-      catatan: args.catatan,
-    })
-    .where(
-      and(
-        eq(bonusKurir.kurirUserId, args.kurirUserId),
-        eq(bonusKurir.status, "pending"),
-      ),
-    );
+  const r = await bayarBonusKurirPartial({
+    kurirUserId: args.kurirUserId,
+    jumlahBayar: totalAmount,
+    paidBy: args.paidBy,
+    catatan: args.catatan,
+  });
 
-  return { count: pendingRows.length, total: totalAmount };
+  return { count: r.count, total: r.totalPaid };
 }

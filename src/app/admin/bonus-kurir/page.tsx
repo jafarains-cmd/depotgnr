@@ -28,13 +28,13 @@ export default async function BonusKurirPage({
   const total = countRow?.n ?? 0;
   const { page, totalPages, offset } = getPagination({ total, limit, page: pageParam });
 
-  // Aggregate per kurir: pending + paid totals + count
+  // Aggregate per kurir: pending effective (total - paidPartial) + paid totals + count
   const summary = await db
     .select({
       kurirUserId: bonusKurir.kurirUserId,
-      pendingTotal: sql<number>`coalesce(sum(case when ${bonusKurir.status} = 'pending' then ${bonusKurir.total} else 0 end), 0)`,
+      pendingTotal: sql<number>`coalesce(sum(case when ${bonusKurir.status} = 'pending' then ${bonusKurir.total} - ${bonusKurir.paidPartial} else 0 end), 0)`,
       pendingCount: sql<number>`coalesce(sum(case when ${bonusKurir.status} = 'pending' then 1 else 0 end), 0)`,
-      paidTotal: sql<number>`coalesce(sum(case when ${bonusKurir.status} = 'dibayar' then ${bonusKurir.total} else 0 end), 0)`,
+      paidTotal: sql<number>`coalesce(sum(case when ${bonusKurir.status} = 'dibayar' then ${bonusKurir.total} else ${bonusKurir.paidPartial} end), 0)`,
       totalGalon: sql<number>`coalesce(sum(${bonusKurir.jumlahGalon}), 0)`,
       kurirNama: userTable.name,
       kurirEmail: userTable.email,

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, User } from "lucide-react";
-import { tandaiBayarBonus } from "./actions";
+import { Check, User, X, Loader2 } from "lucide-react";
+import { tandaiBayarBonus, bayarBonusPartialAction } from "./actions";
 import { formatRupiah } from "@/lib/utils";
 import { DetailModal } from "@/components/DetailModal";
 
@@ -40,22 +40,44 @@ export function BonusClient({
   const [pending, startTransition] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
   const [detailOrderId, setDetailOrderId] = useState<number | null>(null);
+  const [bayarFor, setBayarFor] = useState<KurirSummary | null>(null);
 
-  function bayarKurir(k: KurirSummary) {
+  function openBayar(k: KurirSummary) {
     if (k.pendingCount === 0) return;
-    if (
-      !confirm(
-        `Tandai semua bonus pending ${k.kurirNama} (${k.pendingCount} order, total ${formatRupiah(
-          k.pendingTotal,
-        )}) sebagai SUDAH DIBAYAR?`,
-      )
-    )
-      return;
     setMsg(null);
+    setBayarFor(k);
+  }
+
+  function bayarFull(k: KurirSummary) {
     startTransition(async () => {
       const r = await tandaiBayarBonus(k.kurirUserId);
       if ("error" in r) setMsg(`❌ ${r.error}`);
       else setMsg(`✅ ${r.count} bonus ${k.kurirNama} ditandai dibayar (${formatRupiah(r.total)})`);
+      setBayarFor(null);
+    });
+  }
+
+  function bayarPartial(k: KurirSummary, jumlah: number, catatan: string) {
+    startTransition(async () => {
+      const r = await bayarBonusPartialAction({
+        kurirUserId: k.kurirUserId,
+        jumlahBayar: jumlah,
+        catatan: catatan || undefined,
+      });
+      if ("error" in r) setMsg(`❌ ${r.error}`);
+      else {
+        const sisa = k.pendingTotal - r.totalPaid;
+        const sisaText =
+          sisa > 0 ? `, sisa ${formatRupiah(sisa)} tetap pending` : "";
+        const overText =
+          r.sisaTidakTerpakai > 0
+            ? ` (kelebihan ${formatRupiah(r.sisaTidakTerpakai)} tidak terpakai)`
+            : "";
+        setMsg(
+          `✅ Bayar ${formatRupiah(r.totalPaid)} ke ${k.kurirNama} — ${r.count} order dilunasi${sisaText}${overText}`,
+        );
+      }
+      setBayarFor(null);
     });
   }
 
@@ -105,11 +127,11 @@ export function BonusClient({
                     </div>
                   </div>
                   <button
-                    onClick={() => bayarKurir(k)}
+                    onClick={() => openBayar(k)}
                     disabled={pending || k.pendingCount === 0}
                     className="flex-shrink-0 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-extrabold inline-flex items-center gap-1.5 disabled:opacity-30 active:scale-[0.98]"
                   >
-                    <Check size={14} /> Tandai Dibayar
+                    <Check size={14} /> Bayar Bonus
                   </button>
                 </div>
               ))}
@@ -205,6 +227,139 @@ export function BonusClient({
           onClose={() => setDetailOrderId(null)}
         />
       )}
+
+      {bayarFor && (
+        <BayarBonusModal
+          kurir={bayarFor}
+          pending={pending}
+          onClose={() => setBayarFor(null)}
+          onBayarFull={() => bayarFull(bayarFor)}
+          onBayarPartial={(jumlah, catatan) => bayarPartial(bayarFor, jumlah, catatan)}
+        />
+      )}
+    </div>
+  );
+}
+
+function BayarBonusModal({
+  kurir,
+  pending,
+  onClose,
+  onBayarFull,
+  onBayarPartial,
+}: {
+  kurir: KurirSummary;
+  pending: boolean;
+  onClose: () => void;
+  onBayarFull: () => void;
+  onBayarPartial: (jumlah: number, catatan: string) => void;
+}) {
+  const [jumlah, setJumlah] = useState(String(kurir.pendingTotal));
+  const [catatan, setCatatan] = useState("");
+  const jumlahNum = Math.max(0, Math.floor(Number(jumlah) || 0));
+  const sisaSetelahBayar = Math.max(0, kurir.pendingTotal - jumlahNum);
+  const overflow = Math.max(0, jumlahNum - kurir.pendingTotal);
+  const isFull = jumlahNum === kurir.pendingTotal;
+
+  const presetButtons = [
+    { label: "Penuh", value: kurir.pendingTotal },
+    { label: "Bulat 50k", value: Math.floor(kurir.pendingTotal / 50000) * 50000 },
+    { label: "Bulat 10k", value: Math.floor(kurir.pendingTotal / 10000) * 10000 },
+    { label: "Bulat 5k", value: Math.floor(kurir.pendingTotal / 5000) * 5000 },
+  ].filter((p) => p.value > 0 && p.value <= kurir.pendingTotal);
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 grid place-items-center p-4">
+      <div className="bg-surface rounded-2xl max-w-md w-full p-5 space-y-4">
+        <div className="flex justify-between items-start">
+          <div>
+            <h2 className="font-bold text-lg">Bayar Bonus Kurir</h2>
+            <div className="text-xs text-[color:var(--muted)] mt-0.5">
+              {kurir.kurirNama} · {kurir.pendingCount} order pending
+            </div>
+          </div>
+          <button onClick={onClose} className="text-[color:var(--muted)]">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm">
+          <div className="text-[10px] font-bold tracking-widest text-amber-800">
+            TOTAL PENDING
+          </div>
+          <div className="text-2xl font-extrabold text-amber-900">
+            {formatRupiah(kurir.pendingTotal)}
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs font-bold block mb-1">Jumlah Bayar (Rp)</label>
+          <input
+            type="number"
+            min={0}
+            value={jumlah}
+            onChange={(e) => setJumlah(e.target.value)}
+            className="w-full px-3 py-2 border border-line rounded-md text-lg font-mono"
+          />
+          <div className="flex gap-1.5 mt-2 flex-wrap">
+            {presetButtons.map((p) => (
+              <button
+                key={p.label}
+                type="button"
+                onClick={() => setJumlah(String(p.value))}
+                className="px-2 py-1 text-[11px] border border-line rounded-md hover:border-brand"
+              >
+                {p.label}: {formatRupiah(p.value)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="text-xs space-y-0.5 bg-[color:var(--surface2)] rounded-md p-2">
+          <div className="flex justify-between">
+            <span className="text-[color:var(--muted)]">Dibayar sekarang</span>
+            <b>{formatRupiah(Math.min(jumlahNum, kurir.pendingTotal))}</b>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-[color:var(--muted)]">Sisa pending</span>
+            <b className="text-amber-700">{formatRupiah(sisaSetelahBayar)}</b>
+          </div>
+          {overflow > 0 && (
+            <div className="flex justify-between text-red-600">
+              <span>Kelebihan (tidak terpakai)</span>
+              <b>{formatRupiah(overflow)}</b>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <label className="text-xs font-bold block mb-1">Catatan (opsional)</label>
+          <input
+            value={catatan}
+            onChange={(e) => setCatatan(e.target.value)}
+            placeholder="mis: tunai pas, transfer BCA"
+            className="w-full px-3 py-2 border border-line rounded-md text-sm"
+          />
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2 border-t border-line">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-line rounded-md text-sm"
+            disabled={pending}
+          >
+            Batal
+          </button>
+          <button
+            onClick={() => (isFull ? onBayarFull() : onBayarPartial(jumlahNum, catatan))}
+            disabled={pending || jumlahNum <= 0}
+            className="px-4 py-2 bg-emerald-600 text-white rounded-md text-sm font-bold inline-flex items-center gap-1.5 disabled:opacity-50"
+          >
+            {pending && <Loader2 size={14} className="animate-spin" />}
+            Konfirmasi Bayar {formatRupiah(Math.min(jumlahNum, kurir.pendingTotal))}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
