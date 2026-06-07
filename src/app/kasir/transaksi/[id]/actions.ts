@@ -21,6 +21,7 @@ import {
 } from "@/lib/galon-pinjam";
 import { orderHeader } from "@/db/schema/order";
 import { bestEffort } from "@/lib/best-effort";
+import { logAudit } from "@/lib/audit";
 
 async function buildNotaText(trxId: number): Promise<string | null> {
   const t = await db.query.transaksi.findFirst({ where: eq(transaksi.id, trxId) });
@@ -146,6 +147,17 @@ export async function batalkanTransaksi(
   bestEffort(
     "reverseGalonPinjamForTransaksi",
     reverseGalonPinjamForTransaksi(trxId, session.user.id),
+  );
+  bestEffort(
+    "auditVoidTransaksi",
+    logAudit({
+      actorUserId: session.user.id,
+      action: "transaksi.void",
+      entity: "transaksi",
+      entityId: trxId,
+      before: { nomorNota: t.nomorNota, total: t.total, status: t.status },
+      meta: { alasan: reason, refOrderId: t.refOrderId },
+    }),
   );
 
   // Kalau transaksi auto-sync dari order, balikkan juga order asalnya supaya

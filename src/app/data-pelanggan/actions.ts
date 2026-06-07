@@ -12,6 +12,7 @@ import {
   mutasiGalonPinjam,
 } from "@/db/schema/pelanggan";
 import { catatMutasiGalonPinjam } from "@/lib/galon-pinjam";
+import { logAudit } from "@/lib/audit";
 import { transaksi } from "@/db/schema/transaksi";
 import { orderHeader } from "@/db/schema/order";
 import { komplain } from "@/db/schema/komplain";
@@ -47,8 +48,16 @@ export async function upsertPelanggan(formData: FormData) {
 }
 
 export async function deletePelanggan(id: number) {
-  await requireRole(["admin"]);
+  const session = await requireRole(["admin"]);
+  const before = await db.query.pelanggan.findFirst({ where: eq(pelanggan.id, id) });
   await db.delete(pelanggan).where(eq(pelanggan.id, id));
+  await logAudit({
+    actorUserId: session.user.id,
+    action: "pelanggan.delete",
+    entity: "pelanggan",
+    entityId: id,
+    before,
+  });
   revalidatePath("/data-pelanggan");
 }
 
@@ -61,7 +70,7 @@ export async function adjustLoyaltyManual(
   jumlah: number,
   alasan: string,
 ): Promise<{ ok: true } | { error: string }> {
-  await requireRole(["admin"]);
+  const session = await requireRole(["admin"]);
   const reason = alasan.trim();
   if (reason.length < 3) return { error: "Alasan wajib diisi (min 3 karakter)" };
   if (reason.length > 500) return { error: "Alasan terlalu panjang (max 500 karakter)" };
@@ -95,6 +104,15 @@ export async function adjustLoyaltyManual(
         .where(eq(pelanggan.id, pelangganId))
         .run();
     }
+  });
+
+  await logAudit({
+    actorUserId: session.user.id,
+    action: "pelanggan.adjust-loyalty",
+    entity: "pelanggan",
+    entityId: pelangganId,
+    after: { jumlah },
+    meta: { alasan: reason },
   });
 
   revalidatePath(`/data-pelanggan/${pelangganId}`);
@@ -448,6 +466,16 @@ export async function mergePelanggan(
   revalidatePath("/pembayaran");
   revalidatePath("/kasir/transaksi");
 
+  await logAudit({
+    actorUserId: (await requireRole(["admin"])).user.id,
+    action: "pelanggan.merge",
+    entity: "pelanggan",
+    entityId: sourceId,
+    before: { sourceNama: source.nama },
+    after: { mergedToTargetId: targetId, targetNama: target.nama },
+    meta: { moved, summary },
+  });
+
   return { ok: true, summary: summary || "Tidak ada data untuk dipindahkan" };
 }
 
@@ -476,6 +504,15 @@ export async function adjustGalonPinjamManual(args: {
   });
 
   if ("error" in result) return result;
+
+  await logAudit({
+    actorUserId: session.user.id,
+    action: "pelanggan.adjust-galon-pinjam",
+    entity: "pelanggan",
+    entityId: args.pelangganId,
+    after: { produkId: args.produkId, perubahan: args.perubahan, jumlahBaru: result.jumlahBaru },
+    meta: { alasan },
+  });
 
   revalidatePath(`/data-pelanggan/${args.pelangganId}`);
   revalidatePath("/admin/galon-dipinjam");

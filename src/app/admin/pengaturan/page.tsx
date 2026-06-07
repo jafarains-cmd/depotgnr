@@ -262,6 +262,12 @@ const ALL_FIELDS: Record<string, Field> = {
     label: "Nilai 1 Galon Gratis Stamp (Rp)",
     help: "Default: 5000.",
   },
+
+  thresholdPiutangMenuaHari: {
+    key: "thresholdPiutangMenuaHari",
+    label: "Threshold Piutang Menua (hari)",
+    help: "Piutang (order selesai status bayar=belum) > X hari di-flag sebagai 'menua' dengan badge merah di /pembayaran. Default 30. Set 0 untuk nonaktif.",
+  },
 };
 
 type Tab = {
@@ -288,6 +294,7 @@ const TABS: Tab[] = [
       "maxJarakAntarKm",
       "footerNota",
       "zonaWaktu",
+      "thresholdPiutangMenuaHari",
     ],
   },
   {

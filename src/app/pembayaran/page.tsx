@@ -17,6 +17,7 @@ import { Pagination } from "@/components/Pagination";
 import { parseLimit, parsePage, getPagination } from "@/lib/page-size";
 import { SortAutoSubmit } from "./SortAutoSubmit";
 import { TabNav } from "./TabNav";
+import { getPiutangThreshold, countPiutangMenua } from "@/lib/piutang";
 
 export const dynamic = "force-dynamic";
 
@@ -118,6 +119,9 @@ export default async function PembayaranPage({
     .leftJoin(pelangganTable, eq(orderHeader.pelangganId, pelangganTable.id))
     .where(and(...baseConds, eq(orderHeader.statusBayar, "lunas")));
 
+  const piutangThresholdHari = await getPiutangThreshold();
+  const piutangMenuaCount = await countPiutangMenua();
+
   const list = await db
     .select({
       id: orderHeader.id,
@@ -129,6 +133,7 @@ export default async function PembayaranPage({
       buktiBayarUrl: orderHeader.buktiBayarUrl,
       bayarAt: orderHeader.bayarAt,
       diantarAt: orderHeader.diantarAt,
+      selesaiAt: orderHeader.selesaiAt,
       createdAt: orderHeader.createdAt,
       pelangganNama: pelangganTable.nama,
       pelangganTelp: pelangganTable.telp,
@@ -165,6 +170,7 @@ export default async function PembayaranPage({
     buktiUrl: r.buktiBayarUrl,
     bayarAt: r.bayarAt?.toISOString() ?? null,
     diantarAt: r.diantarAt?.toISOString() ?? null,
+    selesaiAt: r.selesaiAt?.toISOString() ?? null,
     createdAt: r.createdAt.toISOString(),
     pelangganNama: r.pelangganNama,
     pelangganTelp: r.pelangganTelp,
@@ -236,6 +242,19 @@ export default async function PembayaranPage({
           </a>
         )}
       </form>
+      {piutangMenuaCount > 0 && (
+        <a
+          href="/pembayaran?tab=piutang&sort=order-asc"
+          className="block bg-red-50 border border-red-200 rounded-2xl p-3 text-sm hover:bg-red-100"
+        >
+          <div className="font-bold text-red-900 inline-flex items-center gap-1.5">
+            🚨 {piutangMenuaCount} piutang menua (umur &gt; {piutangThresholdHari} hari)
+          </div>
+          <div className="text-xs text-red-800 mt-0.5">
+            Tagih segera atau hubungi pelanggan. Klik untuk filter ke piutang.
+          </div>
+        </a>
+      )}
       <TabNav
         active={tab}
         counts={{
@@ -246,7 +265,7 @@ export default async function PembayaranPage({
         }}
         baseQuery={baseQuery.toString()}
       />
-      <PembayaranClient rows={rows} />
+      <PembayaranClient rows={rows} piutangThresholdHari={piutangThresholdHari} />
       <Pagination page={page} totalPages={totalPages} total={total} />
     </div>
   );

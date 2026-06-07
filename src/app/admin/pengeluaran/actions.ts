@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { pengeluaran } from "@/db/schema/pengeluaran";
 import { requireRole } from "@/lib/permissions";
 import { uploadAsset } from "@/lib/drive";
+import { logAudit } from "@/lib/audit";
 
 type SaveInput = {
   id?: number;
@@ -72,8 +73,16 @@ export async function savePengeluaran(
 }
 
 export async function deletePengeluaran(id: number): Promise<{ ok: true } | { error: string }> {
-  await requireRole(["admin"]);
+  const session = await requireRole(["admin"]);
+  const before = await db.query.pengeluaran.findFirst({ where: eq(pengeluaran.id, id) });
   await db.delete(pengeluaran).where(eq(pengeluaran.id, id));
+  await logAudit({
+    actorUserId: session.user.id,
+    action: "pengeluaran.delete",
+    entity: "pengeluaran",
+    entityId: id,
+    before,
+  });
   revalidatePath("/admin/pengeluaran");
   revalidatePath("/admin/dashboard");
   revalidatePath("/admin/laporan");

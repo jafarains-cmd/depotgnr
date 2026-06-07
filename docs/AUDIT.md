@@ -41,9 +41,14 @@
 - [ ] **5. Alert stok rendah** _(severity: major)_
   Threshold per produk + notif WA grup saat tembus. Sekarang harus manual.
 
-- [ ] **6. Piutang menua tanpa pengingat** _(severity: major)_
-  Order belum lunas 30+ hari tidak di-flag. Belum ada follow-up otomatis ke
-  pelanggan.
+- [x] ~~**6. Piutang menua tanpa pengingat**~~ _(severity: major)_ ✅
+  ~~Order belum lunas 30+ hari tidak di-flag. Belum ada follow-up otomatis ke
+  pelanggan.~~
+  Implementasi: lib/piutang.ts dengan getPiutangThreshold (default 30 hari,
+  configurable di /admin/pengaturan → tab Depot, key
+  `thresholdPiutangMenuaHari`, set 0 untuk nonaktif) + countPiutangMenua.
+  Banner merah di /pembayaran kalau ada piutang > threshold + badge "🕒 N
+  hari · MENUA" (merah pulse) di kartu order piutang.
 
 - [ ] **7. Reminder bonus kurir bulanan** _(severity: minor)_
   Auto-email/WA ke owner tiap awal bulan: "harus bayar bonus kurir Rp X".
@@ -66,9 +71,17 @@
   Double-click "Simpan & Bayar" saat network lambat masih bisa lolos. Pakai
   idempotency key di server.
 
-- [ ] **12. Audit log tidak ada** _(severity: major)_
-  Tidak bisa telusuri "siapa edit harga produk kemarin", "siapa hapus
-  pelanggan X". Backbone trust.
+- [x] ~~**12. Audit log tidak ada**~~ _(severity: major)_ ✅
+  ~~Tidak bisa telusuri "siapa edit harga produk kemarin", "siapa hapus
+  pelanggan X". Backbone trust.~~
+  Implementasi: schema audit_log (append-only, kolom action/entity/entityId/
+  before/after/meta JSON + actorUserId + createdAt). Helper logAudit() di
+  lib/audit.ts. Pasang di action critical: void transaksi, delete/merge/
+  adjust loyalty/adjust galon pinjam pelanggan, delete/update/create/toggle
+  produk, delete pengeluaran, soft/hard delete user + reactivate user.
+  Halaman /admin/audit-log dengan filter range tanggal + search + dropdown
+  entity + filter action + pagination. Detail JSON before/after/meta
+  collapsible per row.
 
 ## 🟢 UX
 
@@ -200,8 +213,8 @@
 ## Progress
 
 - Total: **27 item**
-- Selesai: **14** (#2, #3, #4, #13, #14, #15, #16, #17, #18, #19, #20, #21, #24, #27)
+- Selesai: **16** (#2, #3, #4, #6, #12, #13, #14, #15, #16, #17, #18, #19, #20, #21, #24, #27)
 - Sedang dikerjakan: —
-- Tersisa: **13**
+- Tersisa: **11**
 
-_Update terakhir: 2026-05-23_
+_Update terakhir: 2026-06-08_

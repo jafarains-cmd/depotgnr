@@ -204,6 +204,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           iconColor: "text-sky-600",
         },
         {
+          href: "/admin/audit-log",
+          label: "Audit Log",
+          icon: <FileStack size={16} />,
+          iconColor: "text-purple-600",
+        },
+        {
           href: "/admin/pengaturan",
           label: "Pengaturan",
           icon: <Settings size={16} />,

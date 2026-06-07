@@ -7,6 +7,7 @@ import { user as userTable, session as sessionTable } from "@/db/schema/auth";
 import { requireRole } from "@/lib/permissions";
 import { auth } from "@/lib/auth";
 import { generateToken, createResetToken } from "@/lib/password-reset";
+import { logAudit } from "@/lib/audit";
 
 export async function createStaff(formData: FormData) {
   await requireRole(["admin"]);
@@ -170,6 +171,15 @@ export async function deleteUser(
     await db.delete(userTable).where(eq(userTable.id, id));
   }
 
+  await logAudit({
+    actorUserId: session.user.id,
+    action: mode === "soft" ? "user.nonaktifkan" : "user.delete",
+    entity: "user",
+    entityId: id,
+    before: { name: target.name, email: target.email, role: target.role },
+    meta: { mode },
+  });
+
   revalidatePath("/admin/users");
   return { ok: true };
 }
@@ -180,13 +190,20 @@ export async function deleteUser(
 export async function reactivateUser(
   id: string,
 ): Promise<{ ok: true } | { error: string }> {
-  await requireRole(["admin"]);
+  const session = await requireRole(["admin"]);
   const target = await db.query.user.findFirst({ where: eq(userTable.id, id) });
   if (!target) return { error: "User tidak ditemukan" };
   await db
     .update(userTable)
     .set({ banned: false, banReason: null })
     .where(eq(userTable.id, id));
+  await logAudit({
+    actorUserId: session.user.id,
+    action: "user.reactivate",
+    entity: "user",
+    entityId: id,
+    after: { name: target.name },
+  });
   revalidatePath("/admin/users");
   return { ok: true };
 }

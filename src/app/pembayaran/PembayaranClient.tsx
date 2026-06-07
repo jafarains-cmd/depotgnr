@@ -19,6 +19,7 @@ export type Row = {
   buktiUrl: string | null;
   bayarAt: string | null;
   diantarAt: string | null;
+  selesaiAt: string | null;
   createdAt: string;
   pelangganNama: string | null;
   pelangganTelp: string | null;
@@ -32,7 +33,13 @@ type Item =
   | { kind: "single"; row: Row }
   | { kind: "group"; id: number; kode: string; rows: Row[]; sortKey: string };
 
-export function PembayaranClient({ rows }: { rows: Row[] }) {
+export function PembayaranClient({
+  rows,
+  piutangThresholdHari = 30,
+}: {
+  rows: Row[];
+  piutangThresholdHari?: number;
+}) {
   const [pending, startTransition] = useTransition();
   const toast = useToast();
   const [detailId, setDetailId] = useState<number | null>(null);
@@ -40,6 +47,17 @@ export function PembayaranClient({ rows }: { rows: Row[] }) {
 
   function isPiutang(r: Row) {
     return r.statusOrder === "selesai" && r.status === "belum";
+  }
+
+  function umurHari(r: Row): number {
+    const ref = r.selesaiAt ?? r.diantarAt ?? r.createdAt;
+    const ms = Date.now() - new Date(ref).getTime();
+    return Math.max(0, Math.floor(ms / (24 * 60 * 60 * 1000)));
+  }
+
+  function isMenua(r: Row): boolean {
+    if (!isPiutang(r) || piutangThresholdHari === 0) return false;
+    return umurHari(r) >= piutangThresholdHari;
   }
 
   // Group rows: row dengan notaGabunganId yang sama jadi 1 group item.
@@ -192,6 +210,19 @@ export function PembayaranClient({ rows }: { rows: Row[] }) {
                   {(r.metode ?? "-").toUpperCase()} ·{" "}
                   {isPiutang(r) ? "PIUTANG" : r.status.toUpperCase()}
                 </span>
+                {isPiutang(r) && (
+                  <div className="mt-1">
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                        isMenua(r)
+                          ? "bg-red-600 text-white animate-pulse"
+                          : "bg-amber-100 text-amber-700"
+                      }`}
+                    >
+                      🕒 {umurHari(r)} hari{isMenua(r) ? " · MENUA" : ""}
+                    </span>
+                  </div>
+                )}
                 {r.diantarAt && r.statusOrder === "selesai" && (
                   <div className="text-[10px] text-[color:var(--muted)] mt-1">
                     Diantar:{" "}
