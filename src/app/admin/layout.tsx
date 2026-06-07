@@ -210,6 +210,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           iconColor: "text-purple-600",
         },
         {
+          href: "/admin/shift",
+          label: "Shift Kasir",
+          icon: <Coins size={16} />,
+          iconColor: "text-amber-600",
+        },
+        {
           href: "/admin/pengaturan",
           label: "Pengaturan",
           icon: <Settings size={16} />,

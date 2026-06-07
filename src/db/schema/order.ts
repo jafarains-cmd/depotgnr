@@ -75,6 +75,7 @@ export const orderHeader = sqliteTable("order", {
   trackingToken: text("tracking_token"),
   sheetRowId: text("sheet_row_id"),
   lastSyncedAt: integer("last_synced_at", { mode: "timestamp" }),
+  shiftId: integer("shift_id"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 }, (t) => ({

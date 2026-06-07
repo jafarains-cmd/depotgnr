@@ -11,6 +11,7 @@ export const pengeluaran = sqliteTable(
     deskripsi: text("deskripsi"),
     fotoNotaUrl: text("foto_nota_url"),
     createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+    shiftId: integer("shift_id"),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .$defaultFn(() => new Date()),

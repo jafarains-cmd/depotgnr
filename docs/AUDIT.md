@@ -10,9 +10,20 @@
 
 ## 🔴 OPERASIONAL HARIAN
 
-- [ ] **1. Tutup kas / setoran akhir shift** _(severity: major)_
-  Kasir tidak tahu omzet cash harian & jumlah di tangan. Akhir hari rawan
-  selisih, tidak ada audit shift handoff.
+- [x] ~~**1. Tutup kas / setoran akhir shift**~~ _(severity: major)_ ✅
+  ~~Kasir tidak tahu omzet cash harian & jumlah di tangan. Akhir hari rawan
+  selisih, tidak ada audit shift handoff.~~
+  Implementasi: schema shift_kasir (drizzle 0026) + kolom shift_id di
+  transaksi/order/pengeluaran. Multi-shift independen — beberapa kasir
+  bisa buka shift bersamaan, 1 kasir bisa punya beberapa shift dalam
+  sehari. Uang awal opsional. Saat tutup: hitung ekspektasi (opening +
+  omzet cash - pengeluaran) vs uang fisik → tampil selisih +/0/-. Upload
+  foto bukti opsional. Catatan opsional. Reopen window 30 menit kalau
+  salah tutup. Notif Telegram ke grup saat tutup (detail kasir + omzet
+  per metode + selisih). Audit log tercatat untuk buka/tutup/reopen.
+  POS cegah input tanpa shift open (kasir wajib buka shift dulu).
+  Halaman /kasir/shift untuk kasir manage shift sendiri + lihat shift
+  kasir lain (awareness). Halaman /admin/shift untuk audit history all.
 
 - [x] ~~**2. Dashboard kasir kosong**~~ _(severity: major)_ ✅
   ~~Kasir login langsung ke POS. Tidak ada ringkasan "transaksi saya hari ini",
@@ -213,8 +224,8 @@
 ## Progress
 
 - Total: **27 item**
-- Selesai: **16** (#2, #3, #4, #6, #12, #13, #14, #15, #16, #17, #18, #19, #20, #21, #24, #27)
+- Selesai: **17** (#1, #2, #3, #4, #6, #12, #13, #14, #15, #16, #17, #18, #19, #20, #21, #24, #27)
 - Sedang dikerjakan: —
-- Tersisa: **11**
+- Tersisa: **10**
 
 _Update terakhir: 2026-06-08_

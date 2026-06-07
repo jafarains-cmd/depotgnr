@@ -29,6 +29,7 @@ import {
 } from "@/lib/loyalty";
 import { bestEffort } from "@/lib/best-effort";
 import { applyGalonPinjamFromTransaksi, getSaldoGalonPinjam } from "@/lib/galon-pinjam";
+import { resolveShiftId } from "@/lib/shift";
 
 /**
  * Server action — return info galon pelanggan untuk display di POS:
@@ -74,10 +75,23 @@ export type CreateTransaksiInput = {
   // Untuk order antar, diinput kurir di halaman konfirmasi antar.
   galonPinjamTambah?: number;   // galon depot yang dibawa pulang pelanggan extra
   galonKembalikan?: number;     // galon depot yang pelanggan kembalikan ke depot
+  // Take-over: kasir A input atas nama shift kasir B (force shiftId)
+  shiftId?: number;
 };
 
 export async function createTransaksi(input: CreateTransaksiInput) {
   const session = await requireRole(["admin", "kasir"]);
+
+  // Resolve shift: pakai input.shiftId (take-over) atau cari shift open milik kasir
+  const resolvedShiftId = await resolveShiftId({
+    userId: session.user.id,
+    preferShiftId: input.shiftId ?? null,
+  });
+  if (!resolvedShiftId) {
+    throw new Error(
+      "Tidak ada shift aktif. Buka shift dulu di /kasir/shift sebelum input transaksi.",
+    );
+  }
 
   const galonPinjam = Math.max(0, input.galonPinjamTambah ?? 0);
   const galonKembali = Math.max(0, input.galonKembalikan ?? 0);
@@ -136,13 +150,13 @@ export async function createTransaksi(input: CreateTransaksiInput) {
   //   pickup + piutang                    → order POS langsung selesai, statusBayar=belum
   //   pickup + cash                       → transaksi lunas (existing)
   if (pengantaran === "antar") {
-    return createOrderAntar({ session, input, total, resolvedAlamat });
+    return createOrderAntar({ session, input, total, resolvedAlamat, resolvedShiftId });
   }
   if (isPayOnline) {
-    return createOrderUntukBayarOnline({ session, input, total, subtotal });
+    return createOrderUntukBayarOnline({ session, input, total, subtotal, resolvedShiftId });
   }
   if (isPiutang) {
-    return createOrderPickupPiutang({ session, input, total });
+    return createOrderPickupPiutang({ session, input, total, resolvedShiftId });
   }
 
   // === Cash flow (existing) ===
@@ -173,6 +187,7 @@ export async function createTransaksi(input: CreateTransaksiInput) {
         status: "lunas",
         catatan: input.catatan ?? null,
         refOrderId: input.refOrderId ?? null,
+        shiftId: resolvedShiftId,
       })
       .returning()
       .all();
@@ -350,6 +365,7 @@ async function createOrderUntukBayarOnline(args: {
   input: CreateTransaksiInput;
   total: number;
   subtotal: number;
+  resolvedShiftId: number;
 }): Promise<{
   type: "order";
   orderId: number;
@@ -377,6 +393,7 @@ async function createOrderUntukBayarOnline(args: {
         statusBayar: "belum",
         trackingToken: generateTrackingToken(),
         kurirUserId: session.user.id, // catat siapa kasir yang handle
+        shiftId: args.resolvedShiftId,
       })
       .returning()
       .all();
@@ -445,6 +462,7 @@ async function createOrderPickupPiutang(args: {
   session: Awaited<ReturnType<typeof requireRole>>;
   input: CreateTransaksiInput;
   total: number;
+  resolvedShiftId: number;
 }): Promise<{
   type: "order";
   orderId: number;
@@ -472,6 +490,7 @@ async function createOrderPickupPiutang(args: {
         statusBayar: "belum",
         trackingToken: generateTrackingToken(),
         kurirUserId: session.user.id,
+        shiftId: args.resolvedShiftId,
       })
       .returning()
       .all();
@@ -553,6 +572,7 @@ async function createOrderAntar(args: {
   input: CreateTransaksiInput;
   total: number;
   resolvedAlamat: string;
+  resolvedShiftId: number;
 }): Promise<{
   type: "order";
   orderId: number;
@@ -589,6 +609,7 @@ async function createOrderAntar(args: {
         bayarDikonfirmasiOleh: isCash ? session.user.id : null,
         kurirUserId: input.kurirUserId ?? null,
         trackingToken: generateTrackingToken(),
+        shiftId: args.resolvedShiftId,
       })
       .returning()
       .all();

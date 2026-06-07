@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { db } from "@/db";
 import { eq, inArray } from "drizzle-orm";
 import { produk } from "@/db/schema/produk";
@@ -5,6 +6,9 @@ import { orderHeader, orderItem } from "@/db/schema/order";
 import { user as userTable } from "@/db/schema/auth";
 import { PageHeader } from "@/components/AppShell";
 import { POSClient, type Preset } from "./POSClient";
+import { requireRole } from "@/lib/permissions";
+import { getShiftAktif } from "@/lib/shift";
+import { AlertTriangle, Play } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +17,9 @@ export default async function POSPage({
 }: {
   searchParams: Promise<{ orderId?: string }>;
 }) {
+  const session = await requireRole(["admin", "kasir"]);
   const sp = await searchParams;
+  const shiftAktif = await getShiftAktif(session.user.id);
   const [produkList, pelangganList, kurirList] = await Promise.all([
     db.query.produk.findMany({ where: eq(produk.aktif, true), orderBy: (p, { asc }) => [asc(p.id)] }),
     db.query.pelanggan.findMany({ orderBy: (p, { asc }) => [asc(p.nama)] }),
@@ -63,6 +69,24 @@ export default async function POSPage({
             : "Catat transaksi penjualan/isi ulang."
         }
       />
+      {!shiftAktif ? (
+        <Link
+          href="/kasir/shift"
+          className="block bg-amber-50 border border-amber-300 rounded-2xl p-3 mb-4 hover:bg-amber-100"
+        >
+          <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
+            <AlertTriangle size={16} /> Belum buka shift kasir
+          </div>
+          <div className="text-xs text-amber-800 mt-1 inline-flex items-center gap-1">
+            <Play size={12} /> Klik untuk buka shift dulu sebelum input transaksi
+          </div>
+        </Link>
+      ) : (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2 mb-4 text-[11px] text-emerald-800 inline-flex items-center gap-1.5">
+          🟢 Shift aktif sejak{" "}
+          {shiftAktif.openedAt.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+        </div>
+      )}
       <POSClient
         produkList={produkList}
         pelangganList={pelangganList.map((p) => ({

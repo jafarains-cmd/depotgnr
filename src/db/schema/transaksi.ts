@@ -20,6 +20,7 @@ export const transaksi = sqliteTable("transaksi", {
   voidedAt: integer("voided_at", { mode: "timestamp" }),
   voidedBy: text("voided_by").references(() => user.id, { onDelete: "set null" }),
   voidedAlasan: text("voided_alasan"),
+  shiftId: integer("shift_id"), // FK ke shift_kasir, nullable (transaksi sebelum fitur)
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 

@@ -183,6 +183,13 @@
       "when": 1779100000000,
       "tag": "0025_audit_log",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1779200000000,
+      "tag": "0026_shift_kasir",
+      "breakpoints": true
     }
   ]
 }
