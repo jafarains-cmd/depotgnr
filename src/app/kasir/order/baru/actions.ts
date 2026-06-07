@@ -10,6 +10,7 @@ import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
 import { requireRole } from "@/lib/permissions";
 import { generateNomorNota } from "@/lib/utils";
 import { generateTrackingToken } from "@/lib/tracking";
+import { resolveShiftId } from "@/lib/shift";
 import { notifGrupOrder } from "@/lib/telegram";
 import { sendWhatsAppGroup } from "@/lib/whatsapp";
 import { pengaturan as pengaturanTable } from "@/db/schema/pengaturan";
@@ -57,6 +58,14 @@ export async function createWalkInOrder(input: WalkInOrderInput): Promise<void> 
   const session = await requireRole(["admin", "kasir"]);
   if (input.items.length === 0) throw new Error("Pilih minimal satu produk");
   if (!input.alamatAntar.trim()) throw new Error("Alamat pengantaran wajib diisi");
+
+  // Resolve shift untuk auto-tag order ke shift kasir yang aktif
+  const resolvedShiftId = await resolveShiftId({ userId: session.user.id });
+  if (!resolvedShiftId) {
+    throw new Error(
+      "Tidak ada shift aktif. Buka shift dulu di /kasir/shift sebelum input order.",
+    );
+  }
 
   // Resolve pelangganId
   let pelangganId = input.pelangganId ?? null;
@@ -110,6 +119,7 @@ export async function createWalkInOrder(input: WalkInOrderInput): Promise<void> 
         totalEstimasi,
         catatan: input.catatan ?? null,
         trackingToken: generateTrackingToken(),
+        shiftId: resolvedShiftId,
       })
       .returning()
       .all();

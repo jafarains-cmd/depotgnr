@@ -9,6 +9,7 @@ import { OrderClient, type OrderRow } from "./OrderClient";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { parseRange } from "@/lib/date-range";
 import { requireRole } from "@/lib/permissions";
+import { getShiftAktif, isShiftStale } from "@/lib/shift";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
 import { Pagination } from "@/components/Pagination";
 import { parseLimit, parsePage, getPagination } from "@/lib/page-size";
@@ -31,6 +32,10 @@ export default async function OrderKasirPage({
   const session = await requireRole(["admin", "kasir"]);
   const isAdmin = session.user.role === "admin";
   const sp = await searchParams;
+
+  // Banner status shift kasir (tidak redirect — list boleh dilihat untuk monitoring)
+  const shiftAktif = await getShiftAktif(session.user.id);
+  const shiftStaleFlag = shiftAktif ? isShiftStale(shiftAktif.openedAt) : false;
   const range = parseRange(sp);
   const limit = parseLimit(sp.limit);
   const pageParam = parsePage(sp.page);
@@ -195,6 +200,28 @@ export default async function OrderKasirPage({
           + Order Baru (Walk-in)
         </a>
       </div>
+      {!shiftAktif && (
+        <a
+          href={`/kasir/shift?next=${encodeURIComponent("/kasir/order")}`}
+          className="block bg-amber-50 border border-amber-300 rounded-2xl p-3 mb-4 hover:bg-amber-100"
+        >
+          <div className="text-amber-900 font-bold text-sm">⚠ Belum buka shift kasir</div>
+          <div className="text-xs text-amber-800 mt-1">
+            Buka shift dulu sebelum input order baru.
+          </div>
+        </a>
+      )}
+      {shiftStaleFlag && (
+        <a
+          href={`/kasir/shift?stale=1&next=${encodeURIComponent("/kasir/order")}`}
+          className="block bg-red-50 border border-red-300 rounded-2xl p-3 mb-4 hover:bg-red-100"
+        >
+          <div className="text-red-900 font-bold text-sm">⚠ Shift kemarin masih terbuka</div>
+          <div className="text-xs text-red-800 mt-1">
+            Tutup shift kemarin dulu supaya omzet tidak bercampur.
+          </div>
+        </a>
+      )}
       <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
         <DateRangeFilter
           active={range.key}

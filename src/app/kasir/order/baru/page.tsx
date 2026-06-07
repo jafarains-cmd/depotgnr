@@ -1,14 +1,26 @@
+import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { eq } from "drizzle-orm";
 import { produk } from "@/db/schema/produk";
 import { PageHeader } from "@/components/AppShell";
 import { requireRole } from "@/lib/permissions";
 import { OrderBaruClient } from "./OrderBaruClient";
+import { getShiftAktif, isShiftStale } from "@/lib/shift";
 
 export const dynamic = "force-dynamic";
 
 export default async function OrderBaruKasirPage() {
-  await requireRole(["admin", "kasir"]);
+  const session = await requireRole(["admin", "kasir"]);
+
+  // Pastikan kasir punya shift aktif sebelum bikin order (atas nama mereka)
+  const shiftAktif = await getShiftAktif(session.user.id);
+  if (!shiftAktif) {
+    redirect(`/kasir/shift?next=${encodeURIComponent("/kasir/order/baru")}`);
+  }
+  if (isShiftStale(shiftAktif.openedAt)) {
+    redirect(`/kasir/shift?stale=1&next=${encodeURIComponent("/kasir/order/baru")}`);
+  }
+
   const produkList = await db.query.produk.findMany({
     where: eq(produk.aktif, true),
     orderBy: (p, { asc }) => [asc(p.id)],
