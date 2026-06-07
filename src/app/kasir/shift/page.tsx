@@ -9,8 +9,14 @@ import { PageHeader } from "@/components/AppShell";
 
 export const dynamic = "force-dynamic";
 
-export default async function ShiftPage() {
+export default async function ShiftPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
   const session = await requireRole(["admin", "kasir"]);
+  const sp = await searchParams;
+  const next = sp.next?.trim() || null;
 
   const myShiftAktif = await getShiftAktif(session.user.id);
   const semuaShiftAktif = await getSemuaShiftAktif();
@@ -55,7 +61,20 @@ export default async function ShiftPage() {
         description="Buka shift saat mulai kerja, tutup saat selesai. Recap omzet cash + selisih kas otomatis."
       />
 
+      {next && !myShiftAktif && (
+        <div className="bg-amber-50 border border-amber-300 rounded-2xl p-3 mb-4">
+          <div className="text-sm font-bold text-amber-900">
+            ⚠ Buka shift untuk melanjutkan
+          </div>
+          <div className="text-xs text-amber-800 mt-1">
+            Anda diarahkan ke sini karena belum buka shift. Setelah buka shift,
+            otomatis kembali ke halaman sebelumnya.
+          </div>
+        </div>
+      )}
+
       <ShiftClient
+        nextUrl={next}
         myShiftAktif={
           myShiftAktif
             ? {

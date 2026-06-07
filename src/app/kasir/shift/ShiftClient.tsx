@@ -61,13 +61,16 @@ export function ShiftClient({
   ringkasanAktif,
   semuaShiftAktif,
   shiftHariIni,
+  nextUrl,
 }: {
   myShiftAktif: MyShiftAktif | null;
   ringkasanAktif: Ringkasan | null;
   semuaShiftAktif: ShiftAktif[];
   shiftHariIni: ShiftHariIni[];
+  nextUrl?: string | null;
 }) {
-  const [openBuka, setOpenBuka] = useState(false);
+  // Auto-open modal buka shift kalau ada nextUrl dan belum ada shift aktif
+  const [openBuka, setOpenBuka] = useState(Boolean(nextUrl && !myShiftAktif));
   const [openTutup, setOpenTutup] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -272,7 +275,12 @@ export function ShiftClient({
         </section>
       )}
 
-      {openBuka && <BukaModal onClose={() => setOpenBuka(false)} />}
+      {openBuka && (
+        <BukaModal
+          onClose={() => setOpenBuka(false)}
+          nextUrl={nextUrl ?? null}
+        />
+      )}
       {openTutup && myShiftAktif && ringkasanAktif && (
         <TutupModal
           shiftId={myShiftAktif.id}
@@ -307,7 +315,13 @@ function Stat({
   );
 }
 
-function BukaModal({ onClose }: { onClose: () => void }) {
+function BukaModal({
+  onClose,
+  nextUrl,
+}: {
+  onClose: () => void;
+  nextUrl: string | null;
+}) {
   const [openingCash, setOpeningCash] = useState("");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -325,7 +339,11 @@ function BukaModal({ onClose }: { onClose: () => void }) {
       if ("error" in r) setError(r.error);
       else {
         onClose();
-        router.refresh();
+        if (nextUrl) {
+          router.push(nextUrl);
+        } else {
+          router.refresh();
+        }
       }
     });
   }
@@ -345,6 +363,11 @@ function BukaModal({ onClose }: { onClose: () => void }) {
           Catat berapa uang di laci awal shift (opsional). Sistem akan bandingkan dengan
           uang fisik saat tutup shift untuk hitung selisih.
         </div>
+        {nextUrl && (
+          <div className="bg-sky-50 border border-sky-200 rounded-md p-2 text-[11px] text-sky-800">
+            ℹ Setelah buka shift, Anda akan otomatis dilanjutkan ke halaman sebelumnya.
+          </div>
+        )}
         <div>
           <label className="text-xs font-bold block mb-1">Uang Awal di Laci (Rp)</label>
           <input
