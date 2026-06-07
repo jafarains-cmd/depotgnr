@@ -11,6 +11,7 @@ import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { parseRange } from "@/lib/date-range";
 import { formatRupiah } from "@/lib/utils";
 import { alias } from "drizzle-orm/sqlite-core";
+import { getShiftStaleList, isShiftStale } from "@/lib/shift";
 
 const closedByUser = alias(userTable, "closed_by_user");
 
@@ -30,6 +31,7 @@ export default async function AdminShiftPage({
 }) {
   await requireRole(["admin"]);
   const sp = await searchParams;
+  const staleList = await getShiftStaleList();
   const range = parseRange(sp);
   const limit = parseLimit(sp.limit);
   const pageParam = parsePage(sp.page);
@@ -91,6 +93,49 @@ export default async function AdminShiftPage({
         />
         <PageSizeSelect value={limit} />
       </div>
+
+      {staleList.length > 0 && (
+        <div className="bg-red-50 border border-red-300 rounded-2xl p-4 space-y-3">
+          <div>
+            <div className="text-[10px] font-bold tracking-widest text-red-800">
+              ⚠ SHIFT BELUM DITUTUP (CROSS-MIDNIGHT)
+            </div>
+            <div className="text-sm text-red-900 mt-1">
+              {staleList.length} shift kasir terbuka sejak hari kemarin. Omzet akan
+              bercampur 2 hari kalau dibiarkan. Notif sudah dikirim ke grup WA &
+              Telegram.
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            {staleList.map((s) => {
+              const hours = Math.round(
+                (Date.now() - s.openedAt.getTime()) / (60 * 60 * 1000),
+              );
+              return (
+                <div
+                  key={s.id}
+                  className="bg-white border border-red-200 rounded-lg p-2 flex justify-between items-center"
+                >
+                  <div>
+                    <div className="font-bold text-sm">{s.kasirNama ?? "—"}</div>
+                    <div className="text-[11px] text-[color:var(--muted)]">
+                      Buka sejak{" "}
+                      {s.openedAt.toLocaleString("id-ID", {
+                        timeZone: "Asia/Makassar",
+                        day: "2-digit",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}{" "}
+                      ({hours} jam lalu)
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-surface border border-line rounded-xl p-3">
@@ -161,8 +206,10 @@ export default async function AdminShiftPage({
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
-              {rows.map((r) => (
-                <tr key={r.id}>
+              {rows.map((r) => {
+                const stale = r.status === "open" && isShiftStale(r.openedAt);
+                return (
+                <tr key={r.id} className={stale ? "bg-red-50" : ""}>
                   <td className="p-3 text-xs">
                     <div className="font-bold">{r.kasirNama ?? "—"}</div>
                     <div className="text-[10px] text-[color:var(--muted)] uppercase">
@@ -229,16 +276,19 @@ export default async function AdminShiftPage({
                   <td className="p-3">
                     <span
                       className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                        r.status === "open"
-                          ? "bg-emerald-100 text-emerald-800"
-                          : "bg-[color:var(--surface2)] text-[color:var(--muted)]"
+                        stale
+                          ? "bg-red-600 text-white animate-pulse"
+                          : r.status === "open"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-[color:var(--surface2)] text-[color:var(--muted)]"
                       }`}
                     >
-                      {r.status.toUpperCase()}
+                      {stale ? "STALE" : r.status.toUpperCase()}
                     </span>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
               {rows.length === 0 && (
                 <tr>
                   <td colSpan={8} className="p-8 text-center text-[color:var(--muted)]">

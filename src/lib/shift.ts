@@ -211,5 +211,61 @@ export async function resolveShiftId(args: {
 
 export const SHIFT_REOPEN_WINDOW_MS = REOPEN_WINDOW_MS;
 
+/**
+ * Deteksi shift "stale" — yaitu shift open yang sudah cross-midnight
+ * dibanding sekarang (timezone WIB). Pelanggaran akuntansi: omzet kemarin
+ * dan hari ini akan bercampur kalau dibiarkan.
+ *
+ * Definition: openedAt tanggal kalender (WIB) ≠ tanggal kalender sekarang.
+ */
+export function isShiftStale(openedAt: Date, now: Date = new Date()): boolean {
+  const tz = "Asia/Makassar"; // WIB
+  const openedDay = openedAt.toLocaleDateString("id-ID", { timeZone: tz });
+  const todayDay = now.toLocaleDateString("id-ID", { timeZone: tz });
+  return openedDay !== todayDay;
+}
+
+/**
+ * Hitung berapa shift open yang sudah stale (untuk badge nav admin).
+ */
+export async function countShiftStale(): Promise<number> {
+  const opens = await db
+    .select({ id: shiftKasir.id, openedAt: shiftKasir.openedAt })
+    .from(shiftKasir)
+    .where(eq(shiftKasir.status, "open"));
+  return opens.filter((s) => isShiftStale(s.openedAt)).length;
+}
+
+/**
+ * List shift stale dengan info kasir, untuk notif + halaman admin.
+ */
+export async function getShiftStaleList() {
+  const rows = await db
+    .select({
+      id: shiftKasir.id,
+      kasirUserId: shiftKasir.kasirUserId,
+      kasirNama: userTable.name,
+      openedAt: shiftKasir.openedAt,
+      openingCash: shiftKasir.openingCash,
+      staleNotifSentAt: shiftKasir.staleNotifSentAt,
+    })
+    .from(shiftKasir)
+    .leftJoin(userTable, eq(shiftKasir.kasirUserId, userTable.id))
+    .where(eq(shiftKasir.status, "open"))
+    .orderBy(shiftKasir.openedAt);
+  return rows.filter((s) => isShiftStale(s.openedAt));
+}
+
+/**
+ * Tandai shift sudah dinotif. Pakai bareng dengan notif sender supaya
+ * tidak spam (rate limit 6 jam per shift).
+ */
+export async function markShiftNotified(shiftId: number): Promise<void> {
+  await db
+    .update(shiftKasir)
+    .set({ staleNotifSentAt: new Date() })
+    .where(eq(shiftKasir.id, shiftId));
+}
+
 // Re-export gte/lte untuk konsumer (mis. admin shift filter range)
 export { gte as _gte, lte as _lte };

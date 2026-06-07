@@ -214,6 +214,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           label: "Shift Kasir",
           icon: <Coins size={16} />,
           iconColor: "text-amber-600",
+          badgeKey: "shiftStale",
         },
         {
           href: "/admin/pengaturan",

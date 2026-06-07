@@ -7,7 +7,7 @@ import { user as userTable } from "@/db/schema/auth";
 import { PageHeader } from "@/components/AppShell";
 import { POSClient, type Preset } from "./POSClient";
 import { requireRole } from "@/lib/permissions";
-import { getShiftAktif } from "@/lib/shift";
+import { getShiftAktif, isShiftStale } from "@/lib/shift";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +25,14 @@ export default async function POSPage({
   if (!shiftAktif) {
     const next = sp.orderId ? `/kasir/pos?orderId=${sp.orderId}` : "/kasir/pos";
     redirect(`/kasir/shift?next=${encodeURIComponent(next)}`);
+  }
+
+  // Shift open tapi sudah cross-midnight (lupa tutup) → wajib tutup dulu
+  // sebelum boleh input transaksi baru, supaya omzet kemarin & hari ini
+  // tidak bercampur di 1 shift.
+  if (isShiftStale(shiftAktif.openedAt)) {
+    const next = sp.orderId ? `/kasir/pos?orderId=${sp.orderId}` : "/kasir/pos";
+    redirect(`/kasir/shift?stale=1&next=${encodeURIComponent(next)}`);
   }
   const [produkList, pelangganList, kurirList] = await Promise.all([
     db.query.produk.findMany({ where: eq(produk.aktif, true), orderBy: (p, { asc }) => [asc(p.id)] }),

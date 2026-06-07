@@ -41,6 +41,9 @@ export const shiftKasir = sqliteTable(
     reopenedByUserId: text("reopened_by_user_id").references(() => user.id, {
       onDelete: "set null",
     }),
+    // Track terakhir kali notif "lupa tutup shift" dikirim (idempotency: kirim
+    // ulang hanya tiap 6 jam supaya tidak spam).
+    staleNotifSentAt: integer("stale_notif_sent_at", { mode: "timestamp" }),
   },
   (t) => ({
     kasirStatusIdx: index("shift_kasir_kasir_status_idx").on(t.kasirUserId, t.status),

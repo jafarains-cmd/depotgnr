@@ -12,11 +12,12 @@ export const dynamic = "force-dynamic";
 export default async function ShiftPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; stale?: string }>;
 }) {
   const session = await requireRole(["admin", "kasir"]);
   const sp = await searchParams;
   const next = sp.next?.trim() || null;
+  const isStaleRedirect = sp.stale === "1";
 
   const myShiftAktif = await getShiftAktif(session.user.id);
   const semuaShiftAktif = await getSemuaShiftAktif();
@@ -61,7 +62,7 @@ export default async function ShiftPage({
         description="Buka shift saat mulai kerja, tutup saat selesai. Recap omzet cash + selisih kas otomatis."
       />
 
-      {next && !myShiftAktif && (
+      {next && !myShiftAktif && !isStaleRedirect && (
         <div className="bg-amber-50 border border-amber-300 rounded-2xl p-3 mb-4">
           <div className="text-sm font-bold text-amber-900">
             ⚠ Buka shift untuk melanjutkan
@@ -73,8 +74,29 @@ export default async function ShiftPage({
         </div>
       )}
 
+      {isStaleRedirect && myShiftAktif && (
+        <div className="bg-red-50 border border-red-300 rounded-2xl p-3 mb-4">
+          <div className="text-sm font-bold text-red-900">
+            ⚠ Shift kemarin masih terbuka — wajib tutup dulu
+          </div>
+          <div className="text-xs text-red-800 mt-1 leading-snug">
+            Shift Anda dibuka sejak{" "}
+            {myShiftAktif.openedAt.toLocaleString("id-ID", {
+              day: "2-digit",
+              month: "short",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}{" "}
+            dan masih open. Tutup dulu shift kemarin (recap akan keluar untuk
+            uang fisik kemarin) supaya omzet tidak bercampur. Setelah ditutup,
+            buka shift baru hari ini.
+          </div>
+        </div>
+      )}
+
       <ShiftClient
         nextUrl={next}
+        autoOpenTutup={isStaleRedirect}
         myShiftAktif={
           myShiftAktif
             ? {

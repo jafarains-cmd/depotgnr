@@ -62,16 +62,19 @@ export function ShiftClient({
   semuaShiftAktif,
   shiftHariIni,
   nextUrl,
+  autoOpenTutup,
 }: {
   myShiftAktif: MyShiftAktif | null;
   ringkasanAktif: Ringkasan | null;
   semuaShiftAktif: ShiftAktif[];
   shiftHariIni: ShiftHariIni[];
   nextUrl?: string | null;
+  autoOpenTutup?: boolean;
 }) {
   // Auto-open modal buka shift kalau ada nextUrl dan belum ada shift aktif
   const [openBuka, setOpenBuka] = useState(Boolean(nextUrl && !myShiftAktif));
-  const [openTutup, setOpenTutup] = useState(false);
+  // Auto-open modal tutup shift kalau stale (lupa tutup kemarin)
+  const [openTutup, setOpenTutup] = useState(Boolean(autoOpenTutup && myShiftAktif));
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const [msg, setMsg] = useState<string | null>(null);

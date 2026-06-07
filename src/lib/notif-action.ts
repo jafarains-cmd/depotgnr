@@ -14,6 +14,9 @@ import {
   countKomplainPelangganActive,
   countPelangganDenganGalonPinjam,
 } from "./notifications";
+import { countShiftStale } from "./shift";
+import { notifStaleShiftsIfNeeded } from "./shift-stale-notif";
+import { bestEffort } from "./best-effort";
 import { countChurnRisk } from "./analytics";
 
 export type NotifCounts = {
@@ -25,6 +28,7 @@ export type NotifCounts = {
   pesanan?: number;
   komplain?: number;
   galonPinjam?: number;
+  shiftStale?: number;
 };
 
 /**
@@ -37,16 +41,30 @@ export async function getNotifCountsForCurrentUser(): Promise<NotifCounts> {
   const role = session.user.role ?? "pelanggan";
 
   if (role === "admin") {
-    const [orderMasuk, pembayaran, kurirAktif, bonusPending, churn, komplainBaru, galonPinjam] =
-      await Promise.all([
-        countOrderMasuk(),
-        countPembayaranMenunggu(),
-        countKurirAktif(session.user.id),
-        countKurirBonusPending(),
-        countChurnRisk().catch(() => ({ due: 0, overdue: 0, churn: 0 })),
-        countKomplainBaru(),
-        countPelangganDenganGalonPinjam(),
-      ]);
+    const [
+      orderMasuk,
+      pembayaran,
+      kurirAktif,
+      bonusPending,
+      churn,
+      komplainBaru,
+      galonPinjam,
+      shiftStale,
+    ] = await Promise.all([
+      countOrderMasuk(),
+      countPembayaranMenunggu(),
+      countKurirAktif(session.user.id),
+      countKurirBonusPending(),
+      countChurnRisk().catch(() => ({ due: 0, overdue: 0, churn: 0 })),
+      countKomplainBaru(),
+      countPelangganDenganGalonPinjam(),
+      countShiftStale(),
+    ]);
+    // Best-effort: kirim notif ke grup WA/Telegram untuk shift stale yang
+    // belum dinotif dalam 6 jam terakhir. Dipicu lazy saat admin akses dashboard.
+    if (shiftStale > 0) {
+      bestEffort("notifStaleShifts", notifStaleShiftsIfNeeded().then(() => {}));
+    }
     return {
       orderMasuk,
       pembayaran,
@@ -55,6 +73,7 @@ export async function getNotifCountsForCurrentUser(): Promise<NotifCounts> {
       followUp: churn.due + churn.overdue + churn.churn,
       komplain: komplainBaru,
       galonPinjam,
+      shiftStale,
     };
   }
 
