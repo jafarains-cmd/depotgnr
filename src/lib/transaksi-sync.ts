@@ -67,6 +67,8 @@ export async function syncTransaksiFromOrder(orderId: number): Promise<void> {
         status: "lunas",
         catatan: `Auto-sync dari order ${o.nomorOrder}`,
         refOrderId: orderId,
+        // Inherit shift dari order asal supaya recap shift akurat
+        shiftId: o.shiftId ?? null,
         createdAt,
       })
       .returning({ id: transaksi.id })
