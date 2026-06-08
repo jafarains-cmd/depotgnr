@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Check, X, ExternalLink, FileText, ChevronDown, ChevronRight, FileStack, Unlink } from "lucide-react";
-import { konfirmasiBayar, tolakBayar } from "./actions";
+import { Check, X, ExternalLink, FileText, ChevronDown, ChevronRight, FileStack, Unlink, Loader2 } from "lucide-react";
+import { konfirmasiBayar, tolakBayar, bayarPiutangPartial } from "./actions";
 import { tandaiLunasBatch, lepasNotaGabungan } from "../admin/nota-gabungan/actions";
 import { formatRupiah } from "@/lib/utils";
 import { normalizeDriveUrl, isPdfUrl } from "@/lib/drive-url";
@@ -13,6 +13,7 @@ export type Row = {
   id: number;
   nomorOrder: string;
   total: number;
+  paidPartial: number;
   metode: string | null;
   status: string; // statusBayar: belum | menunggu | lunas
   statusOrder: string;
@@ -48,6 +49,10 @@ export function PembayaranClient({
   function isPiutang(r: Row) {
     return r.statusOrder === "selesai" && r.status === "belum";
   }
+  function sisaPiutang(r: Row): number {
+    return Math.max(0, r.total - r.paidPartial);
+  }
+  const [bayarPartialFor, setBayarPartialFor] = useState<Row | null>(null);
 
   function umurHari(r: Row): number {
     const ref = r.selesaiAt ?? r.diantarAt ?? r.createdAt;
@@ -164,6 +169,18 @@ export function PembayaranClient({
       {detailId !== null && (
         <DetailModal kind="order" id={detailId} onClose={() => setDetailId(null)} />
       )}
+
+      {bayarPartialFor && (
+        <CicilanModal
+          row={bayarPartialFor}
+          onClose={() => setBayarPartialFor(null)}
+          onDone={(r) => {
+            if (r.lunas) toast.show(`✓ Lunas penuh — ${formatRupiah(r.totalDibayar)}`);
+            else toast.show(`💵 Cicilan ${formatRupiah(r.totalDibayar)} dicatat. Sisa ${formatRupiah(r.sisaPiutang)}`);
+            setBayarPartialFor(null);
+          }}
+        />
+      )}
     </div>
   );
 
@@ -211,7 +228,7 @@ export function PembayaranClient({
                   {isPiutang(r) ? "PIUTANG" : r.status.toUpperCase()}
                 </span>
                 {isPiutang(r) && (
-                  <div className="mt-1">
+                  <div className="mt-1 space-y-1">
                     <span
                       className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
                         isMenua(r)
@@ -221,6 +238,12 @@ export function PembayaranClient({
                     >
                       🕒 {umurHari(r)} hari{isMenua(r) ? " · MENUA" : ""}
                     </span>
+                    {r.paidPartial > 0 && (
+                      <div className="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 inline-block">
+                        💵 Cicilan: {formatRupiah(r.paidPartial)} / {formatRupiah(r.total)} · Sisa{" "}
+                        <b>{formatRupiah(sisaPiutang(r))}</b>
+                      </div>
+                    )}
                   </div>
                 )}
                 {r.diantarAt && r.statusOrder === "selesai" && (
@@ -304,8 +327,19 @@ export function PembayaranClient({
                   }}
                   className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-extrabold inline-flex items-center justify-center gap-1.5 disabled:opacity-50 active:scale-[0.98] transition"
                 >
-                  <Check size={14} /> {isPiutang(r) ? "Tandai Lunas" : "Konfirmasi Lunas"}
+                  <Check size={14} /> {isPiutang(r) ? "Lunas Penuh" : "Konfirmasi Lunas"}
                 </button>
+                {/* Tombol bayar sebagian (cicilan) — hanya untuk piutang */}
+                {isPiutang(r) && (
+                  <button
+                    disabled={pending}
+                    onClick={() => setBayarPartialFor(r)}
+                    className="px-3 py-2.5 border-2 border-amber-300 text-amber-700 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-1 disabled:opacity-50"
+                    title="Bayar sebagian / cicilan"
+                  >
+                    Cicilan
+                  </button>
+                )}
                 {/* Tombol tolak hanya untuk yang punya bukti (statusBayar=menunggu) */}
                 {r.status === "menunggu" && (
                   <button
@@ -479,6 +513,158 @@ function GroupCard({
         >
           <FileText size={12} /> Cetak
         </a>
+      </div>
+    </div>
+  );
+}
+
+function CicilanModal({
+  row,
+  onClose,
+  onDone,
+}: {
+  row: Row;
+  onClose: () => void;
+  onDone: (r: { lunas: boolean; sisaPiutang: number; totalDibayar: number }) => void;
+}) {
+  const sisaSekarang = Math.max(0, row.total - row.paidPartial);
+  const [jumlah, setJumlah] = useState(String(sisaSekarang));
+  const [catatan, setCatatan] = useState("");
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const jumlahNum = Math.max(0, Math.floor(Number(jumlah) || 0));
+  const dialokasikan = Math.min(jumlahNum, sisaSekarang);
+  const akanLunas = dialokasikan >= sisaSekarang;
+  const sisaSetelah = Math.max(0, sisaSekarang - dialokasikan);
+
+  const presetButtons = [
+    { label: "Lunas", value: sisaSekarang },
+    { label: "1/2", value: Math.floor(sisaSekarang / 2) },
+    { label: "Bulat 50k", value: Math.floor(sisaSekarang / 50000) * 50000 },
+    { label: "Bulat 10k", value: Math.floor(sisaSekarang / 10000) * 10000 },
+    { label: "Bulat 5k", value: Math.floor(sisaSekarang / 5000) * 5000 },
+  ].filter((p) => p.value > 0 && p.value <= sisaSekarang);
+
+  function submit() {
+    setError(null);
+    if (jumlahNum <= 0) {
+      setError("Jumlah bayar harus > 0");
+      return;
+    }
+    startTransition(async () => {
+      const r = await bayarPiutangPartial({
+        orderId: row.id,
+        jumlahBayar: jumlahNum,
+        catatan: catatan.trim() || undefined,
+      });
+      if ("error" in r) setError(r.error);
+      else onDone({ lunas: r.lunas, sisaPiutang: r.sisaPiutang, totalDibayar: r.totalDibayar });
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 grid place-items-center p-4">
+      <div className="bg-surface rounded-2xl max-w-md w-full p-5 space-y-3">
+        <div className="flex justify-between items-start">
+          <div>
+            <h2 className="font-bold text-lg">Bayar Cicilan</h2>
+            <div className="text-xs text-[color:var(--muted)] mt-0.5">
+              {row.nomorOrder} · {row.pelangganNama ?? "—"}
+            </div>
+          </div>
+          <button onClick={onClose}>
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-1 text-xs">
+          <div className="flex justify-between">
+            <span className="text-[color:var(--muted)]">Total piutang</span>
+            <b>{formatRupiah(row.total)}</b>
+          </div>
+          {row.paidPartial > 0 && (
+            <div className="flex justify-between">
+              <span className="text-[color:var(--muted)]">Sudah dibayar</span>
+              <b className="text-emerald-700">{formatRupiah(row.paidPartial)}</b>
+            </div>
+          )}
+          <div className="flex justify-between pt-1 border-t border-amber-200 font-bold">
+            <span>Sisa sekarang</span>
+            <span className="text-amber-800">{formatRupiah(sisaSekarang)}</span>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs font-bold block mb-1">Jumlah Bayar (Rp)</label>
+          <input
+            type="number"
+            min={0}
+            value={jumlah}
+            onChange={(e) => setJumlah(e.target.value)}
+            className="w-full px-3 py-2 border border-line rounded-md text-lg font-mono"
+            autoFocus
+          />
+          <div className="flex gap-1.5 mt-2 flex-wrap">
+            {presetButtons.map((p) => (
+              <button
+                key={p.label}
+                type="button"
+                onClick={() => setJumlah(String(p.value))}
+                className="px-2 py-1 text-[11px] border border-line rounded-md hover:border-brand"
+              >
+                {p.label}: {formatRupiah(p.value)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div
+          className={`rounded-xl p-3 text-sm font-bold ${
+            akanLunas
+              ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+              : "bg-amber-50 text-amber-800 border border-amber-200"
+          }`}
+        >
+          {akanLunas ? (
+            <>✓ LUNAS PENUH setelah bayar ini</>
+          ) : (
+            <>
+              💵 Cicilan {formatRupiah(dialokasikan)} · Sisa pending{" "}
+              <b>{formatRupiah(sisaSetelah)}</b>
+            </>
+          )}
+        </div>
+
+        <div>
+          <label className="text-xs font-bold block mb-1">Catatan (opsional)</label>
+          <input
+            value={catatan}
+            onChange={(e) => setCatatan(e.target.value)}
+            placeholder="mis: bayar sebagian, sisa minggu depan"
+            className="w-full px-3 py-2 border border-line rounded-md text-sm"
+          />
+        </div>
+
+        {error && <div className="text-xs text-red-600">{error}</div>}
+
+        <div className="flex justify-end gap-2 pt-2 border-t border-line">
+          <button
+            onClick={onClose}
+            disabled={pending}
+            className="px-4 py-2 border border-line rounded-md text-sm"
+          >
+            Batal
+          </button>
+          <button
+            onClick={submit}
+            disabled={pending || jumlahNum <= 0}
+            className="px-4 py-2 bg-emerald-600 text-white rounded-md text-sm font-bold inline-flex items-center gap-1.5 disabled:opacity-50"
+          >
+            {pending && <Loader2 size={14} className="animate-spin" />}
+            Catat Pembayaran
+          </button>
+        </div>
       </div>
     </div>
   );

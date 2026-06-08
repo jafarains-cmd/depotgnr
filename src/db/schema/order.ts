@@ -76,6 +76,9 @@ export const orderHeader = sqliteTable("order", {
   sheetRowId: text("sheet_row_id"),
   lastSyncedAt: integer("last_synced_at", { mode: "timestamp" }),
   shiftId: integer("shift_id"),
+  // Cicilan piutang: berapa rupiah yang sudah dibayar dari totalEstimasi.
+  // Status lunas saat paidPartial >= totalEstimasi. Pending saat <.
+  paidPartial: integer("paid_partial").notNull().default(0),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 }, (t) => ({

@@ -30,6 +30,7 @@ export async function konfirmasiBayar(
     .update(orderHeader)
     .set({
       statusBayar: "lunas",
+      paidPartial: o.totalEstimasi, // tutup penuh (consistent dengan effective check)
       bayarAt: new Date(),
       bayarDikonfirmasiOleh: session.user.id,
       updatedAt: new Date(),
@@ -47,6 +48,69 @@ export async function konfirmasiBayar(
   revalidatePath(`/pelanggan/order/${orderId}/bayar`);
   revalidatePath("/pelanggan/riwayat");
   return { ok: true };
+}
+
+/**
+ * Bayar piutang sebagian (cicilan). Pelanggan bayar X dari total Y.
+ * - Kalau jumlahBayar >= sisa piutang → lunas penuh (status=lunas)
+ * - Kalau jumlahBayar < sisa → tambah ke paidPartial, status tetap belum
+ */
+export async function bayarPiutangPartial(args: {
+  orderId: number;
+  jumlahBayar: number;
+  catatan?: string;
+}): Promise<
+  | { ok: true; lunas: boolean; sisaPiutang: number; totalDibayar: number }
+  | { error: string }
+> {
+  const session = await requireRole(["admin", "kasir"]);
+  if (!Number.isFinite(args.jumlahBayar) || args.jumlahBayar <= 0) {
+    return { error: "Jumlah bayar harus > 0" };
+  }
+  const o = await db.query.orderHeader.findFirst({
+    where: eq(orderHeader.id, args.orderId),
+  });
+  if (!o) return { error: "Order tidak ditemukan" };
+  if (o.statusBayar === "lunas") return { error: "Piutang sudah lunas" };
+
+  const jumlah = Math.floor(args.jumlahBayar);
+  const sisaSekarang = o.totalEstimasi - o.paidPartial;
+  const dialokasikan = Math.min(jumlah, sisaSekarang);
+  const newPaidPartial = o.paidPartial + dialokasikan;
+  const lunas = newPaidPartial >= o.totalEstimasi;
+  const now = new Date();
+
+  await db
+    .update(orderHeader)
+    .set({
+      paidPartial: newPaidPartial,
+      statusBayar: lunas ? "lunas" : o.statusBayar,
+      bayarAt: lunas ? now : o.bayarAt,
+      bayarDikonfirmasiOleh: lunas ? session.user.id : o.bayarDikonfirmasiOleh,
+      catatan: args.catatan?.trim()
+        ? `${o.catatan ? o.catatan + " · " : ""}[Cicilan ${formatRupiah(dialokasikan)} oleh ${session.user.name}${args.catatan ? `: ${args.catatan}` : ""}]`
+        : o.catatan,
+      updatedAt: now,
+    })
+    .where(eq(orderHeader.id, args.orderId));
+
+  // Kalau jadi lunas → trigger side-effects sama dengan konfirmasiBayar
+  if (lunas) {
+    bestEffort("notifLunas(partial)", notifLunas(args.orderId));
+    bestEffort("earnFromOrderIfEligible(partial)", earnFromOrderIfEligible(args.orderId));
+    bestEffort("recordKurirBonus(partial)", recordKurirBonus(args.orderId));
+    bestEffort("syncTransaksiFromOrder(partial)", syncTransaksiFromOrder(args.orderId));
+  }
+
+  revalidatePath("/pembayaran");
+  revalidatePath(`/pelanggan/order/${args.orderId}/bayar`);
+  revalidatePath("/pelanggan/riwayat");
+  return {
+    ok: true,
+    lunas,
+    sisaPiutang: Math.max(0, o.totalEstimasi - newPaidPartial),
+    totalDibayar: dialokasikan,
+  };
 }
 
 export async function tolakBayar(
