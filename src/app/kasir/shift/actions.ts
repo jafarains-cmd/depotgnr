@@ -98,6 +98,55 @@ export async function tutupShiftAction(args: {
   return r;
 }
 
+/**
+ * Force-close shift kasir lain (admin only). Untuk skenario lupa tutup
+ * atau kasir resign. Wajib alasan. Bisa input uang fisik atau biarkan 0.
+ */
+export async function forceCloseShiftAction(args: {
+  shiftId: number;
+  closingCashCounted: number;
+  alasan: string;
+}): Promise<
+  | { ok: true; selisih: number; expected: number }
+  | { error: string }
+> {
+  const session = await requireRole(["admin"]);
+  const alasan = args.alasan.trim();
+  if (alasan.length < 3) return { error: "Alasan force-close wajib (min 3 karakter)" };
+  if (!Number.isFinite(args.closingCashCounted) || args.closingCashCounted < 0) {
+    return { error: "Jumlah uang fisik harus >= 0 (input 0 kalau tidak tahu)" };
+  }
+
+  const r = await tutupShiftLib({
+    shiftId: args.shiftId,
+    closingCashCounted: Math.floor(args.closingCashCounted),
+    catatan: `[FORCE-CLOSE oleh admin ${session.user.name}] ${alasan}`,
+    buktiFotoUrl: null,
+    closedByUserId: session.user.id,
+  });
+  if ("error" in r) return r;
+
+  await logAudit({
+    actorUserId: session.user.id,
+    action: "shift.force-close",
+    entity: "shift_kasir",
+    entityId: args.shiftId,
+    after: {
+      closingCashCounted: args.closingCashCounted,
+      expected: r.expected,
+      selisih: r.selisih,
+    },
+    meta: { alasan, forceClose: true },
+  });
+
+  bestEffort("notifShiftTutup(force)", notifShiftTutup(args.shiftId, session.user.name));
+
+  revalidatePath("/kasir/shift");
+  revalidatePath("/admin/shift");
+  revalidatePath("/admin");
+  return r;
+}
+
 export async function reopenShiftAction(
   shiftId: number,
 ): Promise<{ ok: true } | { error: string }> {

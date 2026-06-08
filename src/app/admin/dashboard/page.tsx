@@ -13,6 +13,8 @@ import { bahanBaku } from "@/db/schema/bahan-baku";
 import { sql, gte, eq, desc, ne, lt, and, isNull } from "drizzle-orm";
 import { formatRupiah } from "@/lib/utils";
 import { countChurnRisk } from "@/lib/analytics";
+import { getSemuaShiftAktif, isShiftStale, ringkasanShift } from "@/lib/shift";
+import { Clock, Lock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -158,6 +160,22 @@ export default async function DashboardPage() {
       ? Math.round(((omzetThisMonth - omzetLastMonth) / omzetLastMonth) * 100)
       : null;
 
+  // Shift kasir aktif saat ini (untuk widget dashboard)
+  const shiftAktifList = await getSemuaShiftAktif();
+  const shiftAktifDetail = await Promise.all(
+    shiftAktifList.map(async (s) => {
+      const ring = await ringkasanShift(s.id);
+      return {
+        id: s.id,
+        kasirNama: s.kasirNama,
+        openedAt: s.openedAt,
+        stale: isShiftStale(s.openedAt),
+        omzetCash: ring.omzetCash,
+        jumlahTransaksi: ring.jumlahTransaksi,
+      };
+    }),
+  );
+
   return (
     <div className="p-4 md:p-6 max-w-6xl space-y-5">
       {/* Hero card */}
@@ -202,6 +220,76 @@ export default async function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Shift Kasir Aktif */}
+      {shiftAktifDetail.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-[11px] font-bold tracking-widest text-[color:var(--muted)] inline-flex items-center gap-1.5">
+              <Clock size={12} /> SHIFT KASIR AKTIF ({shiftAktifDetail.length})
+            </div>
+            <Link
+              href="/admin/shift"
+              className="text-[11px] text-brand font-bold inline-flex items-center gap-0.5"
+            >
+              Kelola semua →
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {shiftAktifDetail.map((s) => (
+              <div
+                key={s.id}
+                className={`rounded-2xl p-3 border ${
+                  s.stale
+                    ? "bg-red-50 border-red-300"
+                    : "bg-emerald-50 border-emerald-200"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="font-bold text-sm inline-flex items-center gap-1.5">
+                      {s.kasirNama ?? "—"}
+                      {s.stale && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-600 text-white font-bold animate-pulse">
+                          STALE
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[10px] text-[color:var(--muted)] mt-0.5">
+                      Sejak{" "}
+                      {s.openedAt.toLocaleString("id-ID", {
+                        day: "2-digit",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
+                  </div>
+                  {s.stale && (
+                    <Link
+                      href="/admin/shift"
+                      title="Force-close shift kemarin"
+                      className="text-[10px] px-2 py-1 bg-red-600 text-white rounded font-bold inline-flex items-center gap-1"
+                    >
+                      <Lock size={10} /> Aksi
+                    </Link>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-line/50 text-xs">
+                  <div>
+                    <div className="text-[9px] text-[color:var(--muted)] uppercase">Transaksi</div>
+                    <div className="font-bold">{s.jumlahTransaksi}</div>
+                  </div>
+                  <div>
+                    <div className="text-[9px] text-[color:var(--muted)] uppercase">Omzet cash</div>
+                    <div className="font-bold text-emerald-700">{formatRupiah(s.omzetCash)}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Hari ini */}
       <div>

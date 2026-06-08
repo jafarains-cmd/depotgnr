@@ -11,7 +11,8 @@ import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { parseRange } from "@/lib/date-range";
 import { formatRupiah } from "@/lib/utils";
 import { alias } from "drizzle-orm/sqlite-core";
-import { getShiftStaleList, isShiftStale } from "@/lib/shift";
+import { getShiftStaleList, isShiftStale, ringkasanShift } from "@/lib/shift";
+import { ForceCloseButton } from "./ForceCloseButton";
 
 const closedByUser = alias(userTable, "closed_by_user");
 
@@ -83,6 +84,30 @@ export default async function AdminShiftPage({
     })
     .from(shiftKasir)
     .where(whereClause);
+
+  // Hitung ekspektasi cash untuk shift open (untuk pass ke force-close button)
+  const openShiftIds = rows.filter((r) => r.status === "open").map((r) => r.id);
+  const expectedMap = new Map<number, number>();
+  for (const id of openShiftIds) {
+    const ring = await ringkasanShift(id);
+    expectedMap.set(id, ring.expected);
+  }
+
+  // Aggregate per kasir (top 10) — siapa paling sering shift + total selisih kumulatif
+  const perKasirRaw = await db
+    .select({
+      kasirUserId: shiftKasir.kasirUserId,
+      kasirNama: userTable.name,
+      jumlahShift: sql<number>`count(*)`,
+      totalSelisih: sql<number>`coalesce(sum(${shiftKasir.selisih}), 0)`,
+      shiftStale: sql<number>`coalesce(sum(case when ${shiftKasir.status} = 'open' then 1 else 0 end), 0)`,
+    })
+    .from(shiftKasir)
+    .leftJoin(userTable, eq(shiftKasir.kasirUserId, userTable.id))
+    .where(whereClause)
+    .groupBy(shiftKasir.kasirUserId)
+    .orderBy(desc(sql<number>`count(*)`))
+    .limit(10);
 
   return (
     <div className="p-4 md:p-6 max-w-6xl space-y-4">
@@ -170,6 +195,53 @@ export default async function AdminShiftPage({
         basePath="/admin/shift"
       />
 
+      {perKasirRaw.length > 0 && (
+        <section>
+          <h2 className="text-xs font-bold tracking-widest text-[color:var(--muted)] mb-2">
+            REKAP PER KASIR
+          </h2>
+          <div className="bg-surface border border-line rounded-2xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left text-xs">
+                <tr>
+                  <th className="p-3">Kasir</th>
+                  <th className="p-3 text-right">Jumlah Shift</th>
+                  <th className="p-3 text-right">Open</th>
+                  <th className="p-3 text-right">Total Selisih</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {perKasirRaw.map((k) => (
+                  <tr key={k.kasirUserId}>
+                    <td className="p-3 font-bold">{k.kasirNama ?? "—"}</td>
+                    <td className="p-3 text-right text-xs">{k.jumlahShift}</td>
+                    <td className="p-3 text-right text-xs">
+                      {Number(k.shiftStale) > 0 ? (
+                        <span className="text-emerald-700 font-bold">{k.shiftStale}</span>
+                      ) : (
+                        <span className="text-[color:var(--muted)]">0</span>
+                      )}
+                    </td>
+                    <td
+                      className={`p-3 text-right text-xs font-mono font-bold ${
+                        Number(k.totalSelisih) === 0
+                          ? "text-[color:var(--muted)]"
+                          : Number(k.totalSelisih) > 0
+                            ? "text-emerald-700"
+                            : "text-red-600"
+                      }`}
+                    >
+                      {Number(k.totalSelisih) > 0 ? "+" : ""}
+                      {formatRupiah(Number(k.totalSelisih))}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       <div className="flex gap-1 text-sm flex-wrap">
         {[
           { f: "", label: "Semua" },
@@ -203,6 +275,7 @@ export default async function AdminShiftPage({
                 <th className="p-3 text-right">Fisik</th>
                 <th className="p-3 text-right">Selisih</th>
                 <th className="p-3">Status</th>
+                <th className="p-3 text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -285,6 +358,15 @@ export default async function AdminShiftPage({
                     >
                       {stale ? "STALE" : r.status.toUpperCase()}
                     </span>
+                  </td>
+                  <td className="p-3 text-right">
+                    {r.status === "open" && (
+                      <ForceCloseButton
+                        shiftId={r.id}
+                        kasirNama={r.kasirNama ?? "—"}
+                        expectedCash={expectedMap.get(r.id) ?? 0}
+                      />
+                    )}
                   </td>
                 </tr>
                 );
