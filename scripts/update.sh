@@ -53,7 +53,31 @@ run_as_user "git pull --ff-only"
 HEAD_AFTER=$(run_as_user "git rev-parse HEAD")
 
 if [[ "$HEAD_BEFORE" == "$HEAD_AFTER" ]]; then
-  log "Sudah versi terbaru ($HEAD_AFTER). Skip build & restart."
+  log "Sudah versi terbaru ($HEAD_AFTER)."
+
+  # Cek apakah build artifact sehat. Next.js write .next/BUILD_ID paling
+  # terakhir, jadi file ini = marker build selesai. Kalau hilang →
+  # build rusak/parsial (storage penuh, restart paksa di tengah build,
+  # backup salah hapus, dll) → service akan crash loop.
+  if [[ ! -f "$APP_DIR/.next/BUILD_ID" ]]; then
+    warn ".next/BUILD_ID hilang — build rusak/hilang. Force rebuild..."
+    run_as_user "rm -rf .next && npm run build"
+    log "Run db:migrate sebagai safety net..."
+    run_as_user "npm run db:migrate" || true
+    log "Restart $SERVICE..."
+    systemctl restart "$SERVICE"
+    sleep 2
+    if systemctl is-active --quiet "$SERVICE"; then
+      log "✓ $SERVICE running. Recovery selesai."
+    else
+      err "$SERVICE TIDAK running setelah rebuild!"
+      echo "Cek log: journalctl -u $SERVICE -n 50"
+      exit 1
+    fi
+    exit 0
+  fi
+
+  log "Build sehat. Skip build & restart."
   # Tetap jalankan migrate sebagai safety net (idempotent) — kasus
   # kalau prior run skip migrate karena diff window tidak include SQL.
   log "Run db:migrate sebagai safety net..."
