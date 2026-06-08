@@ -9,7 +9,7 @@ import { OrderClient, type OrderRow } from "./OrderClient";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { parseRange } from "@/lib/date-range";
 import { requireRole } from "@/lib/permissions";
-import { getShiftAktif, isShiftStale } from "@/lib/shift";
+import { getShiftAktif, isShiftStale, getShiftStaleThresholdJam } from "@/lib/shift";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
 import { Pagination } from "@/components/Pagination";
 import { parseLimit, parsePage, getPagination } from "@/lib/page-size";
@@ -35,7 +35,10 @@ export default async function OrderKasirPage({
 
   // Banner status shift kasir (tidak redirect — list boleh dilihat untuk monitoring)
   const shiftAktif = await getShiftAktif(session.user.id);
-  const shiftStaleFlag = shiftAktif ? isShiftStale(shiftAktif.openedAt) : false;
+  const shiftStaleThresh = await getShiftStaleThresholdJam();
+  const shiftStaleFlag = shiftAktif
+    ? isShiftStale(shiftAktif.openedAt, shiftStaleThresh)
+    : false;
   const range = parseRange(sp);
   const limit = parseLimit(sp.limit);
   const pageParam = parsePage(sp.page);

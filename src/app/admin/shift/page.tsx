@@ -11,7 +11,12 @@ import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { parseRange } from "@/lib/date-range";
 import { formatRupiah } from "@/lib/utils";
 import { alias } from "drizzle-orm/sqlite-core";
-import { getShiftStaleList, isShiftStale, ringkasanShift } from "@/lib/shift";
+import {
+  getShiftStaleList,
+  isShiftStale,
+  ringkasanShift,
+  getShiftStaleThresholdJam,
+} from "@/lib/shift";
 import { ForceCloseButton } from "./ForceCloseButton";
 
 const closedByUser = alias(userTable, "closed_by_user");
@@ -33,6 +38,7 @@ export default async function AdminShiftPage({
   await requireRole(["admin"]);
   const sp = await searchParams;
   const staleList = await getShiftStaleList();
+  const staleThreshold = await getShiftStaleThresholdJam();
   const range = parseRange(sp);
   const limit = parseLimit(sp.limit);
   const pageParam = parsePage(sp.page);
@@ -280,7 +286,7 @@ export default async function AdminShiftPage({
             </thead>
             <tbody className="divide-y divide-line">
               {rows.map((r) => {
-                const stale = r.status === "open" && isShiftStale(r.openedAt);
+                const stale = r.status === "open" && isShiftStale(r.openedAt, staleThreshold);
                 return (
                 <tr key={r.id} className={stale ? "bg-red-50" : ""}>
                   <td className="p-3 text-xs">

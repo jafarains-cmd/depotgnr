@@ -268,6 +268,11 @@ const ALL_FIELDS: Record<string, Field> = {
     label: "Threshold Piutang Menua (hari)",
     help: "Piutang (order selesai status bayar=belum) > X hari di-flag sebagai 'menua' dengan badge merah di /pembayaran. Default 30. Set 0 untuk nonaktif.",
   },
+  shiftStaleAfterJam: {
+    key: "shiftStaleAfterJam",
+    label: "Shift Dianggap Lupa Tutup Setelah (jam)",
+    help: "Shift open > X jam di-flag sebagai 'lupa tutup' (banner peringatan di POS + notif admin WA/TG). Default 18 jam — cukup untuk shift malam normal yang lewat tengah malam. Set 0 untuk nonaktif total.",
+  },
 };
 
 type Tab = {
@@ -295,6 +300,7 @@ const TABS: Tab[] = [
       "footerNota",
       "zonaWaktu",
       "thresholdPiutangMenuaHari",
+      "shiftStaleAfterJam",
     ],
   },
   {

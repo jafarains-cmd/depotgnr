@@ -211,35 +211,63 @@ export async function resolveShiftId(args: {
 
 export const SHIFT_REOPEN_WINDOW_MS = REOPEN_WINDOW_MS;
 
+const DEFAULT_STALE_JAM = 18;
+
 /**
- * Deteksi shift "stale" — yaitu shift open yang sudah cross-midnight
- * dibanding sekarang (timezone WIB). Pelanggaran akuntansi: omzet kemarin
- * dan hari ini akan bercampur kalau dibiarkan.
- *
- * Definition: openedAt tanggal kalender (WIB) ≠ tanggal kalender sekarang.
+ * Threshold dari pengaturan: berapa jam shift open baru dianggap "lupa tutup".
+ * Default 18 jam — cukup longgar untuk shift malam normal (buka sore, kerja
+ * sampai lewat tengah malam). Set 0 di pengaturan untuk nonaktif total.
  */
-export function isShiftStale(openedAt: Date, now: Date = new Date()): boolean {
-  const tz = "Asia/Makassar"; // WIB
-  const openedDay = openedAt.toLocaleDateString("id-ID", { timeZone: tz });
-  const todayDay = now.toLocaleDateString("id-ID", { timeZone: tz });
-  return openedDay !== todayDay;
+export async function getShiftStaleThresholdJam(): Promise<number> {
+  // Dynamic import untuk avoid circular reference pengaturan ↔ shift
+  const { pengaturan } = await import("@/db/schema/pengaturan");
+  const row = await db.query.pengaturan.findFirst({
+    where: eq(pengaturan.key, "shiftStaleAfterJam"),
+  });
+  const n = Number(row?.value);
+  if (!Number.isFinite(n) || n < 0) return DEFAULT_STALE_JAM;
+  return Math.floor(n);
+}
+
+/**
+ * Deteksi shift "stale" — shift open yang sudah berjalan > threshold jam.
+ * Default 18 jam: cukup untuk shift malam normal (buka sore, masih jalan
+ * jam 1-2 pagi = ~10 jam, BELUM stale). Shift > 18 jam = kemungkinan
+ * besar kasir lupa tutup.
+ *
+ * Pakai versi sync untuk performa di mass-check (countShiftStale list).
+ * Default fallback 18 kalau threshold belum di-set.
+ */
+export function isShiftStale(
+  openedAt: Date,
+  thresholdJam: number = DEFAULT_STALE_JAM,
+  now: Date = new Date(),
+): boolean {
+  if (thresholdJam === 0) return false; // disabled
+  const ageMs = now.getTime() - openedAt.getTime();
+  return ageMs > thresholdJam * 60 * 60 * 1000;
 }
 
 /**
  * Hitung berapa shift open yang sudah stale (untuk badge nav admin).
+ * Async version — baca threshold dari pengaturan.
  */
 export async function countShiftStale(): Promise<number> {
+  const threshold = await getShiftStaleThresholdJam();
+  if (threshold === 0) return 0;
   const opens = await db
     .select({ id: shiftKasir.id, openedAt: shiftKasir.openedAt })
     .from(shiftKasir)
     .where(eq(shiftKasir.status, "open"));
-  return opens.filter((s) => isShiftStale(s.openedAt)).length;
+  return opens.filter((s) => isShiftStale(s.openedAt, threshold)).length;
 }
 
 /**
  * List shift stale dengan info kasir, untuk notif + halaman admin.
  */
 export async function getShiftStaleList() {
+  const threshold = await getShiftStaleThresholdJam();
+  if (threshold === 0) return [];
   const rows = await db
     .select({
       id: shiftKasir.id,
@@ -253,7 +281,7 @@ export async function getShiftStaleList() {
     .leftJoin(userTable, eq(shiftKasir.kasirUserId, userTable.id))
     .where(eq(shiftKasir.status, "open"))
     .orderBy(shiftKasir.openedAt);
-  return rows.filter((s) => isShiftStale(s.openedAt));
+  return rows.filter((s) => isShiftStale(s.openedAt, threshold));
 }
 
 /**

@@ -13,7 +13,12 @@ import { bahanBaku } from "@/db/schema/bahan-baku";
 import { sql, gte, eq, desc, ne, lt, and, isNull } from "drizzle-orm";
 import { formatRupiah } from "@/lib/utils";
 import { countChurnRisk } from "@/lib/analytics";
-import { getSemuaShiftAktif, isShiftStale, ringkasanShift } from "@/lib/shift";
+import {
+  getSemuaShiftAktif,
+  isShiftStale,
+  ringkasanShift,
+  getShiftStaleThresholdJam,
+} from "@/lib/shift";
 import { Clock, Lock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -162,6 +167,7 @@ export default async function DashboardPage() {
 
   // Shift kasir aktif saat ini (untuk widget dashboard)
   const shiftAktifList = await getSemuaShiftAktif();
+  const shiftStaleThreshold = await getShiftStaleThresholdJam();
   const shiftAktifDetail = await Promise.all(
     shiftAktifList.map(async (s) => {
       const ring = await ringkasanShift(s.id);
@@ -169,7 +175,7 @@ export default async function DashboardPage() {
         id: s.id,
         kasirNama: s.kasirNama,
         openedAt: s.openedAt,
-        stale: isShiftStale(s.openedAt),
+        stale: isShiftStale(s.openedAt, shiftStaleThreshold),
         omzetCash: ring.omzetCash,
         jumlahTransaksi: ring.jumlahTransaksi,
       };

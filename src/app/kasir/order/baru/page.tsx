@@ -17,9 +17,8 @@ export default async function OrderBaruKasirPage() {
   if (!shiftAktif) {
     redirect(`/kasir/shift?next=${encodeURIComponent("/kasir/order/baru")}`);
   }
-  if (isShiftStale(shiftAktif.openedAt)) {
-    redirect(`/kasir/shift?stale=1&next=${encodeURIComponent("/kasir/order/baru")}`);
-  }
+  // Shift stale = banner peringatan (non-blocking) — kasir tetap bisa input
+  void isShiftStale;
 
   const produkList = await db.query.produk.findMany({
     where: eq(produk.aktif, true),

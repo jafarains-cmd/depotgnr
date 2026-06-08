@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AlertTriangle } from "lucide-react";
 import { db } from "@/db";
 import { eq, inArray } from "drizzle-orm";
 import { produk } from "@/db/schema/produk";
@@ -7,7 +9,7 @@ import { user as userTable } from "@/db/schema/auth";
 import { PageHeader } from "@/components/AppShell";
 import { POSClient, type Preset } from "./POSClient";
 import { requireRole } from "@/lib/permissions";
-import { getShiftAktif, isShiftStale } from "@/lib/shift";
+import { getShiftAktif, isShiftStale, getShiftStaleThresholdJam } from "@/lib/shift";
 
 export const dynamic = "force-dynamic";
 
@@ -27,13 +29,11 @@ export default async function POSPage({
     redirect(`/kasir/shift?next=${encodeURIComponent(next)}`);
   }
 
-  // Shift open tapi sudah cross-midnight (lupa tutup) → wajib tutup dulu
-  // sebelum boleh input transaksi baru, supaya omzet kemarin & hari ini
-  // tidak bercampur di 1 shift.
-  if (isShiftStale(shiftAktif.openedAt)) {
-    const next = sp.orderId ? `/kasir/pos?orderId=${sp.orderId}` : "/kasir/pos";
-    redirect(`/kasir/shift?stale=1&next=${encodeURIComponent(next)}`);
-  }
+  // Shift open terlalu lama (default 18 jam) → tampilkan banner peringatan,
+  // TIDAK block input. Kasir bisa lanjut input ke shift ini ATAU klik banner
+  // untuk tutup shift. Threshold configurable di /admin/pengaturan.
+  const staleThreshold = await getShiftStaleThresholdJam();
+  const isStale = isShiftStale(shiftAktif.openedAt, staleThreshold);
   const [produkList, pelangganList, kurirList] = await Promise.all([
     db.query.produk.findMany({ where: eq(produk.aktif, true), orderBy: (p, { asc }) => [asc(p.id)] }),
     db.query.pelanggan.findMany({ orderBy: (p, { asc }) => [asc(p.nama)] }),
@@ -83,10 +83,29 @@ export default async function POSPage({
             : "Catat transaksi penjualan/isi ulang."
         }
       />
-      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2 mb-4 text-[11px] text-emerald-800 inline-flex items-center gap-1.5">
-        🟢 Shift aktif sejak{" "}
-        {shiftAktif.openedAt.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
-      </div>
+      {isStale ? (
+        <Link
+          href={`/kasir/shift?stale=1&next=${encodeURIComponent("/kasir/pos")}`}
+          className="block bg-amber-50 border border-amber-300 rounded-2xl p-3 mb-4 hover:bg-amber-100"
+        >
+          <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
+            <AlertTriangle size={16} /> Shift sudah berjalan{" "}
+            {Math.round(
+              (Date.now() - shiftAktif.openedAt.getTime()) / (60 * 60 * 1000),
+            )}{" "}
+            jam — cek apakah perlu tutup
+          </div>
+          <div className="text-xs text-amber-800 mt-1">
+            Klik untuk lihat recap & tutup shift kalau selesai. Lanjut input
+            tetap bisa (transaksi masuk ke shift ini).
+          </div>
+        </Link>
+      ) : (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2 mb-4 text-[11px] text-emerald-800 inline-flex items-center gap-1.5">
+          🟢 Shift aktif sejak{" "}
+          {shiftAktif.openedAt.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+        </div>
+      )}
       <POSClient
         produkList={produkList}
         pelangganList={pelangganList.map((p) => ({
