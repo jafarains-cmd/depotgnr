@@ -476,8 +476,13 @@ function TutupModal({
             <b>{formatRupiah(ringkasan.openingCash)}</b>
           </div>
           <div className="flex justify-between">
-            <span className="text-[color:var(--muted)]">+ Omzet cash ({ringkasan.jumlahTransaksi}x)</span>
+            <span className="text-[color:var(--muted)]">
+              + Omzet cash ({ringkasan.jumlahTransaksi}x)
+            </span>
             <b className="text-emerald-700">{formatRupiah(ringkasan.omzetCash)}</b>
+          </div>
+          <div className="text-[10px] text-[color:var(--muted)] pl-3 italic">
+            includes POS langsung + pelunasan piutang cash
           </div>
           <div className="flex justify-between">
             <span className="text-[color:var(--muted)]">− Pengeluaran ({ringkasan.jumlahPengeluaran}x)</span>
@@ -488,6 +493,23 @@ function TutupModal({
             <span>= Ekspektasi cash</span>
             <span>{formatRupiah(ringkasan.expected)}</span>
           </div>
+          {(ringkasan.omzetTransfer > 0 || ringkasan.omzetQris > 0) && (
+            <div className="border-t border-line my-1 pt-2 text-[10px] text-[color:var(--muted)]">
+              <div className="font-bold mb-0.5">Non-cash (langsung ke rekening, TIDAK masuk laci):</div>
+              {ringkasan.omzetTransfer > 0 && (
+                <div className="flex justify-between">
+                  <span>Transfer</span>
+                  <span>{formatRupiah(ringkasan.omzetTransfer)}</span>
+                </div>
+              )}
+              {ringkasan.omzetQris > 0 && (
+                <div className="flex justify-between">
+                  <span>QRIS</span>
+                  <span>{formatRupiah(ringkasan.omzetQris)}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div>

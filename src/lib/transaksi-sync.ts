@@ -14,7 +14,10 @@ import { generateNomorNota } from "./utils";
  * Tujuan: laporan & dashboard yang query tabel `transaksi` jadi mencakup
  * semua revenue (cash POS + order antar) — bukan hanya cash POS.
  */
-export async function syncTransaksiFromOrder(orderId: number): Promise<void> {
+export async function syncTransaksiFromOrder(
+  orderId: number,
+  opts?: { overrideShiftId?: number | null },
+): Promise<void> {
   const o = await db.query.orderHeader.findFirst({
     where: eq(orderHeader.id, orderId),
   });
@@ -67,8 +70,11 @@ export async function syncTransaksiFromOrder(orderId: number): Promise<void> {
         status: "lunas",
         catatan: `Auto-sync dari order ${o.nomorOrder}`,
         refOrderId: orderId,
-        // Inherit shift dari order asal supaya recap shift akurat
-        shiftId: o.shiftId ?? null,
+        // Shift: prioritas overrideShiftId (kasir yang konfirmasi pembayaran
+        // piutang sekarang) > shift order asal. Supaya uang piutang yang
+        // dibayar cash di shift hari ini masuk ke ekspektasi cash shift
+        // sekarang, BUKAN shift kemarin saat order dibuat.
+        shiftId: opts?.overrideShiftId ?? o.shiftId ?? null,
         createdAt,
       })
       .returning({ id: transaksi.id })

@@ -16,6 +16,7 @@ import { sendPushToUser } from "@/lib/push";
 import { bestEffort } from "@/lib/best-effort";
 import { recordKurirBonus } from "@/lib/bonus";
 import { syncTransaksiFromOrder } from "@/lib/transaksi-sync";
+import { getShiftAktif } from "@/lib/shift";
 
 export async function konfirmasiBayar(
   orderId: number,
@@ -41,8 +42,14 @@ export async function konfirmasiBayar(
   bestEffort("earnFromOrderIfEligible", earnFromOrderIfEligible(orderId));
   // Catat bonus kurir kalau order sudah selesai (recordKurirBonus idempoten + cek selesai+lunas)
   bestEffort("recordKurirBonus", recordKurirBonus(orderId));
-  // Sync ke tabel transaksi supaya muncul di laporan/dashboard omzet
-  bestEffort("syncTransaksiFromOrder", syncTransaksiFromOrder(orderId));
+  // Sync ke tabel transaksi. Kalau kasir yang konfirmasi punya shift open,
+  // override shift_id supaya uang piutang masuk ke ekspektasi cash shift
+  // SEKARANG, bukan shift order asal (yang mungkin sudah closed).
+  const shift = await getShiftAktif(session.user.id);
+  bestEffort(
+    "syncTransaksiFromOrder",
+    syncTransaksiFromOrder(orderId, { overrideShiftId: shift?.id ?? null }),
+  );
 
   revalidatePath("/pembayaran");
   revalidatePath(`/pelanggan/order/${orderId}/bayar`);
@@ -99,7 +106,11 @@ export async function bayarPiutangPartial(args: {
     bestEffort("notifLunas(partial)", notifLunas(args.orderId));
     bestEffort("earnFromOrderIfEligible(partial)", earnFromOrderIfEligible(args.orderId));
     bestEffort("recordKurirBonus(partial)", recordKurirBonus(args.orderId));
-    bestEffort("syncTransaksiFromOrder(partial)", syncTransaksiFromOrder(args.orderId));
+    const shift = await getShiftAktif(session.user.id);
+    bestEffort(
+      "syncTransaksiFromOrder(partial)",
+      syncTransaksiFromOrder(args.orderId, { overrideShiftId: shift?.id ?? null }),
+    );
   }
 
   revalidatePath("/pembayaran");
