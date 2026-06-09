@@ -12,14 +12,20 @@ import { Copy, Check, Share2, UserPlus, QrCode } from "lucide-react";
  */
 export function ShareRegistrationButton({
   namaDepot = "Depot Air Minum",
+  kodeReferralStaff,
 }: {
   namaDepot?: string;
+  /** Kode referral staff — kalau ada, link include ?refstaff=KODE untuk track bonus */
+  kodeReferralStaff?: string | null;
 }) {
   const [copied, setCopied] = useState(false);
   const [showQr, setShowQr] = useState(false);
-  const url =
+  const baseUrl =
     typeof window !== "undefined" ? `${window.location.origin}/register` : "/register";
-  const text = `Halo! Daftar akun ${namaDepot} biar order air galon makin gampang + dapat saldo loyalty tiap beli:\n\n${url}`;
+  const url = kodeReferralStaff ? `${baseUrl}?refstaff=${kodeReferralStaff}` : baseUrl;
+  const text = kodeReferralStaff
+    ? `Halo! Daftar akun ${namaDepot} biar order air galon makin gampang + dapat saldo loyalty tiap beli. Pakai link ini supaya kamu auto-dapat welcome bonus saat order pertama:\n\n${url}`
+    : `Halo! Daftar akun ${namaDepot} biar order air galon makin gampang + dapat saldo loyalty tiap beli:\n\n${url}`;
 
   function copy() {
     navigator.clipboard.writeText(text);
@@ -47,6 +53,13 @@ export function ShareRegistrationButton({
       <p className="text-xs text-[color:var(--muted)]">
         Bagikan ke pelanggan baru via WA atau tunjukkan link langsung.
       </p>
+      {kodeReferralStaff && (
+        <div className="text-[11px] bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-md px-2 py-1.5">
+          🎁 Link ini punya kode referral kamu (<b>{kodeReferralStaff}</b>) — kamu
+          dapat bonus saat pelanggan yang daftar pakai link ini melakukan order
+          pertama mereka.
+        </div>
+      )}
       <div className="bg-[color:var(--surface2)] rounded-md px-2 py-1.5 font-mono text-[11px] text-[color:var(--muted)] break-all">
         {url}
       </div>

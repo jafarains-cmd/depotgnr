@@ -5,6 +5,7 @@ import { pelanggan } from "@/db/schema/pelanggan";
 import { user as userTable } from "@/db/schema/auth";
 import { getSession } from "@/lib/permissions";
 import { findPelangganByKode, generateUniqueKodeReferral, ensureKodeReferral } from "@/lib/loyalty";
+import { getUserIdByReferralKode } from "@/lib/referral-staff";
 
 function normalizeNomorWA(raw: string): string {
   let s = raw.trim().replace(/[\s-]/g, "");
@@ -19,11 +20,12 @@ export async function POST(req: Request) {
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { nama, telp, alamat, kodeReferral } = body as {
+  const { nama, telp, alamat, kodeReferral, refstaff } = body as {
     nama?: string;
     telp?: string;
     alamat?: string;
     kodeReferral?: string;
+    refstaff?: string;
   };
 
   // Normalize + sync nomor WA ke user.phoneNumber supaya WA notif jalan.
@@ -95,6 +97,13 @@ export async function POST(req: Request) {
     if (refId) referredBy = refId;
   }
 
+  // Resolve referrer staff (kalau ada refstaff param dari link kasir/admin/kurir)
+  let referredByUserId: string | undefined;
+  if (!existing && refstaff?.trim()) {
+    const uid = await getUserIdByReferralKode(refstaff);
+    if (uid) referredByUserId = uid;
+  }
+
   if (existing) {
     await db
       .update(pelanggan)
@@ -109,6 +118,7 @@ export async function POST(req: Request) {
       alamat,
       kodeReferral: kode,
       referredBy,
+      referredByUserId,
     });
   }
 

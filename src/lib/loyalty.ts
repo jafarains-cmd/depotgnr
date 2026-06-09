@@ -330,6 +330,18 @@ export async function claimReferralBonusIfFirstOrder(
 ): Promise<void> {
   const p = await db.query.pelanggan.findFirst({ where: eq(pelanggan.id, pelangganId) });
   if (!p) return;
+
+  // Welcome bonus: dipindah dari registrasi ke order pertama supaya hanya
+  // pelanggan aktif yang dapat. Idempoten via deskripsi LIKE check.
+  const { giveWelcomeBonus } = await import("./pelanggan");
+  await giveWelcomeBonus(pelangganId).catch(() => {});
+
+  // Bonus referral staff: kalau pelanggan diajak kasir/admin/kurir, catat bonus
+  // pending. Idempoten via cek pelangganId di bonus_referral_staff.
+  const { claimStaffReferralBonusIfFirstOrder } = await import("./referral-staff");
+  await claimStaffReferralBonusIfFirstOrder(pelangganId, refTransaksiId).catch(() => {});
+
+  // Bonus referral antar-pelanggan (logic lama)
   if (!p.referredBy) return;
 
   // Cek apakah sudah pernah di-claim (idempotency via DB).

@@ -24,10 +24,13 @@ function RegisterInner() {
   const [telp, setTelp] = useState("");
   const [alamat, setAlamat] = useState("");
   const [kodeReferral, setKodeReferral] = useState("");
+  const [refstaff, setRefstaff] = useState("");
 
   useEffect(() => {
     const ref = params.get("ref");
     if (ref) setKodeReferral(ref.toUpperCase());
+    const rs = params.get("refstaff");
+    if (rs) setRefstaff(rs.toUpperCase());
   }, [params]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +59,7 @@ function RegisterInner() {
       const res = await fetch("/api/pelanggan/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nama, telp, alamat, kodeReferral }),
+        body: JSON.stringify({ nama, telp, alamat, kodeReferral, refstaff }),
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));

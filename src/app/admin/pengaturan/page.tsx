@@ -240,12 +240,17 @@ const ALL_FIELDS: Record<string, Field> = {
   welcomeBonus: {
     key: "welcomeBonus",
     label: "Welcome Bonus Pendaftaran (Rp)",
-    help: "Saldo otomatis untuk SEMUA pelanggan baru saat register (default: 5000). Isi 0 untuk nonaktifkan.",
+    help: "Saldo untuk pelanggan baru — diberi saat ORDER PERTAMA (bukan saat registrasi) supaya hanya pelanggan aktif yang dapat. Default 5000. Isi 0 untuk nonaktifkan.",
   },
   nilaiReferralBonus: {
     key: "nilaiReferralBonus",
-    label: "Bonus Referral (Rp)",
+    label: "Bonus Referral Pelanggan (Rp)",
     help: "Saldo untuk referee + referrer saat referee selesaikan order pertama (default: 5000).",
+  },
+  bonusReferralStaff: {
+    key: "bonusReferralStaff",
+    label: "Bonus Referral Staff (Rp)",
+    help: "Bonus uang tunai untuk kasir/admin/kurir per pelanggan baru yang dia ajak DAFTAR + sudah order pertama. Owner bayar manual di /admin/bonus-staff. Default 5000. Isi 0 untuk nonaktifkan.",
   },
   aktifkanStampGalon: {
     key: "aktifkanStampGalon",
@@ -333,6 +338,7 @@ const TABS: Tab[] = [
     icon: <Gift size={14} />,
     fieldKeys: [
       "welcomeBonus",
+      "bonusReferralStaff",
       "loyaltiPerGalonAntar",
       "loyaltiPerGalonDepot",
       "nilaiReferralBonus",

@@ -59,13 +59,19 @@ export async function getOrCreatePelanggan(userId: string, fallbackName: string)
     })
     .returning();
 
-  // Welcome bonus: beri saldo loyalty awal untuk semua pelanggan baru
-  giveWelcomeBonus(created.id).catch(() => {});
+  // Welcome bonus: TIDAK lagi diberi saat registrasi. Dipindah ke first
+  // order (lihat claimReferralBonusIfFirstOrder di lib/loyalty.ts) supaya
+  // hanya pelanggan aktif yang dapat — cegah abuse akun fake.
 
   return created;
 }
 
-async function giveWelcomeBonus(pelangganId: number): Promise<void> {
+/**
+ * Beri welcome bonus saat pelanggan order pertama. Idempoten — cek mutasi
+ * loyalty existing supaya tidak dobel. Dipanggil dari
+ * claimReferralBonusIfFirstOrder (lib/loyalty.ts).
+ */
+export async function giveWelcomeBonus(pelangganId: number): Promise<void> {
   const cfg = await getLoyaltyConfig();
   if (cfg.welcomeBonus <= 0) return;
 

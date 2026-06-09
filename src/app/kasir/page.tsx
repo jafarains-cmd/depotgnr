@@ -17,6 +17,7 @@ import { requireRole } from "@/lib/permissions";
 import { formatRupiah } from "@/lib/utils";
 import { PageHeader } from "@/components/AppShell";
 import { ShareRegistrationButton } from "@/components/ShareRegistrationButton";
+import { ensureKodeReferralStaff, getStatReferralStaff } from "@/lib/referral-staff";
 
 export const dynamic = "force-dynamic";
 
@@ -84,6 +85,15 @@ export default async function KasirDashboardPage() {
     .orderBy(desc(orderHeader.createdAt))
     .limit(10);
   const piutangTotal = piutangList.reduce((s, r) => s + r.totalEstimasi, 0);
+
+  // 4b) Kode referral staff + stat untuk widget share
+  const kodeReferralStaff = await ensureKodeReferralStaff(userId).catch(() => null);
+  const statReferral = await getStatReferralStaff(userId).catch(() => ({
+    totalAjak: 0,
+    totalAktif: 0,
+    bonusPending: 0,
+    bonusDibayar: 0,
+  }));
 
   // 4) Aktivitas terbaru saya — transaksi POS terakhir
   const aktivitasTerbaru = await db
@@ -175,8 +185,36 @@ export default async function KasirDashboardPage() {
         />
       </div>
 
-      {/* Bagikan link daftar */}
-      <ShareRegistrationButton />
+      {/* Bagikan link daftar + stat referral */}
+      <div className="space-y-2">
+        <ShareRegistrationButton kodeReferralStaff={kodeReferralStaff} />
+        {statReferral.totalAjak > 0 && (
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="bg-surface border border-line rounded-xl p-2">
+              <div className="text-[9px] text-[color:var(--muted)] uppercase tracking-wide">
+                Diajak
+              </div>
+              <div className="font-extrabold text-sm">{statReferral.totalAjak}</div>
+            </div>
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2">
+              <div className="text-[9px] text-emerald-700 uppercase tracking-wide">
+                Aktif
+              </div>
+              <div className="font-extrabold text-sm text-emerald-800">
+                {statReferral.totalAktif}
+              </div>
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-2">
+              <div className="text-[9px] text-amber-700 uppercase tracking-wide">
+                Bonus Pending
+              </div>
+              <div className="font-extrabold text-sm text-amber-800">
+                {formatRupiah(statReferral.bonusPending)}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Piutang saya */}
       <section className="bg-surface border border-line rounded-2xl overflow-hidden">

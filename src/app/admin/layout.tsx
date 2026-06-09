@@ -175,6 +175,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           badgeKey: "bonusPending",
         },
         {
+          href: "/admin/bonus-staff",
+          label: "Bonus Referral Staff",
+          icon: <Coins size={16} />,
+          iconColor: "text-emerald-600",
+        },
+        {
           href: "/admin/nota-gabungan",
           label: "Nota Gabungan",
           icon: <FileStack size={16} />,

@@ -11,6 +11,7 @@ import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { DistanceWarning } from "@/components/DistanceWarning";
 import { getDepotConfig } from "@/lib/depot-config";
 import { ShareRegistrationButton } from "@/components/ShareRegistrationButton";
+import { ensureKodeReferralStaff } from "@/lib/referral-staff";
 
 export const dynamic = "force-dynamic";
 
@@ -89,10 +90,15 @@ export default async function AkunPage() {
         />
 
         {/* Staff (admin/kasir/kurir) bisa bagikan link daftar ke pelanggan baru */}
-        {!isPelanggan && <ShareRegistrationButton />}
+        {!isPelanggan && <StaffShareSection userId={session.user.id} />}
       </main>
     </div>
   );
+}
+
+async function StaffShareSection({ userId }: { userId: string }) {
+  const kode = await ensureKodeReferralStaff(userId).catch(() => null);
+  return <ShareRegistrationButton kodeReferralStaff={kode} />;
 }
 
 function Row({ label, value }: { label: string; value: string }) {

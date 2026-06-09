@@ -17,6 +17,8 @@ export const pelanggan = sqliteTable(
     saldoLoyalti: integer("saldo_loyalti").notNull().default(0),
     kodeReferral: text("kode_referral").unique(),
     referredBy: integer("referred_by"),
+    // Staff yang ajak (kasir/admin) — tracking untuk bonus_referral_staff
+    referredByUserId: text("referred_by_user_id"),
     firstOrderRewardClaimed: integer("first_order_reward_claimed", { mode: "boolean" })
       .notNull()
       .default(false),
