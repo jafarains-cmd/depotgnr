@@ -16,6 +16,7 @@ import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
 import { requireRole } from "@/lib/permissions";
 import { formatRupiah } from "@/lib/utils";
 import { PageHeader } from "@/components/AppShell";
+import { ShareRegistrationButton } from "@/components/ShareRegistrationButton";
 
 export const dynamic = "force-dynamic";
 
@@ -173,6 +174,9 @@ export default async function KasirDashboardPage() {
           icon={<Wallet size={24} />}
         />
       </div>
+
+      {/* Bagikan link daftar */}
+      <ShareRegistrationButton />
 
       {/* Piutang saya */}
       <section className="bg-surface border border-line rounded-2xl overflow-hidden">

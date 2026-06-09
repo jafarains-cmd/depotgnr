@@ -10,6 +10,7 @@ import { LogoutButton } from "./LogoutButton";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { DistanceWarning } from "@/components/DistanceWarning";
 import { getDepotConfig } from "@/lib/depot-config";
+import { ShareRegistrationButton } from "@/components/ShareRegistrationButton";
 
 export const dynamic = "force-dynamic";
 
@@ -86,6 +87,9 @@ export default async function AkunPage() {
           currentLat={pel?.koordinatLat ?? null}
           currentLng={pel?.koordinatLng ?? null}
         />
+
+        {/* Staff (admin/kasir/kurir) bisa bagikan link daftar ke pelanggan baru */}
+        {!isPelanggan && <ShareRegistrationButton />}
       </main>
     </div>
   );
