@@ -70,10 +70,21 @@ export async function getOrCreatePelanggan(userId: string, fallbackName: string)
  * Beri welcome bonus saat pelanggan order pertama. Idempoten — cek mutasi
  * loyalty existing supaya tidak dobel. Dipanggil dari
  * claimReferralBonusIfFirstOrder (lib/loyalty.ts).
+ *
+ * GUARD: hanya pelanggan yang punya akun (userId != null) yang dapat.
+ * Walk-in murni (dibuat kasir tanpa akun) TIDAK dapat — kebijakan
+ * owner: welcome bonus mendorong pelanggan registrasi via app/WA/email.
  */
 export async function giveWelcomeBonus(pelangganId: number): Promise<void> {
   const cfg = await getLoyaltyConfig();
   if (cfg.welcomeBonus <= 0) return;
+
+  // Hanya pelanggan yang punya akun (registrasi via app, WA, atau email)
+  // yang berhak welcome bonus. Walk-in tanpa akun = skip.
+  const pelData = await db.query.pelanggan.findFirst({
+    where: eq(pelanggan.id, pelangganId),
+  });
+  if (!pelData?.userId) return;
 
   // Idempoten: cek apakah sudah pernah dapat welcome bonus
   const existing = await db.query.mutasiLoyalti.findFirst({

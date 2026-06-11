@@ -83,6 +83,17 @@ export async function POST(req: Request) {
         })
         .where(eq(pelanggan.id, walkIn.id));
       linkedWalkIn = true;
+
+      // Walk-in yang baru di-link ke akun + sudah pernah order = aktif
+      // → kasih welcome bonus retroaktif (idempoten kalau sudah pernah dapat).
+      const { giveWelcomeBonus } = await import("@/lib/pelanggan");
+      const { transaksi: trxSchema } = await import("@/db/schema/transaksi");
+      const adaTrx = await db.query.transaksi.findFirst({
+        where: eq(trxSchema.pelangganId, walkIn.id),
+      });
+      if (adaTrx) {
+        await giveWelcomeBonus(walkIn.id).catch(() => {});
+      }
     }
   }
 

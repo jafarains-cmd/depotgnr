@@ -152,6 +152,16 @@ export async function linkPelangganToUser(
     .set({ userId, updatedAt: new Date() })
     .where(eq(pelanggan.id, pelangganId));
 
+  // Walk-in yang di-link ke akun + sudah pernah order = aktif → kasih
+  // welcome bonus retroaktif (idempoten kalau sudah pernah dapat).
+  const { giveWelcomeBonus } = await import("@/lib/pelanggan");
+  const adaTrx = await db.query.transaksi.findFirst({
+    where: eq(transaksi.pelangganId, pelangganId),
+  });
+  if (adaTrx) {
+    await giveWelcomeBonus(pelangganId).catch(() => {});
+  }
+
   revalidatePath(`/data-pelanggan/${pelangganId}`);
   revalidatePath("/data-pelanggan");
   revalidatePath("/admin/users");
