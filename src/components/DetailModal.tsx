@@ -16,9 +16,11 @@ import {
   getOrderDetail,
   getTransaksiDetail,
   getPelangganDetail,
+  getShiftDetail,
   type OrderDetail,
   type TransaksiDetail,
   type PelangganDetail,
+  type ShiftDetail,
 } from "@/lib/detail-actions";
 import { formatRupiah } from "@/lib/utils";
 import { normalizeDriveUrl, isPdfUrl } from "@/lib/drive-url";
@@ -27,14 +29,19 @@ import { useFormatTanggal } from "./TimezoneContext";
 type Props =
   | { kind: "order"; id: number; onClose: () => void }
   | { kind: "transaksi"; id: number; onClose: () => void }
-  | { kind: "pelanggan"; id: number; onClose: () => void };
+  | { kind: "pelanggan"; id: number; onClose: () => void }
+  | { kind: "shift"; id: number; onClose: () => void };
 
 export function DetailModal(props: Props) {
-  const [data, setData] = useState<OrderDetail | TransaksiDetail | PelangganDetail | null>(null);
+  const [data, setData] = useState<
+    OrderDetail | TransaksiDetail | PelangganDetail | ShiftDetail | null
+  >(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   // Nested modal: kalau user klik nama pelanggan di OrderView/TransaksiView
   const [nestedPelangganId, setNestedPelangganId] = useState<number | null>(null);
+  // Nested transaksi: kalau user klik baris transaksi di ShiftView
+  const [nestedTransaksiId, setNestedTransaksiId] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,7 +54,9 @@ export function DetailModal(props: Props) {
             ? await getOrderDetail(props.id)
             : props.kind === "transaksi"
               ? await getTransaksiDetail(props.id)
-              : await getPelangganDetail(props.id);
+              : props.kind === "pelanggan"
+                ? await getPelangganDetail(props.id)
+                : await getShiftDetail(props.id);
         if (!cancelled) {
           if (!d) setErr("Data tidak ditemukan");
           else setData(d);
@@ -69,7 +78,9 @@ export function DetailModal(props: Props) {
       ? "Detail Order"
       : props.kind === "transaksi"
         ? "Detail Transaksi"
-        : "Detail Pelanggan";
+        : props.kind === "pelanggan"
+          ? "Detail Pelanggan"
+          : "Detail Shift";
 
   return (
     <>
@@ -106,6 +117,9 @@ export function DetailModal(props: Props) {
               <TransaksiView data={data} onOpenPelanggan={setNestedPelangganId} />
             )}
             {data && data.kind === "pelanggan" && <PelangganView data={data} />}
+            {data && data.kind === "shift" && (
+              <ShiftView data={data} onOpenTransaksi={setNestedTransaksiId} />
+            )}
           </div>
         </div>
       </div>
@@ -116,6 +130,16 @@ export function DetailModal(props: Props) {
             kind="pelanggan"
             id={nestedPelangganId}
             onClose={() => setNestedPelangganId(null)}
+          />
+        </div>
+      )}
+
+      {nestedTransaksiId !== null && (
+        <div className="relative z-[60]">
+          <DetailModal
+            kind="transaksi"
+            id={nestedTransaksiId}
+            onClose={() => setNestedTransaksiId(null)}
           />
         </div>
       )}
@@ -455,6 +479,189 @@ function StatBox({
       <div className={`font-extrabold text-sm mt-0.5 ${accent ? "text-brand" : "text-ink"}`}>
         {value}
       </div>
+    </div>
+  );
+}
+
+function ShiftView({
+  data,
+  onOpenTransaksi,
+}: {
+  data: ShiftDetail;
+  onOpenTransaksi: (id: number) => void;
+}) {
+  const fmt = useFormatTanggal();
+  const selisih = data.selisih ?? 0;
+  return (
+    <div className="space-y-4">
+      <div>
+        <div className="font-bold text-lg inline-flex items-center gap-1.5">
+          <User size={16} /> {data.kasirNama}
+        </div>
+        <div className="flex flex-wrap gap-1.5 mt-1">
+          <span
+            className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+              data.status === "open"
+                ? "bg-emerald-100 text-emerald-700"
+                : "bg-[color:var(--surface2)] text-[color:var(--muted)]"
+            }`}
+          >
+            {data.status.toUpperCase()}
+          </span>
+          {data.closedByNama && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold">
+              Force-close oleh {data.closedByNama}
+            </span>
+          )}
+          {data.reopenedAt && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold">
+              ↻ REOPENED
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-[color:var(--surface2)] rounded-lg p-3 space-y-0.5">
+        <Row label="Buka" value={fmt(data.openedAt, { dateStyle: "medium", timeStyle: "short" })} />
+        {data.closedAt && (
+          <Row
+            label="Tutup"
+            value={fmt(data.closedAt, { dateStyle: "medium", timeStyle: "short" })}
+          />
+        )}
+      </div>
+
+      {data.status === "closed" && (
+        <div className="bg-[color:var(--surface2)] rounded-lg p-3 space-y-0.5 text-xs">
+          <Row
+            label="Uang awal"
+            value={data.openingCash !== null ? formatRupiah(data.openingCash) : "—"}
+          />
+          <Row
+            label="+ Omzet cash"
+            value={formatRupiah(data.ringkasan.omzetCash)}
+          />
+          {data.ringkasan.totalPengeluaran > 0 && (
+            <Row
+              label="− Pengeluaran"
+              value={formatRupiah(data.ringkasan.totalPengeluaran)}
+            />
+          )}
+          <div className="border-t border-line my-1" />
+          <Row label="= Ekspektasi" value={<b>{formatRupiah(data.ringkasan.expected)}</b>} />
+          {data.closingCashCounted !== null && (
+            <Row label="Uang fisik" value={<b>{formatRupiah(data.closingCashCounted)}</b>} />
+          )}
+          <Row
+            label="Selisih"
+            value={
+              <b
+                className={
+                  selisih === 0
+                    ? "text-[color:var(--muted)]"
+                    : selisih > 0
+                      ? "text-emerald-700"
+                      : "text-red-600"
+                }
+              >
+                {selisih > 0 ? "+" : ""}
+                {formatRupiah(selisih)}
+              </b>
+            }
+          />
+        </div>
+      )}
+
+      {(data.ringkasan.omzetTransfer > 0 || data.ringkasan.omzetQris > 0) && (
+        <div className="bg-sky-50 border border-sky-200 rounded-lg p-3 space-y-0.5 text-xs">
+          <div className="text-[10px] font-bold text-sky-800 uppercase tracking-wide mb-1">
+            Non-cash (ke rekening)
+          </div>
+          {data.ringkasan.omzetTransfer > 0 && (
+            <Row label="Transfer" value={formatRupiah(data.ringkasan.omzetTransfer)} />
+          )}
+          {data.ringkasan.omzetQris > 0 && (
+            <Row label="QRIS" value={formatRupiah(data.ringkasan.omzetQris)} />
+          )}
+        </div>
+      )}
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs font-bold uppercase tracking-wide text-[color:var(--muted)]">
+            Transaksi ({data.transaksiList.length})
+          </h3>
+        </div>
+        {data.transaksiList.length === 0 ? (
+          <div className="text-xs text-[color:var(--muted)] py-3 text-center">
+            Belum ada transaksi di shift ini
+          </div>
+        ) : (
+          <div className="space-y-1 max-h-64 overflow-y-auto">
+            {data.transaksiList.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => onOpenTransaksi(t.id)}
+                className="w-full text-left bg-[color:var(--surface2)] rounded-md p-2 hover:bg-brand-soft transition block"
+              >
+                <div className="flex justify-between items-start gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[10px] font-mono text-[color:var(--muted)]">
+                      {t.nomorNota}
+                    </div>
+                    <div className="text-xs font-semibold truncate">
+                      {t.pelangganNama ?? "Walk-in"}
+                    </div>
+                    <div className="text-[10px] text-[color:var(--muted)]">
+                      {fmt(t.createdAt, { timeStyle: "short" })} ·{" "}
+                      {t.metodeBayar.toUpperCase()}
+                    </div>
+                  </div>
+                  <div
+                    className={`text-sm font-bold whitespace-nowrap ${
+                      t.voided ? "line-through text-[color:var(--muted)]" : "text-brand"
+                    }`}
+                  >
+                    {formatRupiah(t.total)}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {data.pengeluaranList.length > 0 && (
+        <div>
+          <h3 className="text-xs font-bold uppercase tracking-wide text-[color:var(--muted)] mb-2">
+            Pengeluaran ({data.pengeluaranList.length})
+          </h3>
+          <div className="space-y-1">
+            {data.pengeluaranList.map((p) => (
+              <div
+                key={p.id}
+                className="bg-red-50 border border-red-200 rounded-md p-2 text-xs flex justify-between items-start gap-2"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="font-bold text-red-900">{p.kategori}</div>
+                  {p.deskripsi && (
+                    <div className="text-[10px] text-red-700 mt-0.5">{p.deskripsi}</div>
+                  )}
+                </div>
+                <div className="font-bold text-red-700 whitespace-nowrap">
+                  {formatRupiah(p.jumlah)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {data.catatan && (
+        <div className="text-xs italic text-[color:var(--muted)] border-t border-line pt-2 whitespace-pre-line">
+          {data.catatan}
+        </div>
+      )}
     </div>
   );
 }

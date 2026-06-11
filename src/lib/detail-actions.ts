@@ -12,6 +12,8 @@ import {
   galonDipinjam,
 } from "@/db/schema/pelanggan";
 import { user as userTable } from "@/db/schema/auth";
+import { shiftKasir } from "@/db/schema/shift";
+import { pengeluaran } from "@/db/schema/pengeluaran";
 import { requireRole } from "@/lib/permissions";
 
 export type DetailItem = {
@@ -67,6 +69,48 @@ export type TransaksiDetail = {
   pelangganTelp: string | null;
   kasirNama: string | null;
   items: DetailItem[];
+};
+
+export type ShiftDetail = {
+  kind: "shift";
+  id: number;
+  kasirNama: string;
+  status: "open" | "closed";
+  openedAt: string;
+  closedAt: string | null;
+  reopenedAt: string | null;
+  closedByNama: string | null;
+  openingCash: number | null;
+  closingCashCounted: number | null;
+  closingCashExpected: number | null;
+  selisih: number | null;
+  catatan: string | null;
+  ringkasan: {
+    omzetCash: number;
+    omzetTransfer: number;
+    omzetQris: number;
+    jumlahTransaksi: number;
+    jumlahOrder: number;
+    totalPengeluaran: number;
+    jumlahPengeluaran: number;
+    expected: number;
+  };
+  transaksiList: Array<{
+    id: number;
+    nomorNota: string;
+    pelangganNama: string | null;
+    total: number;
+    metodeBayar: string;
+    voided: boolean;
+    createdAt: string;
+  }>;
+  pengeluaranList: Array<{
+    id: number;
+    kategori: string;
+    deskripsi: string | null;
+    jumlah: number;
+    createdAt: string;
+  }>;
 };
 
 export type PelangganDetail = {
@@ -302,5 +346,94 @@ export async function getPelangganDetail(
     galonTitipan: Number(titipanRow?.total ?? 0),
     linkedUserName: u?.name ?? null,
     hasAccount: !!p.userId,
+  };
+}
+
+export async function getShiftDetail(shiftId: number): Promise<ShiftDetail | null> {
+  await requireRole(["admin", "kasir"]);
+  const { ringkasanShift } = await import("./shift");
+
+  const s = await db.query.shiftKasir.findFirst({
+    where: eq(shiftKasir.id, shiftId),
+  });
+  if (!s) return null;
+
+  const kasir = await db.query.user.findFirst({ where: eq(userTable.id, s.kasirUserId) });
+  const closedByUser = s.closedByUserId
+    ? await db.query.user.findFirst({ where: eq(userTable.id, s.closedByUserId) })
+    : null;
+
+  // Transaksi shift ini
+  const trxList = await db
+    .select({
+      id: transaksi.id,
+      nomorNota: transaksi.nomorNota,
+      total: transaksi.total,
+      metodeBayar: transaksi.metodeBayar,
+      voidedAt: transaksi.voidedAt,
+      createdAt: transaksi.createdAt,
+      pelangganNama: pelangganTable.nama,
+    })
+    .from(transaksi)
+    .leftJoin(pelangganTable, eq(transaksi.pelangganId, pelangganTable.id))
+    .where(eq(transaksi.shiftId, shiftId))
+    .orderBy(sql`${transaksi.createdAt} DESC`);
+
+  // Pengeluaran shift ini
+  const pengList = await db
+    .select({
+      id: pengeluaran.id,
+      kategori: pengeluaran.kategori,
+      deskripsi: pengeluaran.deskripsi,
+      jumlah: pengeluaran.jumlah,
+      createdAt: pengeluaran.createdAt,
+    })
+    .from(pengeluaran)
+    .where(eq(pengeluaran.shiftId, shiftId))
+    .orderBy(sql`${pengeluaran.createdAt} DESC`);
+
+  const ring = await ringkasanShift(shiftId);
+
+  return {
+    kind: "shift",
+    id: s.id,
+    kasirNama: kasir?.name ?? "—",
+    status: s.status,
+    openedAt: s.openedAt.toISOString(),
+    closedAt: s.closedAt?.toISOString() ?? null,
+    reopenedAt: s.reopenedAt?.toISOString() ?? null,
+    closedByNama:
+      closedByUser && closedByUser.name !== kasir?.name ? closedByUser.name : null,
+    openingCash: s.openingCash,
+    closingCashCounted: s.closingCashCounted,
+    closingCashExpected: s.closingCashExpected,
+    selisih: s.selisih,
+    catatan: s.catatan,
+    ringkasan: {
+      omzetCash: ring.omzetCash,
+      omzetTransfer: ring.omzetTransfer,
+      omzetQris: ring.omzetQris,
+      jumlahTransaksi: ring.jumlahTransaksi,
+      jumlahOrder: ring.jumlahOrder,
+      totalPengeluaran: ring.totalPengeluaran,
+      jumlahPengeluaran: ring.jumlahPengeluaran,
+      expected: ring.expected,
+    },
+    transaksiList: trxList.map((t) => ({
+      id: t.id,
+      nomorNota: t.nomorNota,
+      pelangganNama: t.pelangganNama,
+      total: t.total,
+      metodeBayar: t.metodeBayar,
+      voided: !!t.voidedAt,
+      createdAt: t.createdAt.toISOString(),
+    })),
+    pengeluaranList: pengList.map((p) => ({
+      id: p.id,
+      kategori: p.kategori,
+      deskripsi: p.deskripsi,
+      jumlah: p.jumlah,
+      createdAt: p.createdAt.toISOString(),
+    })),
   };
 }
