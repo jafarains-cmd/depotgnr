@@ -2,12 +2,23 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { X, Loader2, ExternalLink, FileText } from "lucide-react";
+import {
+  X,
+  Loader2,
+  ExternalLink,
+  FileText,
+  User,
+  Coins,
+  Wallet,
+  Droplet,
+} from "lucide-react";
 import {
   getOrderDetail,
   getTransaksiDetail,
+  getPelangganDetail,
   type OrderDetail,
   type TransaksiDetail,
+  type PelangganDetail,
 } from "@/lib/detail-actions";
 import { formatRupiah } from "@/lib/utils";
 import { normalizeDriveUrl, isPdfUrl } from "@/lib/drive-url";
@@ -15,12 +26,15 @@ import { useFormatTanggal } from "./TimezoneContext";
 
 type Props =
   | { kind: "order"; id: number; onClose: () => void }
-  | { kind: "transaksi"; id: number; onClose: () => void };
+  | { kind: "transaksi"; id: number; onClose: () => void }
+  | { kind: "pelanggan"; id: number; onClose: () => void };
 
 export function DetailModal(props: Props) {
-  const [data, setData] = useState<OrderDetail | TransaksiDetail | null>(null);
+  const [data, setData] = useState<OrderDetail | TransaksiDetail | PelangganDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  // Nested modal: kalau user klik nama pelanggan di OrderView/TransaksiView
+  const [nestedPelangganId, setNestedPelangganId] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -31,7 +45,9 @@ export function DetailModal(props: Props) {
         const d =
           props.kind === "order"
             ? await getOrderDetail(props.id)
-            : await getTransaksiDetail(props.id);
+            : props.kind === "transaksi"
+              ? await getTransaksiDetail(props.id)
+              : await getPelangganDetail(props.id);
         if (!cancelled) {
           if (!d) setErr("Data tidak ditemukan");
           else setData(d);
@@ -48,38 +64,62 @@ export function DetailModal(props: Props) {
     };
   }, [props.kind, props.id]);
 
+  const title =
+    props.kind === "order"
+      ? "Detail Order"
+      : props.kind === "transaksi"
+        ? "Detail Transaksi"
+        : "Detail Pelanggan";
+
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-      onClick={props.onClose}
-    >
+    <>
       <div
-        className="bg-surface rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
+        className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+        onClick={props.onClose}
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-line">
-          <h2 className="font-bold">Detail {props.kind === "order" ? "Order" : "Transaksi"}</h2>
-          <button
-            onClick={props.onClose}
-            className="w-8 h-8 grid place-items-center rounded-lg hover:bg-[color:var(--surface2)]"
-            aria-label="Tutup"
-          >
-            <X size={18} />
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto p-4">
-          {loading && (
-            <div className="py-12 text-center text-[color:var(--muted)]">
-              <Loader2 className="inline animate-spin" size={20} />
-              <div className="text-xs mt-2">Memuat detail...</div>
-            </div>
-          )}
-          {err && <div className="py-8 text-center text-red-600 text-sm">{err}</div>}
-          {data && data.kind === "order" && <OrderView data={data} />}
-          {data && data.kind === "transaksi" && <TransaksiView data={data} />}
+        <div
+          className="bg-surface rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] flex flex-col"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between px-4 py-3 border-b border-line">
+            <h2 className="font-bold">{title}</h2>
+            <button
+              onClick={props.onClose}
+              className="w-8 h-8 grid place-items-center rounded-lg hover:bg-[color:var(--surface2)]"
+              aria-label="Tutup"
+            >
+              <X size={18} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            {loading && (
+              <div className="py-12 text-center text-[color:var(--muted)]">
+                <Loader2 className="inline animate-spin" size={20} />
+                <div className="text-xs mt-2">Memuat detail...</div>
+              </div>
+            )}
+            {err && <div className="py-8 text-center text-red-600 text-sm">{err}</div>}
+            {data && data.kind === "order" && (
+              <OrderView data={data} onOpenPelanggan={setNestedPelangganId} />
+            )}
+            {data && data.kind === "transaksi" && (
+              <TransaksiView data={data} onOpenPelanggan={setNestedPelangganId} />
+            )}
+            {data && data.kind === "pelanggan" && <PelangganView data={data} />}
+          </div>
         </div>
       </div>
-    </div>
+
+      {nestedPelangganId !== null && (
+        <div className="relative z-[60]">
+          <DetailModal
+            kind="pelanggan"
+            id={nestedPelangganId}
+            onClose={() => setNestedPelangganId(null)}
+          />
+        </div>
+      )}
+    </>
   );
 }
 
@@ -110,13 +150,29 @@ function ItemList({ items }: { items: OrderDetail["items"] }) {
   );
 }
 
-function OrderView({ data }: { data: OrderDetail }) {
+function OrderView({
+  data,
+  onOpenPelanggan,
+}: {
+  data: OrderDetail;
+  onOpenPelanggan: (id: number) => void;
+}) {
   const fmt = useFormatTanggal();
   return (
     <div className="space-y-4">
       <div>
         <div className="font-mono text-xs text-[color:var(--muted)]">{data.nomorOrder}</div>
-        <div className="font-bold text-lg">{data.pelangganNama ?? "Tanpa Akun"}</div>
+        {data.pelangganId !== null ? (
+          <button
+            onClick={() => onOpenPelanggan(data.pelangganId!)}
+            className="font-bold text-lg text-left hover:text-brand hover:underline inline-flex items-center gap-1"
+          >
+            {data.pelangganNama ?? "Tanpa Akun"}
+            <ExternalLink size={14} className="opacity-50" />
+          </button>
+        ) : (
+          <div className="font-bold text-lg">{data.pelangganNama ?? "Tanpa Akun"}</div>
+        )}
         {data.pelangganTelp && (
           <div className="text-xs text-[color:var(--muted)]">📞 {data.pelangganTelp}</div>
         )}
@@ -196,7 +252,13 @@ function OrderView({ data }: { data: OrderDetail }) {
   );
 }
 
-function TransaksiView({ data }: { data: TransaksiDetail }) {
+function TransaksiView({
+  data,
+  onOpenPelanggan,
+}: {
+  data: TransaksiDetail;
+  onOpenPelanggan: (id: number) => void;
+}) {
   const fmt = useFormatTanggal();
   const isVoided = !!data.voidedAt;
   return (
@@ -212,7 +274,17 @@ function TransaksiView({ data }: { data: TransaksiDetail }) {
       )}
       <div>
         <div className="font-mono text-xs text-[color:var(--muted)]">{data.nomorNota}</div>
-        <div className="font-bold text-lg">{data.pelangganNama ?? "Walk-in"}</div>
+        {data.pelangganId !== null ? (
+          <button
+            onClick={() => onOpenPelanggan(data.pelangganId!)}
+            className="font-bold text-lg text-left hover:text-brand hover:underline inline-flex items-center gap-1"
+          >
+            {data.pelangganNama ?? "Walk-in"}
+            <ExternalLink size={14} className="opacity-50" />
+          </button>
+        ) : (
+          <div className="font-bold text-lg">{data.pelangganNama ?? "Walk-in"}</div>
+        )}
         {data.pelangganTelp && (
           <div className="text-xs text-[color:var(--muted)]">📞 {data.pelangganTelp}</div>
         )}
@@ -257,6 +329,132 @@ function TransaksiView({ data }: { data: TransaksiDetail }) {
       >
         Buka halaman nota →
       </Link>
+    </div>
+  );
+}
+
+function PelangganView({ data }: { data: PelangganDetail }) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <div className="font-bold text-lg inline-flex items-center gap-1.5">
+          <User size={18} /> {data.nama}
+        </div>
+        <div className="flex flex-wrap gap-1.5 mt-1">
+          <span
+            className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+              data.tipe === "langganan"
+                ? "bg-emerald-100 text-emerald-700"
+                : "bg-[color:var(--surface2)] text-[color:var(--muted)]"
+            }`}
+          >
+            {data.tipe.toUpperCase()}
+          </span>
+          <span
+            className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+              data.hasAccount
+                ? "bg-sky-100 text-sky-700"
+                : "bg-amber-100 text-amber-700"
+            }`}
+          >
+            {data.hasAccount ? "AKUN ✓" : "WALK-IN"}
+          </span>
+        </div>
+        {data.telp && (
+          <div className="text-xs text-[color:var(--muted)] mt-1">📞 {data.telp}</div>
+        )}
+        {data.alamat && (
+          <div className="text-xs text-[color:var(--muted)] mt-0.5">📍 {data.alamat}</div>
+        )}
+        {data.linkedUserName && (
+          <div className="text-[10px] text-sky-700 mt-1">
+            Tertaut akun: {data.linkedUserName}
+          </div>
+        )}
+      </div>
+
+      {data.piutangTotal > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+          <div className="text-[10px] font-bold tracking-widest text-red-700">
+            ⚠ PIUTANG BELUM LUNAS
+          </div>
+          <div className="text-xl font-extrabold text-red-900 mt-0.5">
+            {formatRupiah(data.piutangTotal)}
+          </div>
+          <div className="text-[11px] text-red-700">{data.piutangCount} order</div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-2">
+        <StatBox
+          icon={<Coins size={14} className="text-brand" />}
+          label="Saldo Loyalty"
+          value={formatRupiah(data.saldoLoyalti)}
+          accent={data.saldoLoyalti > 0}
+        />
+        <StatBox
+          icon={<Droplet size={14} className="text-amber-500" />}
+          label="Stamp Galon"
+          value={`${data.stampGalon}/10`}
+        />
+        <StatBox
+          icon={<Wallet size={14} className="text-emerald-600" />}
+          label="Total Earn"
+          value={formatRupiah(data.totalEarn)}
+        />
+        <StatBox
+          icon={<Wallet size={14} className="text-red-500" />}
+          label="Total Redeem"
+          value={formatRupiah(data.totalRedeem)}
+        />
+      </div>
+
+      <div className="bg-[color:var(--surface2)] rounded-lg p-3 space-y-0.5">
+        <Row label="Total Transaksi" value={`${data.totalTransaksi} (omzet ${formatRupiah(data.totalOmzet)})`} />
+        <Row label="Total Order Antar" value={`${data.totalOrder}`} />
+        {data.galonDipinjam > 0 && (
+          <Row
+            label="🚛 Galon Dipinjam"
+            value={<span className="text-amber-700 font-bold">{data.galonDipinjam} galon</span>}
+          />
+        )}
+        {data.galonTitipan > 0 && (
+          <Row
+            label="💧 Galon Titipan"
+            value={<span className="text-sky-700 font-bold">{data.galonTitipan} galon</span>}
+          />
+        )}
+      </div>
+
+      <Link
+        href={`/data-pelanggan/${data.id}`}
+        className="block w-full text-center py-2 border border-line rounded-md text-xs hover:border-brand hover:text-brand transition inline-flex items-center justify-center gap-1.5"
+      >
+        Buka halaman pelanggan <ExternalLink size={12} />
+      </Link>
+    </div>
+  );
+}
+
+function StatBox({
+  icon,
+  label,
+  value,
+  accent,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  accent?: boolean;
+}) {
+  return (
+    <div className="bg-[color:var(--surface2)] rounded-lg p-2.5">
+      <div className="text-[9px] uppercase tracking-widest text-[color:var(--muted)] inline-flex items-center gap-1">
+        {icon} {label}
+      </div>
+      <div className={`font-extrabold text-sm mt-0.5 ${accent ? "text-brand" : "text-ink"}`}>
+        {value}
+      </div>
     </div>
   );
 }
