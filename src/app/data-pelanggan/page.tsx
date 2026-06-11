@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { Trophy, Users } from "lucide-react";
-import { desc, gt, sql, inArray, eq, like, or } from "drizzle-orm";
+import { desc, gt, sql, inArray, eq, like, or, and } from "drizzle-orm";
 import { db } from "@/db";
 import { pelanggan as pelangganTable, galonPelanggan } from "@/db/schema/pelanggan";
+import { orderHeader } from "@/db/schema/order";
 import { user as userTable } from "@/db/schema/auth";
 import { requireRole } from "@/lib/permissions";
 import { formatRupiah } from "@/lib/utils";
@@ -81,6 +82,26 @@ export default async function PelangganDataPage({
   const topCount = topCountRow[0]?.n ?? 0;
 
   const titipanMap = new Map(titipanTotals.map((t) => [t.pelangganId, t.total]));
+
+  // Total piutang per pelanggan untuk list — query terpisah supaya aggregate akurat
+  const piutangPerPelanggan = await db
+    .select({
+      pelangganId: orderHeader.pelangganId,
+      total: sql<number>`coalesce(sum(${orderHeader.totalEstimasi} - ${orderHeader.paidPartial}), 0)`,
+    })
+    .from(orderHeader)
+    .where(
+      and(
+        eq(orderHeader.status, "selesai"),
+        eq(orderHeader.statusBayar, "belum"),
+      ),
+    )
+    .groupBy(orderHeader.pelangganId);
+  const piutangMap = new Map(
+    piutangPerPelanggan
+      .filter((p) => p.pelangganId !== null)
+      .map((p) => [p.pelangganId as number, Number(p.total)]),
+  );
 
   // Linked users — ambil info user yang tertaut ke pelanggan di halaman ini
   const userIds = list.map((p) => p.userId).filter((id): id is string => !!id);
@@ -199,6 +220,7 @@ export default async function PelangganDataPage({
               return {
                 ...p,
                 titipanTotal: titipanMap.get(p.id) ?? 0,
+                piutangTotal: piutangMap.get(p.id) ?? 0,
                 linkedUser: u
                   ? { id: u.id, name: u.name, email: u.email, username: u.username }
                   : null,

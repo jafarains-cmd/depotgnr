@@ -161,6 +161,23 @@ export default async function PelangganDetailPage({
     })),
   ].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
+  // Total piutang pelanggan (order selesai, statusBayar belum) = sum sisa
+  const [piutangRow] = await db
+    .select({
+      total: sql<number>`coalesce(sum(${orderHeader.totalEstimasi} - ${orderHeader.paidPartial}), 0)`,
+      jumlahOrder: sql<number>`coalesce(count(*), 0)`,
+    })
+    .from(orderHeader)
+    .where(
+      and(
+        eq(orderHeader.pelangganId, pelangganId),
+        eq(orderHeader.status, "selesai"),
+        eq(orderHeader.statusBayar, "belum"),
+      ),
+    );
+  const piutangTotal = Number(piutangRow?.total ?? 0);
+  const piutangJumlah = Number(piutangRow?.jumlahOrder ?? 0);
+
   // Galon titipan + produk list + history mutasi titipan
   const titipanRows = await db
     .select({
@@ -275,6 +292,23 @@ export default async function PelangganDetailPage({
           value={formatRupiah(totalRedeem)}
         />
       </div>
+
+      {piutangTotal > 0 && (
+        <Link
+          href={`/pembayaran?tab=piutang&q=${encodeURIComponent(pel.nama)}`}
+          className="block bg-red-50 border border-red-200 rounded-2xl p-4 hover:bg-red-100"
+        >
+          <div className="text-[10px] font-bold tracking-widest text-red-700">
+            ⚠ PIUTANG BELUM LUNAS
+          </div>
+          <div className="text-2xl font-extrabold text-red-900 mt-1">
+            {formatRupiah(piutangTotal)}
+          </div>
+          <div className="text-xs text-red-700 mt-0.5">
+            {piutangJumlah} order belum lunas · klik untuk kelola di /pembayaran
+          </div>
+        </Link>
+      )}
 
       {isAdmin && (
         <LinkUserSection

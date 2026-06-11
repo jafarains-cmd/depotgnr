@@ -10,6 +10,7 @@ import { LocationPicker } from "./LocationPicker";
 type LinkedUser = { id: string; name: string; email: string; username: string | null };
 type RowWithTitipan = Pelanggan & {
   titipanTotal?: number;
+  piutangTotal?: number;
   linkedUser?: LinkedUser | null;
 };
 
@@ -94,6 +95,7 @@ export function PelangganTable({
               <th className="p-3 hidden md:table-cell">Alamat</th>
               <th className="p-3 hidden sm:table-cell">Tipe</th>
               <th className="p-3 hidden md:table-cell text-right">Titipan</th>
+              <th className="p-3 hidden sm:table-cell text-right">Piutang</th>
               <th className="p-3 hidden lg:table-cell">Akun User</th>
               <th className="p-3 text-right">Aksi</th>
             </tr>
@@ -152,6 +154,15 @@ export function PelangganTable({
                     <span className="text-xs font-bold text-brand inline-flex items-center gap-1">
                       <Package size={11} />
                       {p.titipanTotal}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-[color:var(--muted)]">—</span>
+                  )}
+                </td>
+                <td className="p-3 hidden sm:table-cell text-right">
+                  {(p.piutangTotal ?? 0) > 0 ? (
+                    <span className="text-xs font-bold text-red-700">
+                      {new Intl.NumberFormat("id-ID").format(p.piutangTotal ?? 0)}
                     </span>
                   ) : (
                     <span className="text-xs text-[color:var(--muted)]">—</span>
