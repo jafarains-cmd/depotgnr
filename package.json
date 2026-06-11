@@ -15,6 +15,7 @@
     "db:backfill-transaksi": "tsx src/db/backfillTransaksi.ts",
     "db:backfill-shift": "tsx src/db/backfillShiftId.ts",
     "db:backfill-welcome": "tsx src/db/backfillWelcomeBonus.ts",
+    "db:cleanup-walkin-welcome": "tsx src/db/cleanupWalkinWelcome.ts",
     "db:backup": "tsx src/db/runBackup.ts",
     "auth:generate": "npx @better-auth/cli generate --output src/db/schema/auth.ts",
     "test": "vitest run",
