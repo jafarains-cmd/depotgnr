@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { DetailModal } from "@/components/DetailModal";
 import { ForceCloseButton } from "./ForceCloseButton";
 import { formatRupiah } from "@/lib/utils";
+import { editOpeningCashAction } from "@/app/kasir/shift/actions";
+import { X, Loader2, Pencil } from "lucide-react";
 
 export type Row = {
   id: number;
@@ -25,6 +28,7 @@ export type Row = {
 
 export function ShiftRows({ rows }: { rows: Row[] }) {
   const [detailId, setDetailId] = useState<number | null>(null);
+  const [editFor, setEditFor] = useState<Row | null>(null);
 
   return (
     <div className="bg-surface border border-line rounded-2xl overflow-hidden">
@@ -121,16 +125,25 @@ export function ShiftRows({ rows }: { rows: Row[] }) {
             </span>
           </td>
           <td
-            className="p-3 text-right"
+            className="p-3 text-right whitespace-nowrap"
             onClick={(e) => e.stopPropagation()}
           >
-            {r.status === "open" && (
-              <ForceCloseButton
-                shiftId={r.id}
-                kasirNama={r.kasirNama ?? "—"}
-                expectedCash={r.expectedForOpen}
-              />
-            )}
+            <div className="flex justify-end gap-1.5">
+              <button
+                onClick={() => setEditFor(r)}
+                className="px-2 py-1 text-[10px] border border-amber-300 text-amber-700 rounded-md font-bold inline-flex items-center gap-1 hover:bg-amber-50"
+                title="Edit uang awal (typo / koreksi)"
+              >
+                <Pencil size={10} /> Edit
+              </button>
+              {r.status === "open" && (
+                <ForceCloseButton
+                  shiftId={r.id}
+                  kasirNama={r.kasirNama ?? "—"}
+                  expectedCash={r.expectedForOpen}
+                />
+              )}
+            </div>
           </td>
         </tr>
             ))}
@@ -148,6 +161,148 @@ export function ShiftRows({ rows }: { rows: Row[] }) {
       {detailId !== null && (
         <DetailModal kind="shift" id={detailId} onClose={() => setDetailId(null)} />
       )}
+
+      {editFor && <EditOpeningModal row={editFor} onClose={() => setEditFor(null)} />}
+    </div>
+  );
+}
+
+function EditOpeningModal({ row, onClose }: { row: Row; onClose: () => void }) {
+  const router = useRouter();
+  const [nilai, setNilai] = useState(
+    row.openingCash !== null ? String(row.openingCash) : "",
+  );
+  const [alasan, setAlasan] = useState("");
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function submit() {
+    setError(null);
+    const n = Number(nilai);
+    if (!Number.isFinite(n) || n < 0) {
+      setError("Uang awal harus angka >= 0");
+      return;
+    }
+    if (alasan.trim().length < 3) {
+      setError("Alasan wajib (min 3 karakter)");
+      return;
+    }
+    startTransition(async () => {
+      const r = await editOpeningCashAction({
+        shiftId: row.id,
+        newOpeningCash: Math.floor(n),
+        alasan,
+      });
+      if ("error" in r) setError(r.error);
+      else {
+        onClose();
+        router.refresh();
+      }
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 grid place-items-center p-4">
+      <div className="bg-surface rounded-2xl max-w-md w-full p-5 space-y-3">
+        <div className="flex justify-between items-start">
+          <div>
+            <h2 className="font-bold text-lg">Edit Uang Awal</h2>
+            <div className="text-xs text-[color:var(--muted)] mt-0.5">
+              Kasir: {row.kasirNama ?? "—"} ·{" "}
+              <span
+                className={
+                  row.status === "open" ? "text-emerald-700 font-bold" : "text-[color:var(--muted)]"
+                }
+              >
+                {row.status.toUpperCase()}
+              </span>
+            </div>
+          </div>
+          <button onClick={onClose}>
+            <X size={20} />
+          </button>
+        </div>
+
+        {row.status === "closed" && (
+          <div className="text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded p-2">
+            ⚠ Shift sudah ditutup. Selisih akan dihitung ulang otomatis berdasarkan
+            uang awal baru.
+          </div>
+        )}
+
+        <div className="text-xs bg-[color:var(--surface2)] rounded p-2 space-y-0.5">
+          <div className="flex justify-between">
+            <span className="text-[color:var(--muted)]">Uang awal sekarang</span>
+            <b>{row.openingCash !== null ? formatRupiah(row.openingCash) : "—"}</b>
+          </div>
+          {row.status === "closed" && row.closingCashExpected !== null && (
+            <>
+              <div className="flex justify-between">
+                <span className="text-[color:var(--muted)]">Ekspektasi sekarang</span>
+                <b>{formatRupiah(row.closingCashExpected)}</b>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[color:var(--muted)]">Selisih sekarang</span>
+                <b
+                  className={
+                    (row.selisih ?? 0) === 0
+                      ? "text-[color:var(--muted)]"
+                      : (row.selisih ?? 0) > 0
+                        ? "text-emerald-700"
+                        : "text-red-600"
+                  }
+                >
+                  {(row.selisih ?? 0) > 0 ? "+" : ""}
+                  {formatRupiah(row.selisih ?? 0)}
+                </b>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div>
+          <label className="text-xs font-bold block mb-1">Uang Awal Baru (Rp)</label>
+          <input
+            type="number"
+            min={0}
+            value={nilai}
+            onChange={(e) => setNilai(e.target.value)}
+            className="w-full px-3 py-2 border border-line rounded-md text-lg font-mono"
+            autoFocus
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-bold block mb-1">Alasan (wajib)</label>
+          <textarea
+            value={alasan}
+            onChange={(e) => setAlasan(e.target.value)}
+            rows={2}
+            placeholder="mis: typo 115 harusnya 115000"
+            className="w-full px-3 py-2 border border-line rounded-md text-sm"
+          />
+        </div>
+
+        {error && <div className="text-xs text-red-600">{error}</div>}
+
+        <div className="flex justify-end gap-2 pt-2 border-t border-line">
+          <button
+            onClick={onClose}
+            disabled={pending}
+            className="px-4 py-2 border border-line rounded-md text-sm"
+          >
+            Batal
+          </button>
+          <button
+            onClick={submit}
+            disabled={pending}
+            className="px-4 py-2 bg-amber-600 text-white rounded-md text-sm font-bold inline-flex items-center gap-1.5 disabled:opacity-50"
+          >
+            {pending && <Loader2 size={14} className="animate-spin" />}
+            Simpan
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
