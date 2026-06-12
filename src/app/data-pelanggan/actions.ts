@@ -288,6 +288,10 @@ export async function searchPelangganTujuanMerge(
   const term = q.trim();
   if (term.length < 2) return [];
   const pat = `%${term}%`;
+  // Target merge boleh walk-in atau ber-akun. Berguna untuk skenario:
+  // - 2 walk-in untuk orang yang sama (kasir typo nama berbeda)
+  // - walk-in → ber-akun (pelanggan kemudian register)
+  // - ber-akun → ber-akun (jarang, biasanya duplicate signup)
   return db
     .select({
       id: pelanggan.id,
@@ -299,7 +303,6 @@ export async function searchPelangganTujuanMerge(
     .where(
       and(
         ne(pelanggan.id, sourceId),
-        sql`${pelanggan.userId} IS NOT NULL`,
         or(like(pelanggan.nama, pat), like(pelanggan.telp, pat)),
       ),
     )

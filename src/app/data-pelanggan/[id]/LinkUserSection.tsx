@@ -123,7 +123,7 @@ export function LinkUserSection({
   // Sudah terhubung
   if (currentUserId) {
     return (
-      <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
+      <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-3">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
             <div className="font-bold text-emerald-900 inline-flex items-center gap-1.5">
@@ -141,15 +141,79 @@ export function LinkUserSection({
               )}
             </div>
           </div>
-          <button
-            onClick={doUnlink}
-            disabled={pending}
-            className="text-xs text-amber-700 hover:underline inline-flex items-center gap-1 disabled:opacity-50"
-            title="Putuskan koneksi"
-          >
-            <Unlink size={11} /> Putuskan
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => { setSearching(false); setMerging(true); }}
+              disabled={pending}
+              className="text-xs text-violet-700 hover:underline inline-flex items-center gap-1 disabled:opacity-50"
+              title="Gabung dengan pelanggan lain"
+            >
+              <Merge size={11} /> Gabung
+            </button>
+            <button
+              onClick={doUnlink}
+              disabled={pending}
+              className="text-xs text-amber-700 hover:underline inline-flex items-center gap-1 disabled:opacity-50"
+              title="Putuskan koneksi"
+            >
+              <Unlink size={11} /> Putuskan
+            </button>
+          </div>
         </div>
+
+        {merging && (
+          <div className="border-t border-emerald-200 pt-3 space-y-2">
+            <div className="text-xs text-emerald-900 mb-1">
+              Pilih pelanggan tujuan — semua data dari record ini akan dipindahkan
+              ke target, record ini akan dihapus.
+            </div>
+            <div className="flex gap-1">
+              <input
+                value={mergeQ}
+                onChange={(e) => setMergeQ(e.target.value)}
+                placeholder="Cari nama / telp..."
+                className="flex-1 px-2 py-1.5 border border-line rounded-md text-xs"
+              />
+              <button
+                onClick={doMergeSearch}
+                disabled={pending}
+                className="px-3 py-1.5 bg-violet-600 text-white text-xs font-bold rounded-md disabled:opacity-50"
+              >
+                Cari
+              </button>
+              <button
+                onClick={() => { setMerging(false); setMergeResults([]); }}
+                className="px-2 py-1.5 text-[color:var(--muted)] text-xs"
+              >
+                Batal
+              </button>
+            </div>
+            {mergeResults.length > 0 && (
+              <div className="space-y-1">
+                {mergeResults.map((r) => (
+                  <button
+                    key={r.id}
+                    onClick={() => doMerge(r.id, r.nama)}
+                    disabled={pending}
+                    className="w-full text-left bg-white border border-line rounded-md p-2 hover:border-violet-300 disabled:opacity-50"
+                  >
+                    <div className="text-sm font-bold">{r.nama}</div>
+                    <div className="text-[10px] text-[color:var(--muted)]">
+                      {r.telp ?? "-"} · {r.userId ? "Ber-akun" : "Walk-in"}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {msg && (
+              <div
+                className={`text-xs ${msg.ok ? "text-emerald-700" : "text-red-600"}`}
+              >
+                {msg.text}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   }
