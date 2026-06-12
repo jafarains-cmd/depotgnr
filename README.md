@@ -59,7 +59,28 @@ Setelah login admin, buka menu **Bantuan** di sidebar untuk panduan setup integr
 
 ## Deploy ke Produksi
 
-Disarankan pakai LXC container di Proxmox / VPS Linux + Caddy untuk auto HTTPS. Lihat dokumentasi internal atau tanya admin proyek untuk panduan deploy.
+**Panduan lengkap fresh install di server baru:** [docs/INSTALASI.md](docs/INSTALASI.md)
+
+Atau install otomatis (Ubuntu 22.04+):
+
+```bash
+# Clone repo dulu, lalu:
+sudo bash scripts/install.sh
+```
+
+Script akan:
+- Install Node.js 20 + build tools
+- Bikin user `depot`
+- Clone repo + build
+- Bikin `.env.local` dengan secret auto-generated
+- Setup database + admin pertama
+- Setup systemd service
+- Setup symlink `depot-update` untuk update gampang
+
+Setelah itu masih perlu setup manual (lihat INSTALASI.md):
+- Cloudflare Tunnel untuk HTTPS gratis
+- Apps Script untuk upload foto + backup ke Drive
+- Pengaturan aplikasi via `/admin/pengaturan`
 
 ## Lisensi
 
