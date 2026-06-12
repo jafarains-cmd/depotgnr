@@ -13,7 +13,12 @@ import {
   Loader2,
   AlertTriangle,
 } from "lucide-react";
-import { bukaShiftAction, tutupShiftAction, reopenShiftAction } from "./actions";
+import {
+  bukaShiftAction,
+  tutupShiftAction,
+  reopenShiftAction,
+  editOpeningCashAction,
+} from "./actions";
 import { formatRupiah } from "@/lib/utils";
 
 type MyShiftAktif = {
@@ -77,6 +82,7 @@ export function ShiftClient({
   // (Auto-open dulu memaksa kasir tutup, padahal shift malam masih wajar.)
   void autoOpenTutup;
   const [openTutup, setOpenTutup] = useState(false);
+  const [openEditUangAwal, setOpenEditUangAwal] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const [msg, setMsg] = useState<string | null>(null);
@@ -122,11 +128,21 @@ export function ShiftClient({
               <div className="text-lg font-extrabold text-emerald-900 mt-0.5 inline-flex items-center gap-1.5">
                 <Clock size={16} /> Sejak {fmt(myShiftAktif.openedAt)}
               </div>
-              {myShiftAktif.openingCash !== null && (
-                <div className="text-xs text-emerald-700 mt-1">
-                  Uang awal: {formatRupiah(myShiftAktif.openingCash)}
-                </div>
-              )}
+              <div className="text-xs text-emerald-700 mt-1 inline-flex items-center gap-2">
+                Uang awal:{" "}
+                <b>
+                  {myShiftAktif.openingCash !== null
+                    ? formatRupiah(myShiftAktif.openingCash)
+                    : "—"}
+                </b>
+                <button
+                  onClick={() => setOpenEditUangAwal(true)}
+                  className="text-[10px] text-amber-700 hover:underline font-bold"
+                  title="Koreksi uang awal kalau typo / salah hitung"
+                >
+                  ✎ Edit
+                </button>
+              </div>
             </div>
             <button
               onClick={() => setOpenTutup(true)}
@@ -293,6 +309,108 @@ export function ShiftClient({
           onClose={() => setOpenTutup(false)}
         />
       )}
+      {openEditUangAwal && myShiftAktif && (
+        <EditUangAwalModal
+          shiftId={myShiftAktif.id}
+          currentOpeningCash={myShiftAktif.openingCash}
+          onClose={() => setOpenEditUangAwal(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function EditUangAwalModal({
+  shiftId,
+  currentOpeningCash,
+  onClose,
+}: {
+  shiftId: number;
+  currentOpeningCash: number | null;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const [nilai, setNilai] = useState(currentOpeningCash !== null ? String(currentOpeningCash) : "");
+  const [alasan, setAlasan] = useState("");
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function submit() {
+    setError(null);
+    const n = Number(nilai);
+    if (!Number.isFinite(n) || n < 0) {
+      setError("Uang awal harus angka >= 0");
+      return;
+    }
+    if (alasan.trim().length < 3) {
+      setError("Alasan wajib (min 3 karakter)");
+      return;
+    }
+    startTransition(async () => {
+      const r = await editOpeningCashAction({
+        shiftId,
+        newOpeningCash: Math.floor(n),
+        alasan,
+      });
+      if ("error" in r) setError(r.error);
+      else {
+        onClose();
+        router.refresh();
+      }
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 grid place-items-center p-4">
+      <div className="bg-surface rounded-2xl max-w-md w-full p-5 space-y-3">
+        <div className="flex justify-between items-start">
+          <h2 className="font-bold text-lg">Edit Uang Awal</h2>
+          <button onClick={onClose}>
+            <X size={20} />
+          </button>
+        </div>
+        <div className="text-xs text-[color:var(--muted)]">
+          Koreksi uang awal kalau typo / salah hitung. Perubahan ditrack di audit log.
+        </div>
+        <div className="text-xs bg-[color:var(--surface2)] rounded p-2">
+          Saat ini: <b>{currentOpeningCash !== null ? `Rp ${currentOpeningCash.toLocaleString("id-ID")}` : "—"}</b>
+        </div>
+        <div>
+          <label className="text-xs font-bold block mb-1">Uang Awal Baru (Rp)</label>
+          <input
+            type="number"
+            min={0}
+            value={nilai}
+            onChange={(e) => setNilai(e.target.value)}
+            className="w-full px-3 py-2 border border-line rounded-md text-lg font-mono"
+            autoFocus
+          />
+        </div>
+        <div>
+          <label className="text-xs font-bold block mb-1">Alasan (wajib)</label>
+          <textarea
+            value={alasan}
+            onChange={(e) => setAlasan(e.target.value)}
+            rows={2}
+            placeholder="mis: typo 115 harusnya 115000"
+            className="w-full px-3 py-2 border border-line rounded-md text-sm"
+          />
+        </div>
+        {error && <div className="text-xs text-red-600">{error}</div>}
+        <div className="flex justify-end gap-2 pt-2 border-t border-line">
+          <button onClick={onClose} disabled={pending} className="px-4 py-2 border border-line rounded-md text-sm">
+            Batal
+          </button>
+          <button
+            onClick={submit}
+            disabled={pending}
+            className="px-4 py-2 bg-amber-600 text-white rounded-md text-sm font-bold inline-flex items-center gap-1.5 disabled:opacity-50"
+          >
+            {pending && <Loader2 size={14} className="animate-spin" />}
+            Simpan
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

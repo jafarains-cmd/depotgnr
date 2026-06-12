@@ -147,6 +147,62 @@ export async function forceCloseShiftAction(args: {
   return r;
 }
 
+/**
+ * Edit uang awal shift open. Untuk kasus kasir typo (mis. 115 → 115000)
+ * atau lupa hitung dan baru ingat. Hanya untuk shift status=open.
+ *
+ * Akses: pemilik shift (kasir sendiri) ATAU admin.
+ * Alasan wajib untuk audit trail.
+ */
+export async function editOpeningCashAction(args: {
+  shiftId: number;
+  newOpeningCash: number;
+  alasan: string;
+}): Promise<{ ok: true } | { error: string }> {
+  const session = await requireRole(["admin", "kasir"]);
+  const alasan = args.alasan.trim();
+  if (alasan.length < 3) return { error: "Alasan wajib (min 3 karakter)" };
+  if (!Number.isFinite(args.newOpeningCash) || args.newOpeningCash < 0) {
+    return { error: "Uang awal harus angka >= 0" };
+  }
+
+  const shift = await db.query.shiftKasir.findFirst({
+    where: eq(shiftKasir.id, args.shiftId),
+  });
+  if (!shift) return { error: "Shift tidak ditemukan" };
+  if (shift.status !== "open") return { error: "Hanya shift OPEN yang bisa diedit" };
+
+  // Pemilik shift atau admin
+  const isPemilik = shift.kasirUserId === session.user.id;
+  const isAdmin = session.user.role === "admin";
+  if (!isPemilik && !isAdmin) {
+    return { error: "Hanya pemilik shift atau admin yang bisa edit" };
+  }
+
+  const oldValue = shift.openingCash;
+  const newValue = Math.floor(args.newOpeningCash);
+
+  await db
+    .update(shiftKasir)
+    .set({ openingCash: newValue })
+    .where(eq(shiftKasir.id, args.shiftId));
+
+  await logAudit({
+    actorUserId: session.user.id,
+    action: "shift.edit-opening-cash",
+    entity: "shift_kasir",
+    entityId: args.shiftId,
+    before: { openingCash: oldValue },
+    after: { openingCash: newValue },
+    meta: { alasan },
+  });
+
+  revalidatePath("/kasir/shift");
+  revalidatePath("/admin/shift");
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
 export async function reopenShiftAction(
   shiftId: number,
 ): Promise<{ ok: true } | { error: string }> {
