@@ -148,30 +148,50 @@ export async function forceCloseShiftAction(args: {
 }
 
 /**
- * Edit uang awal shift. Untuk kasus typo (mis. 115 → 115000) atau lupa
- * hitung dan baru ingat.
+ * Edit nominal shift (uang awal / uang fisik tutup). Untuk kasus typo
+ * (mis. 115 → 115000) atau lupa hitung dan baru ingat.
  *
  * Akses:
- *  - Shift OPEN: pemilik shift (kasir sendiri) ATAU admin
- *  - Shift CLOSED: ADMIN ONLY (lebih sensitif, recompute selisih)
+ *  - Shift OPEN: pemilik shift atau admin (hanya bisa edit uang awal)
+ *  - Shift CLOSED: ADMIN ONLY (bisa edit uang awal + uang fisik)
  *
  * Untuk closed shift, sistem otomatis recompute closing_cash_expected &
- * selisih berdasarkan nilai baru:
+ * selisih:
  *   expected_baru = opening_baru + omzet_cash - pengeluaran
- *   selisih_baru = closing_cash_counted - expected_baru
+ *   selisih_baru = uang_fisik_baru - expected_baru
  *
+ * Pass null untuk skip field yang tidak diedit.
  * Alasan wajib untuk audit trail.
  */
-export async function editOpeningCashAction(args: {
+export async function editShiftCashAction(args: {
   shiftId: number;
-  newOpeningCash: number;
+  newOpeningCash?: number | null;
+  newClosingCashCounted?: number | null;
   alasan: string;
-}): Promise<{ ok: true; recomputed?: { expected: number; selisih: number } } | { error: string }> {
+}): Promise<
+  | { ok: true; recomputed?: { expected: number; selisih: number } }
+  | { error: string }
+> {
   const session = await requireRole(["admin", "kasir"]);
   const alasan = args.alasan.trim();
   if (alasan.length < 3) return { error: "Alasan wajib (min 3 karakter)" };
-  if (!Number.isFinite(args.newOpeningCash) || args.newOpeningCash < 0) {
+  if (
+    args.newOpeningCash === undefined &&
+    args.newClosingCashCounted === undefined
+  ) {
+    return { error: "Tidak ada perubahan" };
+  }
+  if (
+    args.newOpeningCash != null &&
+    (!Number.isFinite(args.newOpeningCash) || args.newOpeningCash < 0)
+  ) {
     return { error: "Uang awal harus angka >= 0" };
+  }
+  if (
+    args.newClosingCashCounted != null &&
+    (!Number.isFinite(args.newClosingCashCounted) || args.newClosingCashCounted < 0)
+  ) {
+    return { error: "Uang fisik harus angka >= 0" };
   }
 
   const shift = await db.query.shiftKasir.findFirst({
@@ -182,56 +202,64 @@ export async function editOpeningCashAction(args: {
   const isPemilik = shift.kasirUserId === session.user.id;
   const isAdmin = session.user.role === "admin";
 
-  // Akses
   if (shift.status === "open") {
     if (!isPemilik && !isAdmin) {
       return { error: "Hanya pemilik shift atau admin yang bisa edit" };
     }
+    if (args.newClosingCashCounted != null) {
+      return { error: "Shift masih open — uang fisik diinput saat tutup, bukan di-edit" };
+    }
   } else {
-    // closed shift → admin only
     if (!isAdmin) {
       return { error: "Shift sudah ditutup. Hanya admin yang bisa edit." };
     }
   }
 
   const oldOpening = shift.openingCash;
-  const newOpening = Math.floor(args.newOpeningCash);
+  const oldCounted = shift.closingCashCounted;
 
-  // Update opening cash
-  await db
-    .update(shiftKasir)
-    .set({ openingCash: newOpening })
-    .where(eq(shiftKasir.id, args.shiftId));
+  const updates: Partial<typeof shiftKasir.$inferInsert> = {};
+  if (args.newOpeningCash != null) {
+    updates.openingCash = Math.floor(args.newOpeningCash);
+  }
+  if (args.newClosingCashCounted != null) {
+    updates.closingCashCounted = Math.floor(args.newClosingCashCounted);
+  }
+
+  await db.update(shiftKasir).set(updates).where(eq(shiftKasir.id, args.shiftId));
 
   let recomputed: { expected: number; selisih: number } | undefined;
 
-  // Recompute untuk closed shift
-  if (shift.status === "closed" && shift.closingCashCounted !== null) {
+  // Recompute selisih untuk closed shift
+  if (shift.status === "closed") {
     const ring = await ringkasanShift(args.shiftId);
     const expectedBaru = ring.expected;
-    const selisihBaru = shift.closingCashCounted - expectedBaru;
+    const countedBaru =
+      args.newClosingCashCounted != null
+        ? Math.floor(args.newClosingCashCounted)
+        : (shift.closingCashCounted ?? 0);
+    const selisihBaru = countedBaru - expectedBaru;
     await db
       .update(shiftKasir)
-      .set({
-        closingCashExpected: expectedBaru,
-        selisih: selisihBaru,
-      })
+      .set({ closingCashExpected: expectedBaru, selisih: selisihBaru })
       .where(eq(shiftKasir.id, args.shiftId));
     recomputed = { expected: expectedBaru, selisih: selisihBaru };
   }
 
   await logAudit({
     actorUserId: session.user.id,
-    action: "shift.edit-opening-cash",
+    action: "shift.edit-cash",
     entity: "shift_kasir",
     entityId: args.shiftId,
     before: {
       openingCash: oldOpening,
+      closingCashCounted: oldCounted,
       closingCashExpected: shift.closingCashExpected,
       selisih: shift.selisih,
     },
     after: {
-      openingCash: newOpening,
+      openingCash: updates.openingCash ?? oldOpening,
+      closingCashCounted: updates.closingCashCounted ?? oldCounted,
       ...(recomputed ?? {}),
     },
     meta: { alasan, status: shift.status },
@@ -241,6 +269,19 @@ export async function editOpeningCashAction(args: {
   revalidatePath("/admin/shift");
   revalidatePath("/admin");
   return { ok: true, recomputed };
+}
+
+/** @deprecated Pakai editShiftCashAction. Tetap di-export untuk backward-compat call sites. */
+export async function editOpeningCashAction(args: {
+  shiftId: number;
+  newOpeningCash: number;
+  alasan: string;
+}) {
+  return editShiftCashAction({
+    shiftId: args.shiftId,
+    newOpeningCash: args.newOpeningCash,
+    alasan: args.alasan,
+  });
 }
 
 export async function reopenShiftAction(

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { DetailModal } from "@/components/DetailModal";
 import { ForceCloseButton } from "./ForceCloseButton";
 import { formatRupiah } from "@/lib/utils";
-import { editOpeningCashAction } from "@/app/kasir/shift/actions";
+import { editShiftCashAction } from "@/app/kasir/shift/actions";
 import { X, Loader2, Pencil } from "lucide-react";
 
 export type Row = {
@@ -169,18 +169,53 @@ export function ShiftRows({ rows }: { rows: Row[] }) {
 
 function EditOpeningModal({ row, onClose }: { row: Row; onClose: () => void }) {
   const router = useRouter();
-  const [nilai, setNilai] = useState(
+  const [opening, setOpening] = useState(
     row.openingCash !== null ? String(row.openingCash) : "",
+  );
+  const [counted, setCounted] = useState(
+    row.closingCashCounted !== null ? String(row.closingCashCounted) : "",
   );
   const [alasan, setAlasan] = useState("");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  const isClosed = row.status === "closed";
+  const openingNum = Number(opening);
+  const countedNum = Number(counted);
+  // Live preview selisih untuk closed shift
+  // Pakai (counted - opening - existingExpectedDiff) approach:
+  // expected = opening + omzet_cash - pengeluaran
+  // omzet_cash - pengeluaran = old_expected - old_opening
+  // expected_baru = opening_baru + (old_expected - old_opening)
+  const omzetMinusPeng =
+    row.closingCashExpected !== null && row.openingCash !== null
+      ? row.closingCashExpected - row.openingCash
+      : null;
+  const previewExpected =
+    omzetMinusPeng !== null && Number.isFinite(openingNum)
+      ? Math.floor(openingNum) + omzetMinusPeng
+      : null;
+  const previewSelisih =
+    previewExpected !== null && Number.isFinite(countedNum)
+      ? Math.floor(countedNum) - previewExpected
+      : null;
+
   function submit() {
     setError(null);
-    const n = Number(nilai);
-    if (!Number.isFinite(n) || n < 0) {
+    if (opening.trim() === "") {
+      setError("Uang awal wajib");
+      return;
+    }
+    if (!Number.isFinite(openingNum) || openingNum < 0) {
       setError("Uang awal harus angka >= 0");
+      return;
+    }
+    if (isClosed && counted.trim() === "") {
+      setError("Uang fisik wajib untuk shift closed");
+      return;
+    }
+    if (isClosed && (!Number.isFinite(countedNum) || countedNum < 0)) {
+      setError("Uang fisik harus angka >= 0");
       return;
     }
     if (alasan.trim().length < 3) {
@@ -188,9 +223,10 @@ function EditOpeningModal({ row, onClose }: { row: Row; onClose: () => void }) {
       return;
     }
     startTransition(async () => {
-      const r = await editOpeningCashAction({
+      const r = await editShiftCashAction({
         shiftId: row.id,
-        newOpeningCash: Math.floor(n),
+        newOpeningCash: Math.floor(openingNum),
+        newClosingCashCounted: isClosed ? Math.floor(countedNum) : undefined,
         alasan,
       });
       if ("error" in r) setError(r.error);
@@ -223,40 +259,49 @@ function EditOpeningModal({ row, onClose }: { row: Row; onClose: () => void }) {
           </button>
         </div>
 
-        {row.status === "closed" && (
+        {isClosed && (
           <div className="text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded p-2">
-            ⚠ Shift sudah ditutup. Selisih akan dihitung ulang otomatis berdasarkan
-            uang awal baru.
+            ⚠ Shift sudah ditutup. Ubah uang awal dan/atau uang fisik di laci —
+            selisih dihitung ulang otomatis.
           </div>
         )}
 
         <div className="text-xs bg-[color:var(--surface2)] rounded p-2 space-y-0.5">
+          <div className="text-[10px] font-bold text-[color:var(--muted)] uppercase tracking-wide mb-1">
+            Sekarang
+          </div>
           <div className="flex justify-between">
-            <span className="text-[color:var(--muted)]">Uang awal sekarang</span>
+            <span className="text-[color:var(--muted)]">Uang awal</span>
             <b>{row.openingCash !== null ? formatRupiah(row.openingCash) : "—"}</b>
           </div>
-          {row.status === "closed" && row.closingCashExpected !== null && (
-            <>
-              <div className="flex justify-between">
-                <span className="text-[color:var(--muted)]">Ekspektasi sekarang</span>
-                <b>{formatRupiah(row.closingCashExpected)}</b>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[color:var(--muted)]">Selisih sekarang</span>
-                <b
-                  className={
-                    (row.selisih ?? 0) === 0
-                      ? "text-[color:var(--muted)]"
-                      : (row.selisih ?? 0) > 0
-                        ? "text-emerald-700"
-                        : "text-red-600"
-                  }
-                >
-                  {(row.selisih ?? 0) > 0 ? "+" : ""}
-                  {formatRupiah(row.selisih ?? 0)}
-                </b>
-              </div>
-            </>
+          {isClosed && row.closingCashExpected !== null && (
+            <div className="flex justify-between">
+              <span className="text-[color:var(--muted)]">Ekspektasi</span>
+              <b>{formatRupiah(row.closingCashExpected)}</b>
+            </div>
+          )}
+          {isClosed && row.closingCashCounted !== null && (
+            <div className="flex justify-between">
+              <span className="text-[color:var(--muted)]">Uang fisik</span>
+              <b>{formatRupiah(row.closingCashCounted)}</b>
+            </div>
+          )}
+          {isClosed && (
+            <div className="flex justify-between">
+              <span className="text-[color:var(--muted)]">Selisih</span>
+              <b
+                className={
+                  (row.selisih ?? 0) === 0
+                    ? "text-[color:var(--muted)]"
+                    : (row.selisih ?? 0) > 0
+                      ? "text-emerald-700"
+                      : "text-red-600"
+                }
+              >
+                {(row.selisih ?? 0) > 0 ? "+" : ""}
+                {formatRupiah(row.selisih ?? 0)}
+              </b>
+            </div>
           )}
         </div>
 
@@ -265,12 +310,51 @@ function EditOpeningModal({ row, onClose }: { row: Row; onClose: () => void }) {
           <input
             type="number"
             min={0}
-            value={nilai}
-            onChange={(e) => setNilai(e.target.value)}
+            value={opening}
+            onChange={(e) => setOpening(e.target.value)}
             className="w-full px-3 py-2 border border-line rounded-md text-lg font-mono"
             autoFocus
           />
         </div>
+
+        {isClosed && (
+          <div>
+            <label className="text-xs font-bold block mb-1">
+              Uang Fisik di Laci Baru (Rp)
+            </label>
+            <input
+              type="number"
+              min={0}
+              value={counted}
+              onChange={(e) => setCounted(e.target.value)}
+              className="w-full px-3 py-2 border border-line rounded-md text-lg font-mono"
+            />
+          </div>
+        )}
+
+        {isClosed && previewSelisih !== null && (
+          <div
+            className={`text-xs rounded p-2 ${
+              previewSelisih === 0
+                ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                : previewSelisih > 0
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  : "bg-red-50 text-red-700 border border-red-200"
+            }`}
+          >
+            <div className="flex justify-between">
+              <span>Preview Ekspektasi</span>
+              <b>{formatRupiah(previewExpected ?? 0)}</b>
+            </div>
+            <div className="flex justify-between mt-0.5">
+              <span>Preview Selisih</span>
+              <b>
+                {previewSelisih > 0 ? "+" : ""}
+                {formatRupiah(previewSelisih)}
+              </b>
+            </div>
+          </div>
+        )}
 
         <div>
           <label className="text-xs font-bold block mb-1">Alasan (wajib)</label>
