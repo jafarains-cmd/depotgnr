@@ -93,10 +93,29 @@ export function ShiftRows({ rows }: { rows: Row[] }) {
             {r.openingCash !== null ? formatRupiah(r.openingCash) : "—"}
           </td>
           <td className="p-3 text-xs text-right font-mono">
-            {r.closingCashExpected !== null ? formatRupiah(r.closingCashExpected) : "—"}
+            {r.closingCashExpected !== null ? (
+              formatRupiah(r.closingCashExpected)
+            ) : r.status === "open" ? (
+              <span title="Estimasi live: opening + omzet cash − pengeluaran">
+                {formatRupiah(r.expectedForOpen)}
+                <span className="text-[9px] text-[color:var(--muted)] block font-normal">
+                  estimasi
+                </span>
+              </span>
+            ) : (
+              "—"
+            )}
           </td>
           <td className="p-3 text-xs text-right font-mono">
-            {r.closingCashCounted !== null ? formatRupiah(r.closingCashCounted) : "—"}
+            {r.closingCashCounted !== null ? (
+              formatRupiah(r.closingCashCounted)
+            ) : r.status === "open" ? (
+              <span className="text-[10px] text-[color:var(--muted)] italic">
+                (saat tutup)
+              </span>
+            ) : (
+              "—"
+            )}
           </td>
           <td
             className={`p-3 text-xs text-right font-mono font-bold ${
