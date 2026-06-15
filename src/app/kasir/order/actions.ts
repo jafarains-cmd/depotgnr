@@ -16,6 +16,8 @@ import { reverseBonusForOrder, recordKurirBonus } from "@/lib/bonus";
 import { bonusKurir } from "@/db/schema/bonus";
 import { syncTransaksiFromOrder, voidTransaksiFromOrder } from "@/lib/transaksi-sync";
 import { reverseGalonPinjamForOrder } from "@/lib/galon-pinjam";
+import { reverseStokForOrder } from "@/lib/inventory";
+import { logAudit } from "@/lib/audit";
 import { sendPushToUser } from "@/lib/push";
 import { bestEffort } from "@/lib/best-effort";
 import { uploadBuktiKurir } from "@/lib/drive";
@@ -116,6 +118,95 @@ export async function updateOrderStatus(orderId: number, status: Status) {
   revalidatePath("/kasir/order");
   revalidatePath("/admin/order");
   revalidatePath("/pelanggan/beranda");
+}
+
+/**
+ * Batalkan order POS piutang murni (status=selesai + statusBayar=belum).
+ * Untuk kasus kasir salah input (mis. typo tipe pengantaran, salah item).
+ *
+ * Aturan:
+ *  - Order harus status=selesai DAN statusBayar=belum (piutang murni,
+ *    belum tersinkron ke transaksi)
+ *  - Akses: admin (selalu) atau kasir pembuat dalam 24 jam terakhir
+ *  - Alasan wajib
+ *  - Reverse stok + galon pinjam, set status=batal
+ *  - Audit log
+ */
+export async function batalkanOrderPiutang(
+  orderId: number,
+  alasan: string,
+): Promise<{ ok: true } | { error: string }> {
+  const session = await requireRole(["admin", "kasir"]);
+  const reason = alasan.trim();
+  if (reason.length < 3) return { error: "Alasan wajib (min 3 karakter)" };
+
+  const o = await db.query.orderHeader.findFirst({
+    where: eq(orderHeader.id, orderId),
+  });
+  if (!o) return { error: "Order tidak ditemukan" };
+  if (o.status !== "selesai") {
+    return {
+      error: `Order status "${o.status}" — pakai tombol Batal biasa, bukan fitur ini`,
+    };
+  }
+  if (o.statusBayar === "lunas") {
+    return {
+      error:
+        "Order sudah LUNAS dan tersinkron ke transaksi. Pakai 'Batalkan Tuntas' (admin) supaya transaksi juga di-void.",
+    };
+  }
+
+  // Akses: admin bebas, kasir hanya kalau pembuat + < 24 jam
+  const isAdmin = session.user.role === "admin";
+  if (!isAdmin) {
+    if (o.kurirUserId !== session.user.id) {
+      return { error: "Hanya admin atau kasir pembuat yang bisa batalkan order ini" };
+    }
+    const ageMs = Date.now() - o.createdAt.getTime();
+    if (ageMs > 24 * 60 * 60 * 1000) {
+      return { error: "Order sudah > 24 jam — minta admin yang batalkan" };
+    }
+  }
+
+  // Update status → batal
+  await db
+    .update(orderHeader)
+    .set({
+      status: "batal",
+      catatan: o.catatan
+        ? `${o.catatan} · [BATAL oleh ${session.user.name}: ${reason}]`
+        : `[BATAL oleh ${session.user.name}: ${reason}]`,
+      updatedAt: new Date(),
+    })
+    .where(eq(orderHeader.id, orderId));
+
+  // Reverse stok + galon pinjam
+  bestEffort("reverseStokForOrder", reverseStokForOrder(orderId, session.user.id));
+  bestEffort(
+    "reverseGalonPinjamForOrder",
+    reverseGalonPinjamForOrder(orderId, session.user.id),
+  );
+  // Loyalty / bonus kurir: tidak perlu reverse — belum di-trigger untuk piutang belum lunas
+
+  await logAudit({
+    actorUserId: session.user.id,
+    action: "order.batal-piutang",
+    entity: "order_header",
+    entityId: orderId,
+    before: {
+      nomorOrder: o.nomorOrder,
+      status: o.status,
+      statusBayar: o.statusBayar,
+      totalEstimasi: o.totalEstimasi,
+      tipePengantaran: o.tipePengantaran,
+    },
+    meta: { alasan: reason },
+  });
+
+  revalidatePath("/kasir/order");
+  revalidatePath("/pembayaran");
+  revalidatePath("/admin/order");
+  return { ok: true };
 }
 
 async function notifStatusKeGrup(

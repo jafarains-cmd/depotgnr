@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { Check, X, ExternalLink, FileText, ChevronDown, ChevronRight, FileStack, Unlink, Loader2 } from "lucide-react";
 import { konfirmasiBayar, tolakBayar, bayarPiutangPartial } from "./actions";
+import { batalkanOrderPiutang } from "@/app/kasir/order/actions";
 import { tandaiLunasBatch, lepasNotaGabungan } from "../admin/nota-gabungan/actions";
 import { formatRupiah } from "@/lib/utils";
 import { normalizeDriveUrl, isPdfUrl } from "@/lib/drive-url";
@@ -338,6 +339,27 @@ export function PembayaranClient({
                     title="Bayar sebagian / cicilan"
                   >
                     Cicilan
+                  </button>
+                )}
+                {/* Tombol batalkan piutang — kasir salah input (mis. tipe pengantaran) */}
+                {isPiutang(r) && r.paidPartial === 0 && (
+                  <button
+                    disabled={pending}
+                    onClick={() => {
+                      const alasan = prompt(
+                        `BATALKAN order piutang ${r.nomorOrder} (${formatRupiah(r.total)})?\n\nUntuk kasus kasir salah input (mis. tipe pengantaran salah, salah item). Stok akan otomatis dikembalikan.\n\nAlasan (wajib, min 3 karakter):`,
+                      );
+                      if (!alasan || alasan.trim().length < 3) return;
+                      startTransition(async () => {
+                        const res = await batalkanOrderPiutang(r.id, alasan.trim());
+                        if ("error" in res) toast.show(`❌ ${res.error}`);
+                        else toast.show(`✓ ${r.nomorOrder} dibatalkan, stok dikembalikan`);
+                      });
+                    }}
+                    className="px-3 py-2.5 border-2 border-red-200 text-red-600 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-1 disabled:opacity-50"
+                    title="Batal order — kasir salah input"
+                  >
+                    <X size={14} />
                   </button>
                 )}
                 {/* Tombol tolak hanya untuk yang punya bukti (statusBayar=menunggu) */}
