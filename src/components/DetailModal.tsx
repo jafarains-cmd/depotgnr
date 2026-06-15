@@ -598,35 +598,52 @@ function ShiftView({
           </div>
         ) : (
           <div className="space-y-1 max-h-64 overflow-y-auto">
-            {data.transaksiList.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => onOpenTransaksi(t.id)}
-                className="w-full text-left bg-[color:var(--surface2)] rounded-md p-2 hover:bg-brand-soft transition block"
-              >
-                <div className="flex justify-between items-start gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[10px] font-mono text-[color:var(--muted)]">
-                      {t.nomorNota}
+            {data.transaksiList.map((t) => {
+              const isPiutangLunas = t.refOrderId !== null;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => onOpenTransaksi(t.id)}
+                  className={`w-full text-left rounded-md p-2 hover:bg-brand-soft transition block ${
+                    isPiutangLunas
+                      ? "bg-amber-50 border border-amber-200"
+                      : "bg-[color:var(--surface2)]"
+                  }`}
+                >
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[10px] font-mono text-[color:var(--muted)] inline-flex items-center gap-1.5">
+                        {t.nomorNota}
+                        {isPiutangLunas && (
+                          <span className="px-1 py-0.5 rounded bg-amber-200 text-amber-900 text-[9px] font-bold">
+                            PIUTANG LUNAS
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs font-semibold truncate">
+                        {t.pelangganNama ?? "Walk-in"}
+                      </div>
+                      <div className="text-[10px] text-[color:var(--muted)]">
+                        {fmt(t.createdAt, { timeStyle: "short" })} ·{" "}
+                        {t.metodeBayar.toUpperCase()}
+                        {isPiutangLunas && t.refOrderNomor && (
+                          <span className="ml-1 text-amber-700">
+                            · dari {t.refOrderNomor}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-xs font-semibold truncate">
-                      {t.pelangganNama ?? "Walk-in"}
-                    </div>
-                    <div className="text-[10px] text-[color:var(--muted)]">
-                      {fmt(t.createdAt, { timeStyle: "short" })} ·{" "}
-                      {t.metodeBayar.toUpperCase()}
+                    <div
+                      className={`text-sm font-bold whitespace-nowrap ${
+                        t.voided ? "line-through text-[color:var(--muted)]" : "text-brand"
+                      }`}
+                    >
+                      {formatRupiah(t.total)}
                     </div>
                   </div>
-                  <div
-                    className={`text-sm font-bold whitespace-nowrap ${
-                      t.voided ? "line-through text-[color:var(--muted)]" : "text-brand"
-                    }`}
-                  >
-                    {formatRupiah(t.total)}
-                  </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>

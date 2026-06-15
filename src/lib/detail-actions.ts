@@ -102,6 +102,8 @@ export type ShiftDetail = {
     total: number;
     metodeBayar: string;
     voided: boolean;
+    refOrderId: number | null;
+    refOrderNomor: string | null;
     createdAt: string;
   }>;
   pengeluaranList: Array<{
@@ -363,7 +365,7 @@ export async function getShiftDetail(shiftId: number): Promise<ShiftDetail | nul
     ? await db.query.user.findFirst({ where: eq(userTable.id, s.closedByUserId) })
     : null;
 
-  // Transaksi shift ini
+  // Transaksi shift ini — include refOrderId untuk identifikasi pelunasan piutang
   const trxList = await db
     .select({
       id: transaksi.id,
@@ -371,11 +373,14 @@ export async function getShiftDetail(shiftId: number): Promise<ShiftDetail | nul
       total: transaksi.total,
       metodeBayar: transaksi.metodeBayar,
       voidedAt: transaksi.voidedAt,
+      refOrderId: transaksi.refOrderId,
+      refOrderNomor: orderHeader.nomorOrder,
       createdAt: transaksi.createdAt,
       pelangganNama: pelangganTable.nama,
     })
     .from(transaksi)
     .leftJoin(pelangganTable, eq(transaksi.pelangganId, pelangganTable.id))
+    .leftJoin(orderHeader, eq(transaksi.refOrderId, orderHeader.id))
     .where(eq(transaksi.shiftId, shiftId))
     .orderBy(sql`${transaksi.createdAt} DESC`);
 
@@ -426,6 +431,8 @@ export async function getShiftDetail(shiftId: number): Promise<ShiftDetail | nul
       total: t.total,
       metodeBayar: t.metodeBayar,
       voided: !!t.voidedAt,
+      refOrderId: t.refOrderId,
+      refOrderNomor: t.refOrderNomor,
       createdAt: t.createdAt.toISOString(),
     })),
     pengeluaranList: pengList.map((p) => ({
