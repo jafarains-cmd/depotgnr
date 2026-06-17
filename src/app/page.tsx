@@ -68,7 +68,7 @@ export default async function Home() {
           <div className="flex items-center gap-2">
             <Link
               href="/login"
-              className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm font-bold text-brand border-2 border-brand bg-surface hover:bg-brand-soft rounded-lg transition"
+              className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm font-extrabold text-[color:var(--brand-deep)] bg-[color:var(--accent)] hover:brightness-95 rounded-lg transition shadow-md"
             >
               Masuk
             </Link>
@@ -112,7 +112,7 @@ export default async function Home() {
                 </Link>
                 <Link
                   href="/login"
-                  className="px-6 py-3 border-2 border-brand text-brand font-extrabold rounded-xl hover:bg-brand-soft transition inline-flex items-center justify-center gap-2"
+                  className="px-6 py-3 bg-[color:var(--accent)] text-[color:var(--brand-deep)] font-extrabold rounded-xl hover:brightness-95 transition inline-flex items-center justify-center gap-2 shadow-lg shadow-[color:var(--accent)]/40"
                 >
                   Sudah Punya Akun
                 </Link>
