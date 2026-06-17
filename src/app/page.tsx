@@ -68,13 +68,13 @@ export default async function Home() {
           <div className="flex items-center gap-2">
             <Link
               href="/login"
-              className="hidden sm:inline-flex px-4 py-2 text-sm font-bold text-brand hover:bg-brand-soft rounded-lg transition"
+              className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm font-bold text-brand border-2 border-brand bg-surface hover:bg-brand-soft rounded-lg transition"
             >
               Masuk
             </Link>
             <Link
               href="/register"
-              className="px-4 py-2 bg-brand-600 text-white text-sm font-bold rounded-lg hover:bg-brand-700 transition"
+              className="px-3 sm:px-4 py-2 bg-brand-600 text-white text-sm font-bold rounded-lg hover:bg-brand-700 transition shadow-md shadow-brand/30"
             >
               Daftar
             </Link>
