@@ -4,6 +4,7 @@ import { shiftKasir } from "@/db/schema/shift";
 import { transaksi } from "@/db/schema/transaksi";
 import { orderHeader } from "@/db/schema/order";
 import { pengeluaran } from "@/db/schema/pengeluaran";
+import { kasMasuk } from "@/db/schema/kas-masuk";
 import { user as userTable } from "@/db/schema/auth";
 
 const REOPEN_WINDOW_MS = 30 * 60 * 1000; // 30 menit
@@ -70,11 +71,21 @@ export async function ringkasanShift(shiftId: number) {
     .from(pengeluaran)
     .where(eq(pengeluaran.shiftId, shiftId));
 
+  // Kas masuk lain (di luar omzet POS — pelunasan offline, tip, dll)
+  const [kasRow] = await db
+    .select({
+      totalKasMasukLain: sql<number>`coalesce(sum(${kasMasuk.jumlah}), 0)`,
+      jumlahKasMasukLain: sql<number>`coalesce(count(*), 0)`,
+    })
+    .from(kasMasuk)
+    .where(eq(kasMasuk.shiftId, shiftId));
+
   const shift = await db.query.shiftKasir.findFirst({ where: eq(shiftKasir.id, shiftId) });
   const opening = shift?.openingCash ?? 0;
   const omzetCash = Number(trxRow?.omzetCash ?? 0);
   const totalPengeluaran = Number(pengRow?.totalPengeluaran ?? 0);
-  const expected = opening + omzetCash - totalPengeluaran;
+  const totalKasMasukLain = Number(kasRow?.totalKasMasukLain ?? 0);
+  const expected = opening + omzetCash + totalKasMasukLain - totalPengeluaran;
 
   return {
     openingCash: opening,
@@ -86,6 +97,8 @@ export async function ringkasanShift(shiftId: number) {
     jumlahOrder: Number(orderRow?.jumlahOrder ?? 0),
     totalPengeluaran,
     jumlahPengeluaran: Number(pengRow?.jumlahPengeluaran ?? 0),
+    totalKasMasukLain,
+    jumlahKasMasukLain: Number(kasRow?.jumlahKasMasukLain ?? 0),
     expected,
   };
 }

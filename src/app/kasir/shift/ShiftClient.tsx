@@ -12,6 +12,8 @@ import {
   X,
   Loader2,
   AlertTriangle,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import {
   bukaShiftAction,
@@ -19,6 +21,10 @@ import {
   reopenShiftAction,
   editOpeningCashAction,
 } from "./actions";
+import {
+  tambahKasMasukAction,
+  hapusKasMasukAction,
+} from "./kas-masuk-actions";
 import { formatRupiah } from "@/lib/utils";
 
 type MyShiftAktif = {
@@ -37,6 +43,8 @@ type Ringkasan = {
   jumlahOrder: number;
   totalPengeluaran: number;
   jumlahPengeluaran: number;
+  totalKasMasukLain: number;
+  jumlahKasMasukLain: number;
   expected: number;
 };
 
@@ -61,6 +69,22 @@ type ShiftHariIni = {
   dapatReopen: boolean;
 };
 
+type KasMasukItem = {
+  id: number;
+  tanggal: string;
+  kategori: string;
+  jumlah: number;
+  deskripsi: string | null;
+};
+
+const KATEGORI_LABEL: Record<string, string> = {
+  "pelunasan-offline": "Pelunasan piutang offline",
+  tip: "Tip pelanggan",
+  "setoran-titip": "Setoran titip kasir",
+  "kembalian-tidak-diambil": "Kembalian tidak diambil",
+  lainnya: "Lainnya",
+};
+
 export function ShiftClient({
   myShiftAktif,
   ringkasanAktif,
@@ -68,6 +92,7 @@ export function ShiftClient({
   shiftHariIni,
   nextUrl,
   autoOpenTutup,
+  kasMasukList,
 }: {
   myShiftAktif: MyShiftAktif | null;
   ringkasanAktif: Ringkasan | null;
@@ -75,6 +100,7 @@ export function ShiftClient({
   shiftHariIni: ShiftHariIni[];
   nextUrl?: string | null;
   autoOpenTutup?: boolean;
+  kasMasukList: KasMasukItem[];
 }) {
   // Auto-open modal buka shift kalau ada nextUrl dan belum ada shift aktif
   const [openBuka, setOpenBuka] = useState(Boolean(nextUrl && !myShiftAktif));
@@ -187,6 +213,14 @@ export function ShiftClient({
             </button>
           </div>
         </div>
+      )}
+
+      {/* Kas masuk lain-lain (di luar omzet POS) */}
+      {myShiftAktif && (
+        <KasMasukSection
+          shiftId={myShiftAktif.id}
+          items={kasMasukList}
+        />
       )}
 
       {/* Shift kasir lain yang aktif (untuk take-over awareness) */}
@@ -602,6 +636,16 @@ function TutupModal({
           <div className="text-[10px] text-[color:var(--muted)] pl-3 italic">
             includes POS langsung + pelunasan piutang cash
           </div>
+          {ringkasan.totalKasMasukLain > 0 && (
+            <div className="flex justify-between">
+              <span className="text-[color:var(--muted)]">
+                + Kas masuk lain ({ringkasan.jumlahKasMasukLain}x)
+              </span>
+              <b className="text-emerald-700">
+                {formatRupiah(ringkasan.totalKasMasukLain)}
+              </b>
+            </div>
+          )}
           <div className="flex justify-between">
             <span className="text-[color:var(--muted)]">− Pengeluaran ({ringkasan.jumlahPengeluaran}x)</span>
             <b className="text-red-600">{formatRupiah(ringkasan.totalPengeluaran)}</b>
@@ -703,5 +747,211 @@ function TutupModal({
         </div>
       </div>
     </div>
+  );
+}
+
+function KasMasukSection({
+  shiftId,
+  items,
+}: {
+  shiftId: number;
+  items: KasMasukItem[];
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [showForm, setShowForm] = useState(false);
+  const [jumlah, setJumlah] = useState("");
+  const [kategori, setKategori] = useState("pelunasan-offline");
+  const [deskripsi, setDeskripsi] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+
+  const total = items.reduce((s, it) => s + it.jumlah, 0);
+
+  function handleSubmit() {
+    setErr(null);
+    const j = parseInt(jumlah.replace(/\D/g, ""), 10);
+    if (!Number.isFinite(j) || j <= 0) {
+      setErr("Jumlah harus > 0");
+      return;
+    }
+    if (deskripsi.trim().length < 3) {
+      setErr("Keterangan wajib (min 3 karakter)");
+      return;
+    }
+    startTransition(async () => {
+      const res = await tambahKasMasukAction({
+        jumlah: j,
+        kategori,
+        deskripsi: deskripsi.trim(),
+        shiftId,
+      });
+      if ("error" in res) {
+        setErr(res.error);
+        return;
+      }
+      setJumlah("");
+      setDeskripsi("");
+      setKategori("pelunasan-offline");
+      setShowForm(false);
+      router.refresh();
+    });
+  }
+
+  function handleHapus(id: number, label: string) {
+    const alasan = prompt(
+      `HAPUS kas masuk "${label}"?\n\nAlasan (min 3 karakter):`,
+    );
+    if (!alasan || alasan.trim().length < 3) return;
+    startTransition(async () => {
+      const res = await hapusKasMasukAction(id, alasan.trim());
+      if ("error" in res) {
+        alert(`Gagal: ${res.error}`);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  return (
+    <section>
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-xs font-bold tracking-widest text-[color:var(--muted)] inline-flex items-center gap-1.5">
+          <Coins size={12} /> KAS MASUK LAIN-LAIN
+          {total > 0 && (
+            <span className="text-emerald-700">· {formatRupiah(total)}</span>
+          )}
+        </h2>
+        {!showForm && (
+          <button
+            onClick={() => setShowForm(true)}
+            className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1.5 hover:bg-emerald-700"
+          >
+            <Plus size={12} /> Tambah
+          </button>
+        )}
+      </div>
+      <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-[11px] text-amber-900 leading-snug mb-2">
+        Pakai untuk uang yang masuk laci tapi <b>tidak dari transaksi POS</b>:
+        pelanggan bayar piutang langsung (tanpa app), tip, kembalian tidak
+        diambil, dst.
+      </div>
+
+      {showForm && (
+        <div className="bg-surface border-2 border-emerald-300 rounded-xl p-3 mb-2 space-y-2">
+          <div>
+            <label className="text-[11px] font-bold text-[color:var(--muted)]">
+              Jumlah (Rp)
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={jumlah}
+              onChange={(e) => setJumlah(e.target.value.replace(/\D/g, ""))}
+              placeholder="10000"
+              className="w-full mt-1 px-3 py-2 border border-line rounded-lg text-sm font-bold"
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="text-[11px] font-bold text-[color:var(--muted)]">
+              Kategori
+            </label>
+            <select
+              value={kategori}
+              onChange={(e) => setKategori(e.target.value)}
+              className="w-full mt-1 px-3 py-2 border border-line rounded-lg text-sm bg-surface"
+            >
+              {Object.entries(KATEGORI_LABEL).map(([k, label]) => (
+                <option key={k} value={k}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-[11px] font-bold text-[color:var(--muted)]">
+              Keterangan (min 3 karakter)
+            </label>
+            <input
+              type="text"
+              value={deskripsi}
+              onChange={(e) => setDeskripsi(e.target.value)}
+              placeholder="Ibu Ani bayar piutang langsung, tidak lewat app"
+              className="w-full mt-1 px-3 py-2 border border-line rounded-lg text-sm"
+            />
+          </div>
+          {err && (
+            <div className="text-xs text-red-600 font-bold">{err}</div>
+          )}
+          <div className="flex gap-2">
+            <button
+              onClick={handleSubmit}
+              disabled={pending}
+              className="flex-1 px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold disabled:opacity-50"
+            >
+              {pending ? "Menyimpan…" : "Simpan"}
+            </button>
+            <button
+              onClick={() => {
+                setShowForm(false);
+                setErr(null);
+              }}
+              disabled={pending}
+              className="px-3 py-2 border border-line rounded-lg text-sm font-bold"
+            >
+              Batal
+            </button>
+          </div>
+        </div>
+      )}
+
+      {items.length === 0 ? (
+        <div className="text-xs text-[color:var(--muted)] italic px-1">
+          Belum ada kas masuk lain di shift ini.
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          {items.map((it) => (
+            <div
+              key={it.id}
+              className="bg-surface border border-line rounded-lg px-3 py-2 flex justify-between items-start gap-2"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-bold inline-flex items-center gap-2">
+                  {formatRupiah(it.jumlah)}
+                  <span className="text-[10px] font-medium text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
+                    {KATEGORI_LABEL[it.kategori] ?? it.kategori}
+                  </span>
+                </div>
+                {it.deskripsi && (
+                  <div className="text-xs text-[color:var(--muted)] truncate">
+                    {it.deskripsi}
+                  </div>
+                )}
+                <div className="text-[10px] text-[color:var(--muted)] mt-0.5">
+                  {new Date(it.tanggal).toLocaleString("id-ID", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </div>
+              </div>
+              <button
+                onClick={() =>
+                  handleHapus(
+                    it.id,
+                    `${formatRupiah(it.jumlah)} - ${it.deskripsi ?? it.kategori}`,
+                  )
+                }
+                disabled={pending}
+                className="text-red-600 hover:bg-red-50 p-1.5 rounded disabled:opacity-50"
+                title="Hapus"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }

@@ -14,6 +14,7 @@ import {
 import { user as userTable } from "@/db/schema/auth";
 import { shiftKasir } from "@/db/schema/shift";
 import { pengeluaran } from "@/db/schema/pengeluaran";
+import { kasMasuk } from "@/db/schema/kas-masuk";
 import { requireRole } from "@/lib/permissions";
 
 export type DetailItem = {
@@ -93,6 +94,8 @@ export type ShiftDetail = {
     jumlahOrder: number;
     totalPengeluaran: number;
     jumlahPengeluaran: number;
+    totalKasMasukLain: number;
+    jumlahKasMasukLain: number;
     expected: number;
   };
   transaksiList: Array<{
@@ -107,6 +110,13 @@ export type ShiftDetail = {
     createdAt: string;
   }>;
   pengeluaranList: Array<{
+    id: number;
+    kategori: string;
+    deskripsi: string | null;
+    jumlah: number;
+    createdAt: string;
+  }>;
+  kasMasukList: Array<{
     id: number;
     kategori: string;
     deskripsi: string | null;
@@ -397,6 +407,19 @@ export async function getShiftDetail(shiftId: number): Promise<ShiftDetail | nul
     .where(eq(pengeluaran.shiftId, shiftId))
     .orderBy(sql`${pengeluaran.createdAt} DESC`);
 
+  // Kas masuk lain shift ini
+  const kasList = await db
+    .select({
+      id: kasMasuk.id,
+      kategori: kasMasuk.kategori,
+      deskripsi: kasMasuk.deskripsi,
+      jumlah: kasMasuk.jumlah,
+      createdAt: kasMasuk.createdAt,
+    })
+    .from(kasMasuk)
+    .where(eq(kasMasuk.shiftId, shiftId))
+    .orderBy(sql`${kasMasuk.createdAt} DESC`);
+
   const ring = await ringkasanShift(shiftId);
 
   return {
@@ -422,6 +445,8 @@ export async function getShiftDetail(shiftId: number): Promise<ShiftDetail | nul
       jumlahOrder: ring.jumlahOrder,
       totalPengeluaran: ring.totalPengeluaran,
       jumlahPengeluaran: ring.jumlahPengeluaran,
+      totalKasMasukLain: ring.totalKasMasukLain,
+      jumlahKasMasukLain: ring.jumlahKasMasukLain,
       expected: ring.expected,
     },
     transaksiList: trxList.map((t) => ({
@@ -441,6 +466,13 @@ export async function getShiftDetail(shiftId: number): Promise<ShiftDetail | nul
       deskripsi: p.deskripsi,
       jumlah: p.jumlah,
       createdAt: p.createdAt.toISOString(),
+    })),
+    kasMasukList: kasList.map((k) => ({
+      id: k.id,
+      kategori: k.kategori,
+      deskripsi: k.deskripsi,
+      jumlah: k.jumlah,
+      createdAt: k.createdAt.toISOString(),
     })),
   };
 }

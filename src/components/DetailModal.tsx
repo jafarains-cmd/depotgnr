@@ -541,6 +541,12 @@ function ShiftView({
             label="+ Omzet cash"
             value={formatRupiah(data.ringkasan.omzetCash)}
           />
+          {data.ringkasan.totalKasMasukLain > 0 && (
+            <Row
+              label={`+ Kas masuk lain (${data.ringkasan.jumlahKasMasukLain}x)`}
+              value={formatRupiah(data.ringkasan.totalKasMasukLain)}
+            />
+          )}
           {data.ringkasan.totalPengeluaran > 0 && (
             <Row
               label="− Pengeluaran"
@@ -667,6 +673,34 @@ function ShiftView({
                 </div>
                 <div className="font-bold text-red-700 whitespace-nowrap">
                   {formatRupiah(p.jumlah)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {data.kasMasukList.length > 0 && (
+        <div>
+          <h3 className="text-xs font-bold uppercase tracking-wide text-[color:var(--muted)] mb-2">
+            Kas Masuk Lain ({data.kasMasukList.length})
+          </h3>
+          <div className="space-y-1">
+            {data.kasMasukList.map((k) => (
+              <div
+                key={k.id}
+                className="bg-emerald-50 border border-emerald-200 rounded-md p-2 text-xs flex justify-between items-start gap-2"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="font-bold text-emerald-900">{k.kategori}</div>
+                  {k.deskripsi && (
+                    <div className="text-[10px] text-emerald-700 mt-0.5">
+                      {k.deskripsi}
+                    </div>
+                  )}
+                </div>
+                <div className="font-bold text-emerald-700 whitespace-nowrap">
+                  {formatRupiah(k.jumlah)}
                 </div>
               </div>
             ))}

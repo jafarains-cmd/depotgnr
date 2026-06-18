@@ -4,6 +4,7 @@ import { shiftKasir } from "@/db/schema/shift";
 import { user as userTable } from "@/db/schema/auth";
 import { requireRole } from "@/lib/permissions";
 import { getShiftAktif, getSemuaShiftAktif, ringkasanShift, SHIFT_REOPEN_WINDOW_MS } from "@/lib/shift";
+import { kasMasuk } from "@/db/schema/kas-masuk";
 import { ShiftClient } from "./ShiftClient";
 import { PageHeader } from "@/components/AppShell";
 
@@ -54,6 +55,15 @@ export default async function ShiftPage({
 
   // Ringkasan untuk shift aktif (kalau ada)
   const ringkasanAktif = myShiftAktif ? await ringkasanShift(myShiftAktif.id) : null;
+
+  // Daftar kas masuk lain untuk shift aktif
+  const kasMasukAktif = myShiftAktif
+    ? await db
+        .select()
+        .from(kasMasuk)
+        .where(eq(kasMasuk.shiftId, myShiftAktif.id))
+        .orderBy(desc(kasMasuk.createdAt))
+    : [];
 
   return (
     <div className="p-4 md:p-6 max-w-3xl">
@@ -130,6 +140,13 @@ export default async function ShiftPage({
             s.status === "closed" &&
             s.closedAt !== null &&
             Date.now() - s.closedAt.getTime() < SHIFT_REOPEN_WINDOW_MS,
+        }))}
+        kasMasukList={kasMasukAktif.map((k) => ({
+          id: k.id,
+          tanggal: k.tanggal.toISOString(),
+          kategori: k.kategori,
+          jumlah: k.jumlah,
+          deskripsi: k.deskripsi,
         }))}
       />
     </div>
