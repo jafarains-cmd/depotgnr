@@ -22,6 +22,8 @@ import {
   type PelangganDetail,
   type ShiftDetail,
 } from "@/lib/detail-actions";
+import { tambahPengeluaranKeShiftAction } from "@/app/kasir/shift/investigasi-actions";
+import { tambahKasMasukAction } from "@/app/kasir/shift/kas-masuk-actions";
 import { formatRupiah } from "@/lib/utils";
 import { normalizeDriveUrl, isPdfUrl } from "@/lib/drive-url";
 import { useFormatTanggal } from "./TimezoneContext";
@@ -118,7 +120,14 @@ export function DetailModal(props: Props) {
             )}
             {data && data.kind === "pelanggan" && <PelangganView data={data} />}
             {data && data.kind === "shift" && (
-              <ShiftView data={data} onOpenTransaksi={setNestedTransaksiId} />
+              <ShiftView
+                data={data}
+                onOpenTransaksi={setNestedTransaksiId}
+                onRefresh={async () => {
+                  const fresh = await getShiftDetail(data.id);
+                  if (fresh) setData(fresh);
+                }}
+              />
             )}
           </div>
         </div>
@@ -486,9 +495,11 @@ function StatBox({
 function ShiftView({
   data,
   onOpenTransaksi,
+  onRefresh,
 }: {
   data: ShiftDetail;
   onOpenTransaksi: (id: number) => void;
+  onRefresh: () => Promise<void>;
 }) {
   const fmt = useFormatTanggal();
   const selisih = data.selisih ?? 0;
@@ -576,6 +587,17 @@ function ShiftView({
             }
           />
         </div>
+      )}
+
+      {selisih !== 0 && (
+        <ShiftSelisihPanel
+          shiftId={data.id}
+          selisih={selisih}
+          selisihKategori={data.selisihKategori}
+          selisihAlasan={data.selisihAlasan}
+          catatan={data.catatan}
+          onChanged={onRefresh}
+        />
       )}
 
       {(data.ringkasan.omzetTransfer > 0 || data.ringkasan.omzetQris > 0) && (
@@ -711,6 +733,232 @@ function ShiftView({
       {data.catatan && (
         <div className="text-xs italic text-[color:var(--muted)] border-t border-line pt-2 whitespace-pre-line">
           {data.catatan}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const KATEGORI_SELISIH_LABEL: Record<string, string> = {
+  "pengeluaran-lupa-input": "Pengeluaran lupa diinput",
+  "setoran-owner": "Setoran modal owner",
+  "pelunasan-offline": "Pelunasan piutang langsung",
+  "bayar-lebih": "Pelanggan bayar lebih",
+  "kembalian-tidak-diambil": "Kembalian tidak diambil",
+  tip: "Tip pelanggan",
+  "kurang-bayar": "Pelanggan kurang bayar",
+  hilang: "Hilang / tidak tahu",
+  lainnya: "Lainnya",
+};
+
+function ShiftSelisihPanel({
+  shiftId,
+  selisih,
+  selisihKategori,
+  selisihAlasan,
+  catatan,
+  onChanged,
+}: {
+  shiftId: number;
+  selisih: number;
+  selisihKategori: string | null;
+  selisihAlasan: string | null;
+  catatan: string | null;
+  onChanged: () => Promise<void>;
+}) {
+  const [showForm, setShowForm] = useState<"pengeluaran" | "kas-masuk" | null>(
+    null,
+  );
+  const [pending, setPending] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [jumlah, setJumlah] = useState(String(Math.abs(selisih)));
+  const [kategori, setKategori] = useState(
+    selisih > 0 ? "pelunasan-offline" : "lainnya",
+  );
+  const [deskripsi, setDeskripsi] = useState("");
+
+  const isKurang = selisih < 0;
+  const isLebih = selisih > 0;
+
+  async function submit() {
+    setErr(null);
+    const j = parseInt(jumlah.replace(/\D/g, ""), 10);
+    if (!Number.isFinite(j) || j <= 0) {
+      setErr("Jumlah harus > 0");
+      return;
+    }
+    if (deskripsi.trim().length < 3) {
+      setErr("Keterangan wajib (min 3 karakter)");
+      return;
+    }
+    setPending(true);
+    try {
+      const res =
+        showForm === "pengeluaran"
+          ? await tambahPengeluaranKeShiftAction({
+              shiftId,
+              jumlah: j,
+              kategori,
+              deskripsi: deskripsi.trim(),
+            })
+          : await tambahKasMasukAction({
+              shiftId,
+              jumlah: j,
+              kategori,
+              deskripsi: deskripsi.trim(),
+            });
+      if ("error" in res) {
+        setErr(res.error);
+        return;
+      }
+      setShowForm(null);
+      setDeskripsi("");
+      await onChanged();
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-3 space-y-2">
+      <div className="text-xs font-extrabold text-amber-900 uppercase tracking-wide">
+        ⚠ Selisih {isLebih ? "Lebih" : "Kurang"} {formatRupiah(Math.abs(selisih))}
+      </div>
+
+      {selisihKategori ? (
+        <div className="text-xs text-amber-900">
+          <div>
+            <b>Kategori:</b>{" "}
+            {KATEGORI_SELISIH_LABEL[selisihKategori] ?? selisihKategori}
+          </div>
+          {selisihAlasan && (
+            <div className="mt-0.5">
+              <b>Alasan:</b> {selisihAlasan}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="text-xs text-amber-800 italic">
+          Belum ada penjelasan kategori. {catatan ? `Catatan kasir: "${catatan}"` : ""}
+        </div>
+      )}
+
+      {showForm === null ? (
+        <div className="flex flex-wrap gap-2 pt-1">
+          {isLebih && (
+            <button
+              onClick={() => {
+                setShowForm("kas-masuk");
+                setKategori("pelunasan-offline");
+                setJumlah(String(selisih));
+              }}
+              className="px-3 py-1.5 bg-emerald-600 text-white rounded text-xs font-bold hover:bg-emerald-700"
+            >
+              + Catat Kas Masuk Lain
+            </button>
+          )}
+          {isKurang && (
+            <button
+              onClick={() => {
+                setShowForm("pengeluaran");
+                setKategori("lainnya");
+                setJumlah(String(Math.abs(selisih)));
+              }}
+              className="px-3 py-1.5 bg-red-600 text-white rounded text-xs font-bold hover:bg-red-700"
+            >
+              + Catat Pengeluaran
+            </button>
+          )}
+          {isLebih && (
+            <button
+              onClick={() => {
+                setShowForm("pengeluaran");
+                setKategori("lainnya");
+                setJumlah("");
+              }}
+              className="px-3 py-1.5 border border-line rounded text-xs font-bold hover:bg-surface"
+            >
+              + Pengeluaran
+            </button>
+          )}
+          {isKurang && (
+            <button
+              onClick={() => {
+                setShowForm("kas-masuk");
+                setKategori("lainnya");
+                setJumlah("");
+              }}
+              className="px-3 py-1.5 border border-line rounded text-xs font-bold hover:bg-surface"
+            >
+              + Kas Masuk Lain
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="bg-surface border border-amber-200 rounded p-2 space-y-2">
+          <div className="text-[11px] font-bold text-amber-900">
+            {showForm === "pengeluaran" ? "Tambah Pengeluaran" : "Tambah Kas Masuk Lain"}
+          </div>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={jumlah}
+            onChange={(e) => setJumlah(e.target.value.replace(/\D/g, ""))}
+            placeholder="Jumlah (Rp)"
+            className="w-full px-2 py-1.5 border border-line rounded text-sm font-bold"
+            autoFocus
+          />
+          <select
+            value={kategori}
+            onChange={(e) => setKategori(e.target.value)}
+            className="w-full px-2 py-1.5 border border-line rounded text-sm bg-surface"
+          >
+            {showForm === "pengeluaran" ? (
+              <>
+                <option value="lainnya">Lainnya</option>
+                <option value="antar-barang">Bayar antar barang</option>
+                <option value="transport">Transport / bensin</option>
+                <option value="operasional">Operasional depot</option>
+                <option value="gaji">Gaji / bonus kasir</option>
+                <option value="modal-keluar">Modal owner keluar</option>
+              </>
+            ) : (
+              <>
+                <option value="pelunasan-offline">Pelunasan piutang offline</option>
+                <option value="tip">Tip pelanggan</option>
+                <option value="setoran-titip">Setoran titip kasir</option>
+                <option value="kembalian-tidak-diambil">Kembalian tidak diambil</option>
+                <option value="lainnya">Lainnya</option>
+              </>
+            )}
+          </select>
+          <input
+            type="text"
+            value={deskripsi}
+            onChange={(e) => setDeskripsi(e.target.value)}
+            placeholder="Keterangan (min 3 karakter)"
+            className="w-full px-2 py-1.5 border border-line rounded text-sm"
+          />
+          {err && <div className="text-xs text-red-600 font-bold">{err}</div>}
+          <div className="flex gap-1.5">
+            <button
+              onClick={submit}
+              disabled={pending}
+              className="flex-1 px-2 py-1.5 bg-amber-600 text-white rounded text-xs font-bold disabled:opacity-50"
+            >
+              {pending ? "Menyimpan…" : "Simpan & Recompute"}
+            </button>
+            <button
+              onClick={() => {
+                setShowForm(null);
+                setErr(null);
+              }}
+              disabled={pending}
+              className="px-2 py-1.5 border border-line rounded text-xs"
+            >
+              Batal
+            </button>
+          </div>
         </div>
       )}
     </div>

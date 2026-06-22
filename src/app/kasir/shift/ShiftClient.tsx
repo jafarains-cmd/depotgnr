@@ -572,12 +572,15 @@ function TutupModal({
   const [catatan, setCatatan] = useState("");
   const [buktiBase64, setBuktiBase64] = useState<string | null>(null);
   const [buktiMime, setBuktiMime] = useState<string | null>(null);
+  const [selisihKategori, setSelisihKategori] = useState("");
+  const [selisihAlasan, setSelisihAlasan] = useState("");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   const countedNum = Math.max(0, Math.floor(Number(counted) || 0));
   const selisih = countedNum - ringkasan.expected;
+  const hasSelisih = selisih !== 0;
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -594,6 +597,16 @@ function TutupModal({
 
   function submit() {
     setError(null);
+    if (hasSelisih) {
+      if (!selisihKategori) {
+        setError("Selisih terdeteksi — pilih kategori penyebabnya");
+        return;
+      }
+      if (selisihAlasan.trim().length < 3) {
+        setError("Selisih terdeteksi — alasan wajib (min 3 karakter)");
+        return;
+      }
+    }
     startTransition(async () => {
       const r = await tutupShiftAction({
         shiftId,
@@ -601,6 +614,8 @@ function TutupModal({
         catatan,
         buktiBase64,
         buktiMimeType: buktiMime,
+        selisihKategori: hasSelisih ? selisihKategori : null,
+        selisihAlasan: hasSelisih ? selisihAlasan.trim() : null,
       });
       if ("error" in r) setError(r.error);
       else {
@@ -705,6 +720,53 @@ function TutupModal({
             <>🔴 KURANG {formatRupiah(Math.abs(selisih))} dari ekspektasi</>
           )}
         </div>
+
+        {hasSelisih && (
+          <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-3 space-y-2">
+            <div className="text-xs font-extrabold text-amber-900 inline-flex items-center gap-1.5">
+              <AlertTriangle size={14} /> WAJIB: Jelaskan sumber selisih
+            </div>
+            <div>
+              <label className="text-[11px] font-bold text-amber-900 block mb-1">
+                Kategori penyebab
+              </label>
+              <select
+                value={selisihKategori}
+                onChange={(e) => setSelisihKategori(e.target.value)}
+                className="w-full px-3 py-2 border border-amber-300 rounded-md text-sm bg-surface"
+              >
+                <option value="">— Pilih kategori —</option>
+                <option value="pengeluaran-lupa-input">
+                  Pengeluaran lupa diinput
+                </option>
+                <option value="setoran-owner">Setoran modal owner</option>
+                <option value="pelunasan-offline">
+                  Pelunasan piutang langsung (tidak via app)
+                </option>
+                <option value="bayar-lebih">Pelanggan bayar lebih</option>
+                <option value="kembalian-tidak-diambil">
+                  Kembalian tidak diambil
+                </option>
+                <option value="tip">Tip pelanggan</option>
+                <option value="kurang-bayar">Pelanggan kurang bayar</option>
+                <option value="hilang">Hilang / tidak tahu</option>
+                <option value="lainnya">Lainnya</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[11px] font-bold text-amber-900 block mb-1">
+                Penjelasan detail (min 3 karakter)
+              </label>
+              <textarea
+                value={selisihAlasan}
+                onChange={(e) => setSelisihAlasan(e.target.value)}
+                rows={2}
+                placeholder="mis: bayar antar barang Rp 50rb tapi lupa input pengeluaran"
+                className="w-full px-3 py-2 border border-amber-300 rounded-md text-sm"
+              />
+            </div>
+          </div>
+        )}
 
         <div>
           <label className="text-xs font-bold block mb-1">Catatan (opsional)</label>

@@ -85,6 +85,8 @@ export type ShiftDetail = {
   closingCashCounted: number | null;
   closingCashExpected: number | null;
   selisih: number | null;
+  selisihKategori: string | null;
+  selisihAlasan: string | null;
   catatan: string | null;
   ringkasan: {
     omzetCash: number;
@@ -436,6 +438,8 @@ export async function getShiftDetail(shiftId: number): Promise<ShiftDetail | nul
     closingCashCounted: s.closingCashCounted,
     closingCashExpected: s.closingCashExpected,
     selisih: s.selisih,
+    selisihKategori: s.selisihKategori,
+    selisihAlasan: s.selisihAlasan,
     catatan: s.catatan,
     ringkasan: {
       omzetCash: ring.omzetCash,

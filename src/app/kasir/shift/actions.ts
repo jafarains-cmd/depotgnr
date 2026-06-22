@@ -47,6 +47,8 @@ export async function tutupShiftAction(args: {
   catatan?: string;
   buktiBase64?: string | null;
   buktiMimeType?: string | null;
+  selisihKategori?: string | null;
+  selisihAlasan?: string | null;
 }): Promise<
   | { ok: true; selisih: number; expected: number }
   | { error: string }
@@ -73,6 +75,8 @@ export async function tutupShiftAction(args: {
     catatan: args.catatan,
     buktiFotoUrl,
     closedByUserId: session.user.id,
+    selisihKategori: args.selisihKategori,
+    selisihAlasan: args.selisihAlasan,
   });
   if ("error" in r) return r;
 
@@ -85,6 +89,8 @@ export async function tutupShiftAction(args: {
       closingCashCounted: args.closingCashCounted,
       expected: r.expected,
       selisih: r.selisih,
+      selisihKategori: args.selisihKategori,
+      selisihAlasan: args.selisihAlasan,
     },
     meta: { catatan: args.catatan },
   });
@@ -239,10 +245,19 @@ export async function editShiftCashAction(args: {
         ? Math.floor(args.newClosingCashCounted)
         : (shift.closingCashCounted ?? 0);
     const selisihBaru = countedBaru - expectedBaru;
-    await db
-      .update(shiftKasir)
-      .set({ closingCashExpected: expectedBaru, selisih: selisihBaru })
-      .where(eq(shiftKasir.id, args.shiftId));
+    // Kalau selisih jadi 0 setelah recompute, bersihkan kategori+alasan
+    // (sumbernya sudah ditemukan via tambah pengeluaran/kas-masuk-lain).
+    const updates: {
+      closingCashExpected: number;
+      selisih: number;
+      selisihKategori?: string | null;
+      selisihAlasan?: string | null;
+    } = { closingCashExpected: expectedBaru, selisih: selisihBaru };
+    if (selisihBaru === 0) {
+      updates.selisihKategori = null;
+      updates.selisihAlasan = null;
+    }
+    await db.update(shiftKasir).set(updates).where(eq(shiftKasir.id, args.shiftId));
     recomputed = { expected: expectedBaru, selisih: selisihBaru };
   }
 

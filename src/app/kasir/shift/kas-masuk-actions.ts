@@ -6,8 +6,29 @@ import { requireRole } from "@/lib/permissions";
 import { db } from "@/db";
 import { kasMasuk } from "@/db/schema/kas-masuk";
 import { shiftKasir } from "@/db/schema/shift";
-import { getShiftAktif } from "@/lib/shift";
+import { getShiftAktif, ringkasanShift } from "@/lib/shift";
 import { logAudit } from "@/lib/audit";
+
+async function recomputeIfClosed(shiftId: number): Promise<void> {
+  const shift = await db.query.shiftKasir.findFirst({
+    where: eq(shiftKasir.id, shiftId),
+  });
+  if (!shift || shift.status !== "closed") return;
+  const ring = await ringkasanShift(shiftId);
+  const counted = shift.closingCashCounted ?? 0;
+  const selisihBaru = counted - ring.expected;
+  const updates: {
+    closingCashExpected: number;
+    selisih: number;
+    selisihKategori?: string | null;
+    selisihAlasan?: string | null;
+  } = { closingCashExpected: ring.expected, selisih: selisihBaru };
+  if (selisihBaru === 0) {
+    updates.selisihKategori = null;
+    updates.selisihAlasan = null;
+  }
+  await db.update(shiftKasir).set(updates).where(eq(shiftKasir.id, shiftId));
+}
 
 const KATEGORI_VALID = [
   "pelunasan-offline",
@@ -58,11 +79,13 @@ export async function tambahKasMasukAction(args: {
   if (!shift) return { error: "Shift tidak ditemukan" };
 
   const isAdmin = session.user.role === "admin";
-  if (!isAdmin && shift.kasirUserId !== session.user.id) {
-    return { error: "Hanya kasir pemilik shift atau admin yang bisa tambah" };
-  }
-  if (!isAdmin && shift.status !== "open") {
-    return { error: "Shift sudah ditutup. Minta admin untuk koreksi." };
+  if (!isAdmin) {
+    if (shift.kasirUserId !== session.user.id) {
+      return { error: "Hanya kasir pemilik shift atau admin yang bisa tambah" };
+    }
+    if (shift.status !== "open") {
+      return { error: "Shift sudah ditutup. Minta admin untuk koreksi." };
+    }
   }
 
   const now = new Date();
@@ -82,6 +105,8 @@ export async function tambahKasMasukAction(args: {
 
   const newId = inserted[0]?.id;
   if (!newId) return { error: "Gagal simpan kas masuk" };
+
+  await recomputeIfClosed(shiftId);
 
   await logAudit({
     actorUserId: session.user.id,
@@ -125,6 +150,7 @@ export async function hapusKasMasukAction(
   }
 
   await db.delete(kasMasuk).where(eq(kasMasuk.id, id));
+  await recomputeIfClosed(row.shiftId);
 
   await logAudit({
     actorUserId: session.user.id,

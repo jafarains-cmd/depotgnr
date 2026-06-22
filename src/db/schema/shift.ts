@@ -27,6 +27,8 @@ export const shiftKasir = sqliteTable(
     closingCashCounted: integer("closing_cash_counted"), // diisi saat tutup
     closingCashExpected: integer("closing_cash_expected"), // snapshot computed saat tutup
     selisih: integer("selisih"), // counted - expected (- = kurang, + = lebih)
+    selisihKategori: text("selisih_kategori"), // wajib kalau selisih != 0
+    selisihAlasan: text("selisih_alasan"), // penjelasan kasir
     catatan: text("catatan"),
     buktiFotoUrl: text("bukti_foto_url"),
     status: text("status", { enum: ["open", "closed"] }).notNull().default("open"),

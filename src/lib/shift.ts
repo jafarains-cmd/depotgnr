@@ -134,6 +134,8 @@ export async function tutupShift(args: {
   catatan?: string;
   buktiFotoUrl?: string | null;
   closedByUserId: string;
+  selisihKategori?: string | null;
+  selisihAlasan?: string | null;
 }): Promise<
   | { ok: true; selisih: number; expected: number }
   | { error: string }
@@ -147,6 +149,22 @@ export async function tutupShift(args: {
   const summary = await ringkasanShift(args.shiftId);
   const selisih = args.closingCashCounted - summary.expected;
 
+  // Wajib kategori + alasan kalau selisih != 0
+  if (selisih !== 0) {
+    const kategori = args.selisihKategori?.trim() ?? "";
+    const alasan = args.selisihAlasan?.trim() ?? "";
+    if (!kategori) {
+      return {
+        error: `Selisih ${selisih > 0 ? "+" : ""}${selisih} terdeteksi — pilih kategori penyebabnya`,
+      };
+    }
+    if (alasan.length < 3) {
+      return {
+        error: "Selisih terdeteksi — alasan wajib (min 3 karakter)",
+      };
+    }
+  }
+
   await db
     .update(shiftKasir)
     .set({
@@ -154,6 +172,8 @@ export async function tutupShift(args: {
       closingCashCounted: args.closingCashCounted,
       closingCashExpected: summary.expected,
       selisih,
+      selisihKategori: selisih !== 0 ? args.selisihKategori?.trim() || null : null,
+      selisihAlasan: selisih !== 0 ? args.selisihAlasan?.trim() || null : null,
       catatan: args.catatan?.trim() || null,
       buktiFotoUrl: args.buktiFotoUrl ?? null,
       closedAt: new Date(),

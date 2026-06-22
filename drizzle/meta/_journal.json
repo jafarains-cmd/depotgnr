@@ -218,6 +218,13 @@
       "when": 1779600000000,
       "tag": "0030_kas_masuk",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1779700000000,
+      "tag": "0031_shift_selisih_kategori",
+      "breakpoints": true
     }
   ]
 }
