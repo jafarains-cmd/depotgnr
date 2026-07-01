@@ -158,7 +158,7 @@ export default async function OrderAntarReportPage({
       />
 
       <form className="flex gap-2 items-center text-xs no-print">
-        {range.key && range.key !== "30d" && <input type="hidden" name="range" value={range.key} />}
+        {range.key && range.key !== "month" && <input type="hidden" name="range" value={range.key} />}
         {q && <input type="hidden" name="q" value={q} />}
         {kurirId && <input type="hidden" name="userId" value={kurirId} />}
         {pelangganId && <input type="hidden" name="pelangganId" value={pelangganId} />}

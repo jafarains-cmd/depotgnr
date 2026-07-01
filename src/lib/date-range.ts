@@ -3,9 +3,10 @@
  *
  * Preset key:
  *  - today      : 00:00 hari ini → sekarang
+ *  - yesterday  : kemarin 00:00 → 23:59
  *  - 7d         : 7 hari terakhir (termasuk hari ini)
- *  - 30d        : 30 hari terakhir (default kalau tidak ada query)
- *  - month      : bulan ini (1 → akhir bulan)
+ *  - 30d        : 30 hari terakhir
+ *  - month      : bulan ini (1 → akhir bulan) — DEFAULT
  *  - prev_month : bulan lalu (1 → akhir bulan)
  *  - all        : tanpa filter
  *  - custom     : pakai from/to dari query string
@@ -13,6 +14,7 @@
 
 export type DateRangeKey =
   | "today"
+  | "yesterday"
   | "7d"
   | "30d"
   | "month"
@@ -22,6 +24,7 @@ export type DateRangeKey =
 
 export const RANGE_LABELS: Record<DateRangeKey, string> = {
   today: "Hari Ini",
+  yesterday: "Kemarin",
   "7d": "7 Hari",
   "30d": "30 Hari",
   month: "Bulan Ini",
@@ -30,8 +33,8 @@ export const RANGE_LABELS: Record<DateRangeKey, string> = {
   custom: "Custom",
 };
 
-/** Default kalau tidak ada query: 30 hari terakhir (lebih ringan dari Semua) */
-export const DEFAULT_RANGE: DateRangeKey = "30d";
+/** Default kalau tidak ada query: bulan ini (sesuai preferensi user). */
+export const DEFAULT_RANGE: DateRangeKey = "month";
 
 export type ParsedRange = {
   key: DateRangeKey;
@@ -73,6 +76,11 @@ export function parseRange(params: {
   switch (key) {
     case "today":
       return { key, from: startOfDay(now), to: endOfDay(now) };
+    case "yesterday": {
+      const y = new Date(now);
+      y.setDate(y.getDate() - 1);
+      return { key, from: startOfDay(y), to: endOfDay(y) };
+    }
     case "7d": {
       const from = startOfDay(now);
       from.setDate(from.getDate() - 6);

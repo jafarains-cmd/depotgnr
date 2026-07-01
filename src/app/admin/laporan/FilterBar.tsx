@@ -46,7 +46,7 @@ export function FilterBar({
         preserveParams={["q", "userId", "pelangganId", ...Object.keys(extraHidden ?? {})]}
       />
       <form className="flex gap-2 flex-wrap items-center text-xs">
-        {rangeKey && rangeKey !== "30d" && <input type="hidden" name="range" value={rangeKey} />}
+        {rangeKey && rangeKey !== "month" && <input type="hidden" name="range" value={rangeKey} />}
         {extraHidden &&
           Object.entries(extraHidden).map(
             ([k, v]) => v && <input key={k} type="hidden" name={k} value={v} />,

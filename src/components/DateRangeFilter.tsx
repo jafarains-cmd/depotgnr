@@ -5,7 +5,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Calendar, X } from "lucide-react";
 import { type DateRangeKey, RANGE_LABELS, toInputDate } from "@/lib/date-range";
 
-const PRESETS: DateRangeKey[] = ["today", "7d", "30d", "month", "prev_month", "all"];
+const PRESETS: DateRangeKey[] = [
+  "today",
+  "yesterday",
+  "7d",
+  "30d",
+  "month",
+  "prev_month",
+  "all",
+];
 
 export function DateRangeFilter({
   active,
@@ -119,7 +127,7 @@ export function DateRangeFilter({
               onClick={() => {
                 setFrom("");
                 setTo("");
-                router.push(buildUrl({ range: "30d", from: null, to: null }));
+                router.push(buildUrl({ range: "month", from: null, to: null }));
               }}
               className="px-2 py-1.5 text-xs text-[color:var(--muted)] hover:text-red-600 inline-flex items-center gap-1"
             >

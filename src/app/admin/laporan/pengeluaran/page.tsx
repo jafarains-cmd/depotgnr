@@ -120,7 +120,7 @@ export default async function PengeluaranReportPage({
       />
 
       <form className="flex gap-2 items-center text-xs no-print">
-        {range.key && range.key !== "30d" && <input type="hidden" name="range" value={range.key} />}
+        {range.key && range.key !== "month" && <input type="hidden" name="range" value={range.key} />}
         {q && <input type="hidden" name="q" value={q} />}
         {userId && <input type="hidden" name="userId" value={userId} />}
         <AutoSubmitSelect
