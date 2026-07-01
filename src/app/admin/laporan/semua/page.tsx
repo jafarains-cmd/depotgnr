@@ -28,6 +28,7 @@ import { FilterBar } from "../FilterBar";
 import { ExportActions } from "../ExportActions";
 import { PrintStyles, PrintHeader } from "../PrintStyles";
 import { AutoSubmitSelect } from "../AutoSubmitSelect";
+import { LaporanClickProvider, LaporanRow } from "../LaporanClickable";
 
 export const dynamic = "force-dynamic";
 
@@ -318,6 +319,7 @@ export default async function SemuaAktivitasPage({
 
       <div className="bg-surface border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
+          <LaporanClickProvider>
           <table className="w-full text-xs">
             <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
               <tr>
@@ -334,8 +336,9 @@ export default async function SemuaAktivitasPage({
             </thead>
             <tbody className="divide-y divide-line">
               {paged.map((r) => (
-                <tr
+                <LaporanRow
                   key={`${r.kind}-${r.id}`}
+                  target={{ kind: r.kind, id: r.id }}
                   className={r.voided ? "opacity-50 line-through" : ""}
                 >
                   <td className="p-2 whitespace-nowrap">
@@ -378,7 +381,7 @@ export default async function SemuaAktivitasPage({
                     )}
                   </td>
                   <td className="p-2 text-right font-bold">{formatRupiah(r.total)}</td>
-                </tr>
+                </LaporanRow>
               ))}
               {paged.length === 0 && (
                 <tr>
@@ -401,6 +404,7 @@ export default async function SemuaAktivitasPage({
               </tfoot>
             )}
           </table>
+          </LaporanClickProvider>
         </div>
       </div>
 

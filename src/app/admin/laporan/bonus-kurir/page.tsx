@@ -15,6 +15,7 @@ import { LaporanNav } from "../LaporanNav";
 import { FilterBar } from "../FilterBar";
 import { ExportActions } from "../ExportActions";
 import { PrintStyles, PrintHeader } from "../PrintStyles";
+import { LaporanClickProvider, LaporanRow } from "../LaporanClickable";
 import { AutoSubmitSelect } from "../AutoSubmitSelect";
 
 export const dynamic = "force-dynamic";
@@ -150,6 +151,7 @@ export default async function BonusKurirReportPage({
 
       <div className="bg-surface border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
+          <LaporanClickProvider>
           <table className="w-full text-xs">
             <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
               <tr>
@@ -166,7 +168,7 @@ export default async function BonusKurirReportPage({
             </thead>
             <tbody className="divide-y divide-line">
               {rows.map((r) => (
-                <tr key={r.id}>
+                <LaporanRow key={r.id} target={{ kind: "order", id: r.orderId }}>
                   <td className="p-2 whitespace-nowrap">
                     {r.createdAt.toLocaleDateString("id-ID", {
                       day: "2-digit",
@@ -192,7 +194,7 @@ export default async function BonusKurirReportPage({
                         })
                       : "-"}
                   </td>
-                </tr>
+                </LaporanRow>
               ))}
               {rows.length === 0 && (
                 <tr>
@@ -216,6 +218,7 @@ export default async function BonusKurirReportPage({
               </tfoot>
             )}
           </table>
+          </LaporanClickProvider>
         </div>
       </div>
 

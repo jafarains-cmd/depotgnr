@@ -15,6 +15,7 @@ import { LaporanNav } from "../LaporanNav";
 import { FilterBar } from "../FilterBar";
 import { ExportActions } from "../ExportActions";
 import { PrintStyles, PrintHeader } from "../PrintStyles";
+import { LaporanClickProvider, LaporanRow } from "../LaporanClickable";
 
 export const dynamic = "force-dynamic";
 
@@ -188,6 +189,7 @@ export default async function PenjualanReportPage({
 
       <div className="bg-surface border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
+          <LaporanClickProvider>
           <table className="w-full text-xs">
             <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
               <tr>
@@ -212,7 +214,7 @@ export default async function PenjualanReportPage({
                   .map((it) => `${it.nama} (${it.qty} ${it.jenis})`)
                   .join(", ");
                 return (
-                  <tr key={r.id}>
+                  <LaporanRow key={r.id} target={{ kind: "transaksi", id: r.id }}>
                     <td className="p-2 whitespace-nowrap">
                       {r.createdAt.toLocaleString("id-ID", {
                         day: "2-digit",
@@ -234,7 +236,7 @@ export default async function PenjualanReportPage({
                     <td className="p-2 text-right font-bold">{formatRupiah(r.total)}</td>
                     <td className="p-2 uppercase">{r.metodeBayar}</td>
                     <td className="p-2 uppercase">{r.status}</td>
-                  </tr>
+                  </LaporanRow>
                 );
               })}
               {rows.length === 0 && (
@@ -259,6 +261,7 @@ export default async function PenjualanReportPage({
               </tfoot>
             )}
           </table>
+          </LaporanClickProvider>
         </div>
       </div>
 
