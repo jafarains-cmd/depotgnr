@@ -339,7 +339,30 @@ function TransaksiView({
 
       <div className="border-t border-line pt-2 space-y-0.5">
         <Row label="Subtotal" value={formatRupiah(data.subtotal)} />
-        {data.diskon > 0 && <Row label="Diskon" value={`- ${formatRupiah(data.diskon)}`} />}
+        {data.loyaltiDipakai > 0 && (
+          <Row
+            label="− Diskon loyalti pelanggan"
+            value={`- ${formatRupiah(data.loyaltiDipakai)}`}
+          />
+        )}
+        {data.diskon > data.loyaltiDipakai && (
+          <Row
+            label={
+              data.loyaltiDipakai > 0
+                ? "− Diskon lain"
+                : "− Diskon"
+            }
+            value={`- ${formatRupiah(data.diskon - data.loyaltiDipakai)}`}
+          />
+        )}
+        {data.diskon === 0 &&
+          data.loyaltiDipakai === 0 &&
+          data.total < data.subtotal && (
+            <Row
+              label="− Diskon"
+              value={`- ${formatRupiah(data.subtotal - data.total)}`}
+            />
+          )}
         <div
           className={`flex justify-between text-base font-extrabold pt-1 ${
             isVoided ? "line-through text-[color:var(--muted)]" : ""
@@ -348,6 +371,23 @@ function TransaksiView({
           <span>TOTAL</span>
           <span className="text-brand">{formatRupiah(data.total)}</span>
         </div>
+        {data.total === 0 && data.subtotal > 0 && !isVoided && (
+          <div className="mt-2 bg-amber-50 border border-amber-200 rounded-md p-2 text-[11px] text-amber-900 leading-snug">
+            <b>Pembayaran Rp 0</b> — dibayar penuh dari{" "}
+            {data.loyaltiDipakai > 0
+              ? `saldo loyalti pelanggan (Rp ${formatRupiah(data.loyaltiDipakai).replace("Rp ", "")})`
+              : "diskon manual / promo"}
+            .
+          </div>
+        )}
+        {data.total > 0 &&
+          data.total < data.subtotal &&
+          data.loyaltiDipakai > 0 && (
+            <div className="mt-2 bg-emerald-50 border border-emerald-200 rounded-md p-2 text-[11px] text-emerald-900 leading-snug">
+              Pelanggan pakai <b>{formatRupiah(data.loyaltiDipakai)}</b> dari
+              saldo loyalti sebagai potongan.
+            </div>
+          )}
       </div>
 
       {data.catatan && (

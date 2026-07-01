@@ -61,6 +61,12 @@ export type TransaksiDetail = {
   subtotal: number;
   diskon: number;
   total: number;
+  loyaltiDipakai: number;
+  loyaltiDetail: Array<{
+    jumlah: number;
+    tipe: string;
+    deskripsi: string | null;
+  }>;
   catatan: string | null;
   createdAt: string;
   voidedAt: string | null;
@@ -237,6 +243,33 @@ export async function getTransaksiDetail(
     ? await db.query.user.findFirst({ where: eq(userTable.id, t.kasirUserId) })
     : null;
 
+  // Ambil mutasi loyalti terkait transaksi ini (redeem = loyalti dipakai,
+  // earn = cashback masuk). Kalau order (refOrderId), coba juga via order.
+  const mutasiDirect = await db
+    .select({
+      jumlah: mutasiLoyalti.jumlah,
+      tipe: mutasiLoyalti.tipe,
+      deskripsi: mutasiLoyalti.deskripsi,
+    })
+    .from(mutasiLoyalti)
+    .where(eq(mutasiLoyalti.refTransaksiId, trxId));
+
+  const mutasiViaOrder = t.refOrderId
+    ? await db
+        .select({
+          jumlah: mutasiLoyalti.jumlah,
+          tipe: mutasiLoyalti.tipe,
+          deskripsi: mutasiLoyalti.deskripsi,
+        })
+        .from(mutasiLoyalti)
+        .where(eq(mutasiLoyalti.refOrderId, t.refOrderId))
+    : [];
+
+  const allMutasi = [...mutasiDirect, ...mutasiViaOrder];
+  const loyaltiDipakai = allMutasi
+    .filter((m) => m.jumlah < 0)
+    .reduce((s, m) => s + Math.abs(m.jumlah), 0);
+
   return {
     kind: "transaksi",
     id: t.id,
@@ -246,6 +279,8 @@ export async function getTransaksiDetail(
     subtotal: t.subtotal,
     diskon: t.diskon,
     total: t.total,
+    loyaltiDipakai,
+    loyaltiDetail: allMutasi,
     catatan: t.catatan,
     createdAt: t.createdAt.toISOString(),
     voidedAt: t.voidedAt?.toISOString() ?? null,
