@@ -20,6 +20,7 @@ import {
   Cloud,
   Wrench,
   MessageSquareWarning,
+  ShieldCheck,
 } from "lucide-react";
 import { AppShell, type NavGroup } from "@/components/AppShell";
 import { requireRole } from "@/lib/permissions";
@@ -208,6 +209,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           label: "Backup",
           icon: <Cloud size={16} />,
           iconColor: "text-sky-600",
+        },
+        {
+          href: "/admin/security",
+          label: "Security",
+          icon: <ShieldCheck size={16} />,
+          iconColor: "text-emerald-600",
         },
         {
           href: "/admin/audit-log",
