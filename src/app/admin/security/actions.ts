@@ -12,6 +12,29 @@ import { logAudit } from "@/lib/audit";
 
 const execAsync = promisify(exec);
 
+export type NpmAuditVuln = {
+  name: string;
+  severity: string;
+  isDirect: boolean;
+  range: string;
+  fixAvailable:
+    | false
+    | true
+    | { name: string; version: string; isSemVerMajor: boolean };
+  via: Array<
+    | string
+    | {
+        source?: number;
+        name?: string;
+        title?: string;
+        url?: string;
+        severity?: string;
+        range?: string;
+      }
+  >;
+  effects: string[];
+};
+
 export type NpmAuditResult = {
   ok: true;
   metadata: {
@@ -22,11 +45,41 @@ export type NpmAuditResult = {
       total: number;
     };
   };
+  vulnerabilities: NpmAuditVuln[];
   ranAt: string;
   raw?: string;
 };
 
 export type NpmAuditError = { error: string; raw?: string };
+
+function extractVulnerabilities(parsed: unknown): NpmAuditVuln[] {
+  if (!parsed || typeof parsed !== "object") return [];
+  const vulnObj = (parsed as Record<string, unknown>).vulnerabilities;
+  if (!vulnObj || typeof vulnObj !== "object") return [];
+  const out: NpmAuditVuln[] = [];
+  for (const [pkgName, raw] of Object.entries(vulnObj)) {
+    const v = raw as Record<string, unknown>;
+    out.push({
+      name: String(v.name ?? pkgName),
+      severity: String(v.severity ?? "unknown"),
+      isDirect: !!v.isDirect,
+      range: String(v.range ?? ""),
+      fixAvailable: v.fixAvailable as NpmAuditVuln["fixAvailable"],
+      via: Array.isArray(v.via) ? v.via : [],
+      effects: Array.isArray(v.effects) ? (v.effects as string[]) : [],
+    });
+  }
+  // Sort by severity: critical > high > moderate > low > info
+  const order: Record<string, number> = {
+    critical: 0,
+    high: 1,
+    moderate: 2,
+    low: 3,
+    info: 4,
+  };
+  out.sort((a, b) => (order[a.severity] ?? 9) - (order[b.severity] ?? 9));
+  return out;
+}
 
 /**
  * Jalankan npm audit --json dan parse hasilnya.
@@ -48,18 +101,20 @@ export async function runNpmAudit(): Promise<NpmAuditResult | NpmAuditError> {
       dev: 0,
       total: 0,
     };
+    const detail = extractVulnerabilities(parsed);
 
     await logAudit({
       actorUserId: session.user.id,
       action: "security.npm-audit",
       entity: "system",
       entityId: "npm-audit",
-      after: { vulnerabilities, dependencies },
+      after: { vulnerabilities, dependencies, count: detail.length },
     });
 
     return {
       ok: true,
       metadata: { vulnerabilities, dependencies },
+      vulnerabilities: detail,
       ranAt: new Date().toISOString(),
     };
   } catch (err) {
@@ -74,16 +129,18 @@ export async function runNpmAudit(): Promise<NpmAuditResult | NpmAuditError> {
         dev: 0,
         total: 0,
       };
+      const detail = extractVulnerabilities(parsed);
       await logAudit({
         actorUserId: session.user.id,
         action: "security.npm-audit",
         entity: "system",
         entityId: "npm-audit",
-        after: { vulnerabilities, dependencies },
+        after: { vulnerabilities, dependencies, count: detail.length },
       });
       return {
         ok: true,
         metadata: { vulnerabilities, dependencies },
+        vulnerabilities: detail,
         ranAt: new Date().toISOString(),
       };
     } catch {
