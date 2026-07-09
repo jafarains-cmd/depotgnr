@@ -33,6 +33,7 @@ export default async function KasirLayout({ children }: { children: React.ReactN
       items: [
         { href: "/data-pelanggan", label: "Pelanggan", icon: <Users size={16} />, iconColor: "text-fuchsia-600" },
         { href: "/pembayaran", label: "Pembayaran", icon: <Wallet size={16} />, iconColor: "text-emerald-600", badgeKey: "pembayaran" },
+        { href: "/kasir/galon-dipinjam", label: "Galon Dipinjam", icon: <Truck size={16} />, iconColor: "text-amber-600" },
       ],
     },
     {
