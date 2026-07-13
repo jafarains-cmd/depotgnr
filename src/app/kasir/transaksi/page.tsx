@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { db } from "@/db";
 import { eq, desc, and, gte, lte, like, or, sql, isNull, isNotNull } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 import { TransaksiRow } from "./TransaksiRow";
 import { transaksi } from "@/db/schema/transaksi";
 import { user as userTable } from "@/db/schema/auth";
 import { pelanggan } from "@/db/schema/pelanggan";
+import { orderHeader } from "@/db/schema/order";
 import { PageHeader } from "@/components/AppShell";
 import { formatRupiah } from "@/lib/utils";
 import { requireRole } from "@/lib/permissions";
@@ -27,6 +29,7 @@ export default async function RiwayatKasirPage({
     limit?: string;
     page?: string;
     tab?: string;
+    sumber?: string;
   }>;
 }) {
   const session = await requireRole(["admin", "kasir"]);
@@ -39,6 +42,11 @@ export default async function RiwayatKasirPage({
   const tab = (["aktif", "batal", "semua"] as const).includes(sp.tab as never)
     ? (sp.tab as "aktif" | "batal" | "semua")
     : "aktif";
+  const sumber = (["semua", "pos", "antar"] as const).includes(
+    sp.sumber as never,
+  )
+    ? (sp.sumber as "semua" | "pos" | "antar")
+    : "semua";
 
   // baseConds = filter tanpa tab status; tabConds = base + filter status
   const baseConds = [];
@@ -59,6 +67,11 @@ export default async function RiwayatKasirPage({
   }
   if (tab === "aktif") conds.push(isNull(transaksi.voidedAt));
   else if (tab === "batal") conds.push(isNotNull(transaksi.voidedAt));
+
+  // Filter sumber: pos = tidak ada refOrderId (POS langsung),
+  //                antar = ada refOrderId (hasil sync order antar)
+  if (sumber === "pos") conds.push(isNull(transaksi.refOrderId));
+  else if (sumber === "antar") conds.push(isNotNull(transaksi.refOrderId));
 
   const whereClause = conds.length > 0 ? and(...conds) : undefined;
 
@@ -104,6 +117,48 @@ export default async function RiwayatKasirPage({
     .leftJoin(pelanggan, eq(transaksi.pelangganId, pelanggan.id))
     .where(baseWhere);
 
+  // Count per sumber (pakai tab status yang aktif juga supaya konsisten
+  // sama dengan filter yang user lihat)
+  const sumberBase = [...conds.filter((c) => c !== undefined)];
+  // Buang filter sumber dari sumberBase supaya count menghitung total
+  // yang bisa difilter oleh tab sumber, bukan hasil filter sumber saat ini
+  const sumberBaseWhere = (() => {
+    const c = [...baseConds];
+    if (q) {
+      const pat = `%${q}%`;
+      c.push(
+        or(
+          like(pelanggan.nama, pat),
+          like(pelanggan.telp, pat),
+          like(transaksi.nomorNota, pat),
+        )!,
+      );
+    }
+    if (tab === "aktif") c.push(isNull(transaksi.voidedAt));
+    else if (tab === "batal") c.push(isNotNull(transaksi.voidedAt));
+    return c.length > 0 ? and(...c) : undefined;
+  })();
+
+  const [posCnt] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(transaksi)
+    .leftJoin(pelanggan, eq(transaksi.pelangganId, pelanggan.id))
+    .where(and(sumberBaseWhere, isNull(transaksi.refOrderId)));
+  const [antarCnt] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(transaksi)
+    .leftJoin(pelanggan, eq(transaksi.pelangganId, pelanggan.id))
+    .where(and(sumberBaseWhere, isNotNull(transaksi.refOrderId)));
+  const [sumberSemuaCnt] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(transaksi)
+    .leftJoin(pelanggan, eq(transaksi.pelangganId, pelanggan.id))
+    .where(sumberBaseWhere);
+
+  // Alias user table untuk join kurir (dari orderHeader) supaya tidak
+  // konflik dengan alias kasir.
+  const kurirUser = alias(userTable, "kurir_user");
+
   const rows = await db
     .select({
       id: transaksi.id,
@@ -113,11 +168,17 @@ export default async function RiwayatKasirPage({
       createdAt: transaksi.createdAt,
       voidedAt: transaksi.voidedAt,
       kasir: userTable.name,
+      kasirRole: userTable.role,
       pelangganNama: pelanggan.nama,
+      refOrderId: transaksi.refOrderId,
+      alamatAntar: orderHeader.alamatAntar,
+      kurirNama: kurirUser.name,
     })
     .from(transaksi)
     .leftJoin(userTable, eq(transaksi.kasirUserId, userTable.id))
     .leftJoin(pelanggan, eq(transaksi.pelangganId, pelanggan.id))
+    .leftJoin(orderHeader, eq(transaksi.refOrderId, orderHeader.id))
+    .leftJoin(kurirUser, eq(orderHeader.kurirUserId, kurirUser.id))
     .where(whereClause)
     .orderBy(desc(transaksi.createdAt))
     .limit(limit)
@@ -147,6 +208,7 @@ export default async function RiwayatKasirPage({
           ).map((t) => {
             const params = new URLSearchParams();
             if (t.key !== "aktif") params.set("tab", t.key);
+            if (sumber !== "semua") params.set("sumber", sumber);
             if (range.key) params.set("range", range.key);
             if (sp.from) params.set("from", sp.from);
             if (sp.to) params.set("to", sp.to);
@@ -178,11 +240,78 @@ export default async function RiwayatKasirPage({
             );
           })}
         </div>
+
+        {/* Tab sumber: Semua Sumber / POS Depot / Order Antar */}
+        <div className="flex gap-1 text-xs">
+          {(
+            [
+              {
+                key: "semua",
+                label: "Semua Sumber",
+                icon: "",
+                count: sumberSemuaCnt?.n ?? 0,
+                color: "brand",
+              },
+              {
+                key: "pos",
+                label: "POS Depot",
+                icon: "🏪",
+                count: posCnt?.n ?? 0,
+                color: "sky",
+              },
+              {
+                key: "antar",
+                label: "Order Antar",
+                icon: "🚛",
+                count: antarCnt?.n ?? 0,
+                color: "amber",
+              },
+            ] as const
+          ).map((s) => {
+            const params = new URLSearchParams();
+            if (s.key !== "semua") params.set("sumber", s.key);
+            if (tab !== "aktif") params.set("tab", tab);
+            if (range.key) params.set("range", range.key);
+            if (sp.from) params.set("from", sp.from);
+            if (sp.to) params.set("to", sp.to);
+            if (q) params.set("q", q);
+            const isActive = sumber === s.key;
+            const activeClass =
+              s.color === "sky"
+                ? "bg-sky-600 text-white"
+                : s.color === "amber"
+                  ? "bg-amber-600 text-white"
+                  : "bg-brand-600 text-white";
+            return (
+              <Link
+                key={s.key}
+                href={`/kasir/transaksi${params.toString() ? `?${params}` : ""}`}
+                className={`px-3 py-1.5 rounded-md font-bold inline-flex items-center gap-1.5 ${
+                  isActive
+                    ? activeClass
+                    : "bg-[color:var(--surface2)] text-[color:var(--muted)] hover:text-ink"
+                }`}
+              >
+                {s.icon && <span>{s.icon}</span>}
+                {s.label}
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-extrabold ${
+                    isActive ? "bg-white/30" : "bg-[color:var(--surface)] text-ink"
+                  }`}
+                >
+                  {s.count}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+
         <form className="flex gap-2 items-center">
           {range.key && <input type="hidden" name="range" value={range.key} />}
           {sp.from && <input type="hidden" name="from" value={sp.from} />}
           {sp.to && <input type="hidden" name="to" value={sp.to} />}
           {tab !== "aktif" && <input type="hidden" name="tab" value={tab} />}
+          {sumber !== "semua" && <input type="hidden" name="sumber" value={sumber} />}
           <input
             type="search"
             name="q"
@@ -223,52 +352,88 @@ export default async function RiwayatKasirPage({
                 <th className="p-3">Waktu</th>
                 <th className="p-3 hidden sm:table-cell">No. Nota</th>
                 <th className="p-3">Pelanggan</th>
-                <th className="p-3 hidden md:table-cell">Kasir</th>
+                <th className="p-3 hidden lg:table-cell">Sumber</th>
+                <th className="p-3 hidden md:table-cell">Kasir/Kurir</th>
                 <th className="p-3 hidden sm:table-cell">Bayar</th>
                 <th className="p-3 text-right">Total</th>
                 <th className="p-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
-              {rows.map((r) => (
-                <TransaksiRow key={r.id} trxId={r.id}>
-                  <td className="p-3 text-xs text-[color:var(--muted)]">
-                    {r.createdAt.toLocaleString("id-ID", {
-                      day: "2-digit",
-                      month: "short",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                    {/* di mobile, tampilkan info nota & metode bayar di bawah waktu */}
-                    <div className="sm:hidden text-[10px] mt-0.5 font-mono">{r.nomorNota}</div>
-                    <div className="sm:hidden text-[10px] mt-0.5 uppercase">{r.metodeBayar}</div>
-                  </td>
-                  <td className="p-3 font-mono text-xs hidden sm:table-cell">
-                    {r.nomorNota}
-                    {r.voidedAt && (
-                      <span className="ml-1 text-[10px] px-1.5 py-0.5 bg-rose-600 text-white rounded font-extrabold tracking-wider">
-                        ⊗ BATAL
+              {rows.map((r) => {
+                const isAntar = r.refOrderId !== null;
+                const isWalkinDepot =
+                  isAntar && r.alamatAntar === "(diambil di depot)";
+                const displaySumberLabel = isAntar
+                  ? isWalkinDepot
+                    ? "🏪 POS DEPOT"
+                    : "🚛 ANTAR"
+                  : "🏪 POS DEPOT";
+                const sumberBadgeClass = isAntar && !isWalkinDepot
+                  ? "bg-amber-100 text-amber-800 border-amber-200"
+                  : "bg-sky-100 text-sky-800 border-sky-200";
+                const displayNama = isAntar ? r.kurirNama ?? "—" : r.kasir ?? "—";
+                const displayRole = isAntar && !isWalkinDepot ? "KURIR" : "KASIR";
+                return (
+                  <TransaksiRow key={r.id} trxId={r.id}>
+                    <td className="p-3 text-xs text-[color:var(--muted)]">
+                      {r.createdAt.toLocaleString("id-ID", {
+                        day: "2-digit",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                      {/* di mobile, tampilkan info nota, sumber & metode bayar di bawah waktu */}
+                      <div className="sm:hidden text-[10px] mt-0.5 font-mono">{r.nomorNota}</div>
+                      <div className="lg:hidden text-[10px] mt-0.5">
+                        <span className={`inline-block px-1 py-0.5 rounded text-[9px] font-bold border ${sumberBadgeClass}`}>
+                          {displaySumberLabel}
+                        </span>
+                      </div>
+                      <div className="sm:hidden text-[10px] mt-0.5 uppercase">{r.metodeBayar}</div>
+                    </td>
+                    <td className="p-3 font-mono text-xs hidden sm:table-cell">
+                      {r.nomorNota}
+                      {r.voidedAt && (
+                        <span className="ml-1 text-[10px] px-1.5 py-0.5 bg-rose-600 text-white rounded font-extrabold tracking-wider">
+                          ⊗ BATAL
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-3 truncate max-w-[140px]">
+                      {r.pelangganNama ?? (
+                        <span className="text-[color:var(--muted)]">walk-in</span>
+                      )}
+                      {isAntar && !isWalkinDepot && r.alamatAntar && (
+                        <div className="text-[10px] text-[color:var(--muted)] truncate mt-0.5" title={r.alamatAntar}>
+                          📍 {r.alamatAntar}
+                        </div>
+                      )}
+                    </td>
+                    <td className="p-3 hidden lg:table-cell">
+                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${sumberBadgeClass}`}>
+                        {displaySumberLabel}
                       </span>
-                    )}
-                  </td>
-                  <td className="p-3 truncate max-w-[120px]">
-                    {r.pelangganNama ?? (
-                      <span className="text-[color:var(--muted)]">walk-in</span>
-                    )}
-                  </td>
-                  <td className="p-3 hidden md:table-cell">{r.kasir ?? "-"}</td>
-                  <td className="p-3 uppercase text-xs hidden sm:table-cell">{r.metodeBayar}</td>
-                  <td className={`p-3 text-right font-medium whitespace-nowrap ${r.voidedAt ? "line-through text-[color:var(--muted)]" : ""}`}>
-                    {formatRupiah(r.total)}
-                  </td>
-                  <td className="p-3 text-right">
-                    <span className="text-xs text-brand">Detail →</span>
-                  </td>
-                </TransaksiRow>
-              ))}
+                    </td>
+                    <td className="p-3 hidden md:table-cell">
+                      <div className="text-sm">{displayNama}</div>
+                      <div className="text-[9px] font-bold text-[color:var(--muted)] uppercase tracking-wider">
+                        {displayRole}
+                      </div>
+                    </td>
+                    <td className="p-3 uppercase text-xs hidden sm:table-cell">{r.metodeBayar}</td>
+                    <td className={`p-3 text-right font-medium whitespace-nowrap ${r.voidedAt ? "line-through text-[color:var(--muted)]" : ""}`}>
+                      {formatRupiah(r.total)}
+                    </td>
+                    <td className="p-3 text-right">
+                      <span className="text-xs text-brand">Detail →</span>
+                    </td>
+                  </TransaksiRow>
+                );
+              })}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-6 text-center text-[color:var(--muted)]">
+                  <td colSpan={8} className="p-6 text-center text-[color:var(--muted)]">
                     Belum ada transaksi.
                   </td>
                 </tr>
