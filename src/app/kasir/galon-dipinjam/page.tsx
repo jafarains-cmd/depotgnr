@@ -1,22 +1,36 @@
 import Link from "next/link";
+import { asc, eq } from "drizzle-orm";
 import { Truck } from "lucide-react";
 import { requireRole } from "@/lib/permissions";
 import { summaryGalonPinjam } from "@/lib/galon-pinjam";
 import { PageHeader } from "@/components/AppShell";
+import { db } from "@/db";
+import { produk } from "@/db/schema/produk";
+import { TambahGalonButton } from "./TambahGalonModal";
 
 export const dynamic = "force-dynamic";
 
 export default async function GalonDipinjamKasirPage() {
   await requireRole(["admin", "kasir"]);
-  const rows = await summaryGalonPinjam();
+  const [rows, produkList] = await Promise.all([
+    summaryGalonPinjam(),
+    db
+      .select({ id: produk.id, nama: produk.nama })
+      .from(produk)
+      .where(eq(produk.aktif, true))
+      .orderBy(asc(produk.nama)),
+  ]);
   const grandTotal = rows.reduce((s, r) => s + r.totalGalon, 0);
 
   return (
     <div className="p-4 md:p-6 max-w-4xl space-y-4">
-      <PageHeader
-        title="Galon Depot Dipinjam"
-        description="Daftar pelanggan yang sedang memegang galon milik depot."
-      />
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <PageHeader
+          title="Galon Depot Dipinjam"
+          description="Daftar pelanggan yang sedang memegang galon milik depot."
+        />
+        <TambahGalonButton produkList={produkList} />
+      </div>
 
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-900 inline-flex items-center gap-2">
         <Truck size={16} />
