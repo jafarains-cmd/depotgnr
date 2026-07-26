@@ -408,6 +408,36 @@ export async function getAnomalies(): Promise<AnomalyItem[]> {
     });
   }
 
+  // Stok terisi rendah (di bawah threshold produk)
+  const { getStokRendah, getPelangganPinjamMacet } = await import("./stok-alert");
+  const stokRendah = await getStokRendah();
+  for (const s of stokRendah) {
+    const displayName = s.brand ? `${s.nama} (${s.brand})` : s.nama;
+    anomalies.push({
+      jenis: "stok-terisi-rendah",
+      severity: s.stokTerisi === 0 ? "critical" : "warning",
+      label: `Stok ${displayName}: ${s.stokTerisi} galon (min ${s.stokMinimal})`,
+      detail:
+        s.stokTerisi === 0
+          ? `HABIS — waktu produksi/isi ulang dari tong sekarang!`
+          : `Kekurangan ${s.kekurangan} galon dari minimum. Segera produksi/isi ulang.`,
+      href: "/admin/inventory",
+    });
+  }
+
+  // Pelanggan pinjam galon tapi tidak order > 30 hari
+  const pinjamMacet = await getPelangganPinjamMacet();
+  if (pinjamMacet.length > 0) {
+    const totalGalonMacet = pinjamMacet.reduce((s, p) => s + p.totalGalon, 0);
+    anomalies.push({
+      jenis: "pinjam-galon-macet",
+      severity: pinjamMacet.length >= 5 ? "critical" : "warning",
+      label: `${pinjamMacet.length} pelanggan pinjam galon tapi tidak order > 30 hari (${totalGalonMacet} galon)`,
+      detail: `Kandidat follow-up: ${pinjamMacet.slice(0, 3).map((p) => p.nama).join(", ")}${pinjamMacet.length > 3 ? "..." : ""}. Galon berisiko hilang atau pelanggan tidak aktif lagi.`,
+      href: "/admin/galon-dipinjam",
+    });
+  }
+
   return anomalies;
 }
 

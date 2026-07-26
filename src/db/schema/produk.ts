@@ -12,6 +12,10 @@ export const produk = sqliteTable("produk", {
   hargaPokok: integer("harga_pokok").notNull().default(0),
   // Brand galon (mis. "AQUA", "Le Minerale"). Null = brand depot sendiri.
   brand: text("brand"),
+  // Stok minimum untuk trigger alert. Kalau stok terisi <= angka ini,
+  // sistem kirim notif Telegram + tampil di dashboard admin.
+  // 0 = alert disabled untuk produk ini.
+  stokMinimal: integer("stok_minimal").notNull().default(0),
   aktif: integer("aktif", { mode: "boolean" }).notNull().default(true),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),

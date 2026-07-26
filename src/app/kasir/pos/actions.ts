@@ -236,6 +236,12 @@ export async function createTransaksi(input: CreateTransaksiInput) {
     ),
   );
 
+  // Cek stok rendah setelah transaksi (best-effort, idempotent per hari)
+  bestEffort(
+    "cekAlertStokRendah",
+    import("@/lib/stok-alert").then((m) => m.cekDanKirimAlertStokRendah()),
+  );
+
   // Earn loyalty (best-effort) — rate baca dari pengaturan, fallback default
   if (input.pelangganId) {
     const totalGalon = input.items.reduce((s, it) => s + it.qty, 0);

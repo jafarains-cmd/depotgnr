@@ -182,8 +182,63 @@ export default async function DashboardPage() {
     }),
   );
 
+  // Cek anomali stok rendah + pinjam macet (best-effort, tidak block render)
+  const stokAlertModule = await import("@/lib/stok-alert");
+  const [stokRendah, pinjamMacet] = await Promise.all([
+    stokAlertModule.getStokRendah().catch(() => []),
+    stokAlertModule.getPelangganPinjamMacet().catch(() => []),
+  ]);
+  const totalGalonMacet = pinjamMacet.reduce((s, p) => s + p.totalGalon, 0);
+
   return (
     <div className="p-4 md:p-6 max-w-6xl space-y-5">
+      {/* Alert banner kalau ada stok rendah atau pinjam macet */}
+      {(stokRendah.length > 0 || pinjamMacet.length > 0) && (
+        <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-3 space-y-2">
+          <div className="text-sm font-bold text-amber-900 inline-flex items-center gap-1.5">
+            <AlertTriangle size={16} /> Perlu Perhatian
+          </div>
+          <div className="grid sm:grid-cols-2 gap-2 text-xs">
+            {stokRendah.length > 0 && (
+              <Link
+                href="/admin/inventory"
+                className="bg-surface border border-amber-200 rounded-lg p-2.5 hover:border-amber-400 transition"
+              >
+                <div className="font-bold text-amber-800 mb-0.5">
+                  🚨 Stok Terisi Rendah ({stokRendah.length} produk)
+                </div>
+                <div className="text-[color:var(--muted)]">
+                  {stokRendah
+                    .slice(0, 3)
+                    .map((s) => `${s.nama}: ${s.stokTerisi}/${s.stokMinimal}`)
+                    .join(" · ")}
+                  {stokRendah.length > 3 && "..."}
+                </div>
+                <div className="text-[10px] text-amber-700 mt-1 font-semibold">
+                  Waktu produksi/isi ulang →
+                </div>
+              </Link>
+            )}
+            {pinjamMacet.length > 0 && (
+              <Link
+                href="/admin/galon-dipinjam"
+                className="bg-surface border border-amber-200 rounded-lg p-2.5 hover:border-amber-400 transition"
+              >
+                <div className="font-bold text-amber-800 mb-0.5">
+                  📋 Pelanggan Pinjam Macet ({pinjamMacet.length})
+                </div>
+                <div className="text-[color:var(--muted)]">
+                  {totalGalonMacet} galon di pelanggan yang tidak order &gt; 30 hari
+                </div>
+                <div className="text-[10px] text-amber-700 mt-1 font-semibold">
+                  Follow-up sekarang →
+                </div>
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Hero card */}
       <div
         className="relative overflow-hidden rounded-3xl p-6 text-white"

@@ -232,6 +232,13 @@
       "when": 1779800000000,
       "tag": "0032_pembelian_galon",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1779900000000,
+      "tag": "0033_stok_alert",
+      "breakpoints": true
     }
   ]
 }

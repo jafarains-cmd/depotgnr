@@ -79,6 +79,7 @@ export default async function InventoryPage({
           terisi: stokMap.get(`${p.id}:terisi`) ?? 0,
           kosong: stokMap.get(`${p.id}:kosong`) ?? 0,
           rusak: stokMap.get(`${p.id}:rusak`) ?? 0,
+          stokMinimal: p.stokMinimal ?? 0,
         }))}
         mutasi={mutasi.map((m) => ({
           ...m,

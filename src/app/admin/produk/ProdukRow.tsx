@@ -12,6 +12,8 @@ type Row = {
   hargaIsiUlang: number;
   hargaTukar: number;
   hargaBeliBaru: number;
+  brand: string | null;
+  stokMinimal: number;
   aktif: boolean;
   hargaIsiUlangFmt: string;
   hargaTukarFmt: string;

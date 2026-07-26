@@ -19,6 +19,8 @@ export async function upsertProduk(formData: FormData) {
     hargaIsiUlang: Number(formData.get("hargaIsiUlang") ?? 0),
     hargaTukar: Number(formData.get("hargaTukar") ?? 0),
     hargaBeliBaru: Number(formData.get("hargaBeliBaru") ?? 0),
+    brand: String(formData.get("brand") ?? "").trim() || null,
+    stokMinimal: Math.max(0, Number(formData.get("stokMinimal") ?? 0)),
     aktif: formData.get("aktif") === "on",
     updatedAt: new Date(),
   };

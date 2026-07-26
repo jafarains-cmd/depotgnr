@@ -14,6 +14,8 @@ export function ProdukForm({
     hargaIsiUlang: number;
     hargaTukar: number;
     hargaBeliBaru: number;
+    brand?: string | null;
+    stokMinimal?: number;
     aktif: boolean;
   };
   onDone?: () => void;
@@ -58,6 +60,27 @@ export function ProdukForm({
         type="number"
         defaultValue={initial?.hargaBeliBaru ?? 0}
       />
+      <Field
+        label="Brand (opsional, kosong = brand depot sendiri)"
+        name="brand"
+        defaultValue={initial?.brand ?? ""}
+      />
+      <div>
+        <label className="block text-xs font-medium text-[color:var(--muted)] mb-0.5">
+          Stok Minimum (untuk alert; 0 = alert disabled)
+        </label>
+        <input
+          type="number"
+          name="stokMinimal"
+          min={0}
+          defaultValue={initial?.stokMinimal ?? 0}
+          className="w-full px-2.5 py-1.5 border border-line rounded-md"
+        />
+        <div className="text-[10px] text-[color:var(--muted)] mt-1">
+          Kalau stok terisi ≤ angka ini, admin dapat notif Telegram +
+          muncul di dashboard security.
+        </div>
+      </div>
       <label className="flex items-center gap-2">
         <input type="checkbox" name="aktif" defaultChecked={initial?.aktif ?? true} /> Aktif
       </label>

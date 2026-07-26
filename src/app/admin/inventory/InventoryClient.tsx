@@ -4,7 +4,14 @@ import { useState, useTransition } from "react";
 import { Plus, Minus } from "lucide-react";
 import { mutasiManual } from "./actions";
 
-type ProdukStok = { id: number; nama: string; terisi: number; kosong: number; rusak: number };
+type ProdukStok = {
+  id: number;
+  nama: string;
+  terisi: number;
+  kosong: number;
+  rusak: number;
+  stokMinimal?: number;
+};
 type Mutasi = {
   id: number;
   produkId: number;
@@ -30,17 +37,36 @@ export function InventoryClient({
   return (
     <div className="space-y-6">
       <div className="grid lg:grid-cols-3 gap-3">
-        {produk.map((p) => (
-          <div key={p.id} className="bg-surface border border-line rounded-2xl p-4">
-            <div className="font-medium mb-3">{p.nama}</div>
+        {produk.map((p) => {
+          const isRendah = (p.stokMinimal ?? 0) > 0 && p.terisi <= (p.stokMinimal ?? 0);
+          return (
+          <div
+            key={p.id}
+            className={`bg-surface rounded-2xl p-4 ${
+              isRendah ? "border-2 border-amber-400" : "border border-line"
+            }`}
+          >
+            <div className="flex items-start justify-between gap-2 mb-3">
+              <div className="font-medium">{p.nama}</div>
+              {isRendah && (
+                <span className="text-[9px] px-1.5 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 rounded font-extrabold uppercase tracking-wider">
+                  🚨 Stok Rendah
+                </span>
+              )}
+            </div>
             <div className="space-y-1.5 text-sm">
               <StokRow
                 label="Terisi"
                 jumlah={p.terisi}
-                color="text-emerald-700"
+                color={isRendah ? "text-amber-700" : "text-emerald-700"}
                 onAdd={() => setOpen({ produkId: p.id, status: "terisi", sign: 1 })}
                 onSub={() => setOpen({ produkId: p.id, status: "terisi", sign: -1 })}
               />
+              {(p.stokMinimal ?? 0) > 0 && (
+                <div className="text-[10px] text-[color:var(--muted)] pl-1">
+                  Min: {p.stokMinimal} galon
+                </div>
+              )}
               <StokRow
                 label="Kosong"
                 jumlah={p.kosong}
@@ -57,7 +83,8 @@ export function InventoryClient({
               />
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {open && (

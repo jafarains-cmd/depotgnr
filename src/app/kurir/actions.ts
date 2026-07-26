@@ -219,6 +219,12 @@ export async function konfirmasiDiantar(args: {
     }
   }
 
+  // Cek stok rendah setelah kurir konfirmasi (best-effort, idempotent per hari)
+  bestEffort(
+    "cekAlertStokRendah(kurir)",
+    import("@/lib/stok-alert").then((m) => m.cekDanKirimAlertStokRendah()),
+  );
+
   revalidatePath(`/kurir/${args.orderId}`);
   revalidatePath("/kurir");
   if (codAutoLunas) revalidatePath("/pembayaran");
