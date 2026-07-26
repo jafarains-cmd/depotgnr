@@ -62,7 +62,15 @@ export default async function InventoryPage({
     <div className="p-4 md:p-6">
       <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
         <PageHeader title="Inventory" description="Stok galon dan mutasi stok." />
-        <PageSizeSelect value={limit} />
+        <div className="flex gap-2 items-center">
+          <a
+            href="/admin/inventory/pembelian"
+            className="px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition inline-flex items-center gap-1.5"
+          >
+            + Beli Galon
+          </a>
+          <PageSizeSelect value={limit} />
+        </div>
       </div>
       <InventoryClient
         produk={produkList.map((p) => ({
