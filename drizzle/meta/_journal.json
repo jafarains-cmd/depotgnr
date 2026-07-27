@@ -239,6 +239,13 @@
       "when": 1779900000000,
       "tag": "0033_stok_alert",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "6",
+      "when": 1780000000000,
+      "tag": "0034_reminder_piutang",
+      "breakpoints": true
     }
   ]
 }

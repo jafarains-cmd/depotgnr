@@ -18,6 +18,12 @@ import { parseLimit, parsePage, getPagination } from "@/lib/page-size";
 import { SortAutoSubmit } from "./SortAutoSubmit";
 import { TabNav } from "./TabNav";
 import { getPiutangThreshold, countPiutangMenua } from "@/lib/piutang";
+import {
+  getPiutangNeedReminder,
+  buildWaLink,
+  getDepotContext,
+} from "@/lib/reminder-piutang";
+import { ReminderSection, type ReminderRow } from "./ReminderSection";
 
 export const dynamic = "force-dynamic";
 
@@ -121,6 +127,33 @@ export default async function PembayaranPage({
 
   const piutangThresholdHari = await getPiutangThreshold();
   const piutangMenuaCount = await countPiutangMenua();
+
+  // Ambil daftar piutang yang butuh reminder + generate WA link per row
+  const [needReminder, depotCtx] = await Promise.all([
+    getPiutangNeedReminder(),
+    getDepotContext(),
+  ]);
+  const reminderRows: ReminderRow[] = needReminder.map((r) => ({
+    orderId: r.orderId,
+    nomorOrder: r.nomorOrder,
+    pelangganNama: r.pelangganNama,
+    pelangganTelp: r.pelangganTelp,
+    totalPiutang: r.totalPiutang,
+    daysAge: r.daysAge,
+    currentStage: r.currentStage,
+    lastReminderStage: r.lastReminderStage,
+    waLink: buildWaLink({
+      pelangganNama: r.pelangganNama,
+      pelangganTelp: r.pelangganTelp,
+      nomorOrder: r.nomorOrder,
+      totalPiutang: r.totalPiutang,
+      createdAt: r.createdAt,
+      daysAge: r.daysAge,
+      stage: r.currentStage,
+      namaDepot: depotCtx.namaDepot,
+      telpDepot: depotCtx.telpDepot,
+    }),
+  }));
 
   const list = await db
     .select({
@@ -267,6 +300,7 @@ export default async function PembayaranPage({
         }}
         baseQuery={baseQuery.toString()}
       />
+      {reminderRows.length > 0 && <ReminderSection rows={reminderRows} />}
       <PembayaranClient rows={rows} piutangThresholdHari={piutangThresholdHari} />
       <Pagination page={page} totalPages={totalPages} total={total} />
     </div>

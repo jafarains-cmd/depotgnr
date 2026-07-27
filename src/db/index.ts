@@ -24,6 +24,7 @@ import * as shiftSchema from "./schema/shift";
 import * as referralStaffSchema from "./schema/referral-staff";
 import * as kasMasukSchema from "./schema/kas-masuk";
 import * as pembelianSchema from "./schema/pembelian";
+import * as reminderPiutangSchema from "./schema/reminder-piutang";
 
 const dbPath = process.env.DATABASE_URL ?? "./data/depot.db";
 mkdirSync(dirname(dbPath), { recursive: true });
@@ -64,6 +65,7 @@ export const schema = {
   ...referralStaffSchema,
   ...kasMasukSchema,
   ...pembelianSchema,
+  ...reminderPiutangSchema,
 };
 
 export const db = drizzle(sqlite, { schema });
