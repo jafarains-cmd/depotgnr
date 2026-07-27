@@ -109,16 +109,59 @@ export async function ringkasanShift(shiftId: number) {
 export async function bukaShift(args: {
   kasirUserId: string;
   openingCash?: number | null;
+  // Handover context: kalau ada pending handover, wajib link + jelaskan
+  // kalau opening beda dengan handover amount.
+  openingFromShiftId?: number | null;
+  openingExtraAmount?: number;
+  openingExtraSource?: string | null;
+  openingExtraCatatan?: string | null;
 }): Promise<{ ok: true; shiftId: number } | { error: string }> {
   const existing = await getShiftAktif(args.kasirUserId);
   if (existing) return { error: "Anda sudah punya shift open. Tutup dulu sebelum buka shift baru." };
+
+  const openingCash = args.openingCash ?? null;
+  const extraAmount = Math.max(0, args.openingExtraAmount ?? 0);
+
+  // Kalau ada handover asal → validasi
+  if (args.openingFromShiftId) {
+    const fromShift = await db.query.shiftKasir.findFirst({
+      where: eq(shiftKasir.id, args.openingFromShiftId),
+    });
+    if (!fromShift) return { error: "Shift asal handover tidak ditemukan" };
+    if (fromShift.handoverToKasirUserId !== args.kasirUserId) {
+      return { error: "Handover ini bukan untuk Anda" };
+    }
+    const handoverAmt = fromShift.handoverAmount ?? 0;
+
+    // Kalau opening != handover → wajib penjelasan
+    if (openingCash !== null && openingCash !== handoverAmt) {
+      const diff = openingCash - handoverAmt;
+      if (diff !== extraAmount) {
+        return {
+          error: `Opening Rp ${openingCash.toLocaleString("id-ID")} beda dari handover Rp ${handoverAmt.toLocaleString("id-ID")}. Selisih ${diff > 0 ? "+" : ""}${diff.toLocaleString("id-ID")} — jelaskan sumbernya.`,
+        };
+      }
+      if (extraAmount > 0) {
+        if (!args.openingExtraSource) {
+          return { error: "Kategori sumber uang tambahan wajib dipilih" };
+        }
+        if (!args.openingExtraCatatan || args.openingExtraCatatan.trim().length < 3) {
+          return { error: "Catatan sumber uang tambahan wajib (min 3 karakter)" };
+        }
+      }
+    }
+  }
 
   const [created] = await db
     .insert(shiftKasir)
     .values({
       kasirUserId: args.kasirUserId,
-      openingCash: args.openingCash ?? null,
+      openingCash,
       status: "open",
+      openingFromShiftId: args.openingFromShiftId ?? null,
+      openingExtraAmount: extraAmount,
+      openingExtraSource: extraAmount > 0 ? args.openingExtraSource ?? null : null,
+      openingExtraCatatan: extraAmount > 0 ? args.openingExtraCatatan?.trim() ?? null : null,
     })
     .returning();
   return { ok: true, shiftId: created.id };
@@ -136,6 +179,11 @@ export async function tutupShift(args: {
   closedByUserId: string;
   selisihKategori?: string | null;
   selisihAlasan?: string | null;
+  // Handover: uang diserahkan ke kasir berikutnya
+  handoverAmount?: number | null;
+  handoverToKasirUserId?: string | null;
+  handoverFotoUrl?: string | null;
+  handoverCatatan?: string | null;
 }): Promise<
   | { ok: true; selisih: number; expected: number }
   | { error: string }
@@ -165,6 +213,17 @@ export async function tutupShift(args: {
     }
   }
 
+  // Validasi handover: kalau jumlah > 0, wajib pilih kasir penerima
+  const handoverAmt = Math.max(0, args.handoverAmount ?? 0);
+  if (handoverAmt > 0 && !args.handoverToKasirUserId) {
+    return { error: "Handover: pilih kasir penerima wajib kalau ada uang diserahkan" };
+  }
+  if (handoverAmt > args.closingCashCounted) {
+    return {
+      error: `Handover Rp ${handoverAmt.toLocaleString("id-ID")} tidak boleh > uang fisik Rp ${args.closingCashCounted.toLocaleString("id-ID")}`,
+    };
+  }
+
   await db
     .update(shiftKasir)
     .set({
@@ -178,10 +237,49 @@ export async function tutupShift(args: {
       buktiFotoUrl: args.buktiFotoUrl ?? null,
       closedAt: new Date(),
       closedByUserId: args.closedByUserId,
+      handoverAmount: handoverAmt > 0 ? handoverAmt : null,
+      handoverToKasirUserId: handoverAmt > 0 ? args.handoverToKasirUserId : null,
+      handoverFotoUrl: args.handoverFotoUrl ?? null,
+      handoverCatatan: args.handoverCatatan?.trim() || null,
     })
     .where(eq(shiftKasir.id, args.shiftId));
 
   return { ok: true, selisih, expected: summary.expected };
+}
+
+/**
+ * Ambil handover pending untuk kasir tertentu (shift yang tutup dengan
+ * handoverToKasirUserId = kasir ini, tapi belum di-link ke shift baru).
+ * Return null kalau tidak ada.
+ */
+export async function getPendingHandoverForKasir(kasirUserId: string) {
+  const rows = await db
+    .select({
+      id: shiftKasir.id,
+      handoverAmount: shiftKasir.handoverAmount,
+      handoverFotoUrl: shiftKasir.handoverFotoUrl,
+      handoverCatatan: shiftKasir.handoverCatatan,
+      fromKasirUserId: shiftKasir.kasirUserId,
+      fromKasirNama: userTable.name,
+      closedAt: shiftKasir.closedAt,
+    })
+    .from(shiftKasir)
+    .leftJoin(userTable, eq(shiftKasir.kasirUserId, userTable.id))
+    .where(
+      and(
+        eq(shiftKasir.handoverToKasirUserId, kasirUserId),
+        sql`${shiftKasir.handoverAmount} > 0`,
+        // Belum di-link ke shift baru
+        sql`NOT EXISTS (
+          SELECT 1 FROM shift_kasir AS sk2
+          WHERE sk2.opening_from_shift_id = ${shiftKasir.id}
+        )`,
+      ),
+    )
+    .orderBy(desc(shiftKasir.closedAt))
+    .limit(1);
+
+  return rows[0] ?? null;
 }
 
 /**

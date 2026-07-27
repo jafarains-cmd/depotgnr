@@ -46,6 +46,26 @@ export const shiftKasir = sqliteTable(
     // Track terakhir kali notif "lupa tutup shift" dikirim (idempotency: kirim
     // ulang hanya tiap 6 jam supaya tidak spam).
     staleNotifSentAt: integer("stale_notif_sent_at", { mode: "timestamp" }),
+
+    // ═══════════════════════════════════════════════════════════
+    // HANDOVER (serah-terima uang antar kasir)
+    // Diisi saat tutup shift kalau uang diserahkan ke kasir berikut
+    // (bukan disetor sendiri / ditinggal untuk diambil owner).
+    // ═══════════════════════════════════════════════════════════
+    handoverAmount: integer("handover_amount"), // Rupiah, null = tidak ada handover
+    handoverToKasirUserId: text("handover_to_kasir_user_id").references(
+      () => user.id,
+      { onDelete: "set null" },
+    ),
+    handoverFotoUrl: text("handover_foto_url"),
+    handoverCatatan: text("handover_catatan"),
+
+    // Saat buka shift dari handover: link ke shift asal + track kalau
+    // opening lebih besar dari handover (ada setoran tambahan owner).
+    openingFromShiftId: integer("opening_from_shift_id"),
+    openingExtraAmount: integer("opening_extra_amount").notNull().default(0),
+    openingExtraSource: text("opening_extra_source"), // setoran-owner|sisa-cash|kas-masuk-lain|lainnya
+    openingExtraCatatan: text("opening_extra_catatan"),
   },
   (t) => ({
     kasirStatusIdx: index("shift_kasir_kasir_status_idx").on(t.kasirUserId, t.status),

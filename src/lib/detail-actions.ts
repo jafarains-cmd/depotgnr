@@ -94,6 +94,17 @@ export type ShiftDetail = {
   selisihKategori: string | null;
   selisihAlasan: string | null;
   catatan: string | null;
+  // Handover info (kalau shift tutup dengan handover ke kasir lain)
+  handoverAmount: number | null;
+  handoverToKasirNama: string | null;
+  handoverFotoUrl: string | null;
+  handoverCatatan: string | null;
+  // Opening dari handover shift lain
+  openingFromShiftId: number | null;
+  openingFromKasirNama: string | null;
+  openingExtraAmount: number;
+  openingExtraSource: string | null;
+  openingExtraCatatan: string | null;
   ringkasan: {
     omzetCash: number;
     omzetTransfer: number;
@@ -459,6 +470,27 @@ export async function getShiftDetail(shiftId: number): Promise<ShiftDetail | nul
 
   const ring = await ringkasanShift(shiftId);
 
+  // Fetch handover info: kasir penerima (kalau tutup dengan handover)
+  const handoverToUser = s.handoverToKasirUserId
+    ? await db.query.user.findFirst({
+        where: eq(userTable.id, s.handoverToKasirUserId),
+      })
+    : null;
+
+  // Fetch opening asal shift (kalau shift ini terima handover)
+  let openingFromKasirNama: string | null = null;
+  if (s.openingFromShiftId) {
+    const fromShift = await db.query.shiftKasir.findFirst({
+      where: eq(shiftKasir.id, s.openingFromShiftId),
+    });
+    if (fromShift) {
+      const fromKasir = await db.query.user.findFirst({
+        where: eq(userTable.id, fromShift.kasirUserId),
+      });
+      openingFromKasirNama = fromKasir?.name ?? null;
+    }
+  }
+
   return {
     kind: "shift",
     id: s.id,
@@ -476,6 +508,15 @@ export async function getShiftDetail(shiftId: number): Promise<ShiftDetail | nul
     selisihKategori: s.selisihKategori,
     selisihAlasan: s.selisihAlasan,
     catatan: s.catatan,
+    handoverAmount: s.handoverAmount,
+    handoverToKasirNama: handoverToUser?.name ?? null,
+    handoverFotoUrl: s.handoverFotoUrl,
+    handoverCatatan: s.handoverCatatan,
+    openingFromShiftId: s.openingFromShiftId,
+    openingFromKasirNama,
+    openingExtraAmount: s.openingExtraAmount,
+    openingExtraSource: s.openingExtraSource,
+    openingExtraCatatan: s.openingExtraCatatan,
     ringkasan: {
       omzetCash: ring.omzetCash,
       omzetTransfer: ring.omzetTransfer,

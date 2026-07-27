@@ -19,12 +19,37 @@ import { bestEffort } from "@/lib/best-effort";
 import { uploadAsset } from "@/lib/drive";
 
 export async function bukaShiftAction(
-  openingCash: number | null,
+  args:
+    | number
+    | null
+    | {
+        openingCash: number | null;
+        openingFromShiftId?: number | null;
+        openingExtraAmount?: number;
+        openingExtraSource?: string | null;
+        openingExtraCatatan?: string | null;
+      },
 ): Promise<{ ok: true; shiftId: number } | { error: string }> {
   const session = await requireRole(["admin", "kasir"]);
+
+  // Backward-compat: kalau dipanggil dengan number/null (signature lama)
+  const input =
+    typeof args === "object" && args !== null
+      ? args
+      : { openingCash: args as number | null };
+
+  const openingCash =
+    input.openingCash !== null && Number.isFinite(input.openingCash)
+      ? Math.max(0, Math.floor(input.openingCash))
+      : null;
+
   const r = await bukaShiftLib({
     kasirUserId: session.user.id,
-    openingCash: openingCash !== null && Number.isFinite(openingCash) ? Math.max(0, Math.floor(openingCash)) : null,
+    openingCash,
+    openingFromShiftId: input.openingFromShiftId ?? null,
+    openingExtraAmount: input.openingExtraAmount ?? 0,
+    openingExtraSource: input.openingExtraSource ?? null,
+    openingExtraCatatan: input.openingExtraCatatan ?? null,
   });
   if ("error" in r) return r;
 
@@ -33,7 +58,12 @@ export async function bukaShiftAction(
     action: "shift.buka",
     entity: "shift_kasir",
     entityId: r.shiftId,
-    after: { openingCash },
+    after: {
+      openingCash,
+      openingFromShiftId: input.openingFromShiftId ?? null,
+      openingExtraAmount: input.openingExtraAmount ?? 0,
+      openingExtraSource: input.openingExtraSource ?? null,
+    },
   });
 
   revalidatePath("/kasir/shift");
@@ -49,6 +79,12 @@ export async function tutupShiftAction(args: {
   buktiMimeType?: string | null;
   selisihKategori?: string | null;
   selisihAlasan?: string | null;
+  // Handover fields
+  handoverAmount?: number;
+  handoverToKasirUserId?: string | null;
+  handoverBase64?: string | null;
+  handoverMimeType?: string | null;
+  handoverCatatan?: string | null;
 }): Promise<
   | { ok: true; selisih: number; expected: number }
   | { error: string }
@@ -58,7 +94,7 @@ export async function tutupShiftAction(args: {
     return { error: "Jumlah uang fisik wajib (>= 0)" };
   }
 
-  // Upload bukti foto kalau ada (best-effort: kalau gagal, lanjut tanpa foto)
+  // Upload bukti foto (tutup shift) kalau ada
   let buktiFotoUrl: string | null = null;
   if (args.buktiBase64 && args.buktiMimeType) {
     const up = await uploadAsset({
@@ -69,6 +105,17 @@ export async function tutupShiftAction(args: {
     if (up.ok && up.url) buktiFotoUrl = up.url;
   }
 
+  // Upload foto handover kalau ada
+  let handoverFotoUrl: string | null = null;
+  if (args.handoverBase64 && args.handoverMimeType) {
+    const up = await uploadAsset({
+      prefix: `shift-handover-${args.shiftId}`,
+      base64: args.handoverBase64,
+      mimeType: args.handoverMimeType,
+    });
+    if (up.ok && up.url) handoverFotoUrl = up.url;
+  }
+
   const r = await tutupShiftLib({
     shiftId: args.shiftId,
     closingCashCounted: Math.floor(args.closingCashCounted),
@@ -77,6 +124,10 @@ export async function tutupShiftAction(args: {
     closedByUserId: session.user.id,
     selisihKategori: args.selisihKategori,
     selisihAlasan: args.selisihAlasan,
+    handoverAmount: args.handoverAmount,
+    handoverToKasirUserId: args.handoverToKasirUserId,
+    handoverFotoUrl,
+    handoverCatatan: args.handoverCatatan,
   });
   if ("error" in r) return r;
 
@@ -91,8 +142,10 @@ export async function tutupShiftAction(args: {
       selisih: r.selisih,
       selisihKategori: args.selisihKategori,
       selisihAlasan: args.selisihAlasan,
+      handoverAmount: args.handoverAmount,
+      handoverToKasirUserId: args.handoverToKasirUserId,
     },
-    meta: { catatan: args.catatan },
+    meta: { catatan: args.catatan, handoverCatatan: args.handoverCatatan },
   });
 
   // Kirim notif detail ke grup Telegram (best-effort)

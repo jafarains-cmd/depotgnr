@@ -85,6 +85,17 @@ const KATEGORI_LABEL: Record<string, string> = {
   lainnya: "Lainnya",
 };
 
+type PendingHandover = {
+  fromShiftId: number;
+  amount: number;
+  fromKasirNama: string;
+  closedAt: string | null;
+  catatan: string | null;
+  fotoUrl: string | null;
+} | null;
+
+type KasirOption = { id: string; name: string };
+
 export function ShiftClient({
   myShiftAktif,
   ringkasanAktif,
@@ -93,6 +104,8 @@ export function ShiftClient({
   nextUrl,
   autoOpenTutup,
   kasMasukList,
+  pendingHandover,
+  kasirLain,
 }: {
   myShiftAktif: MyShiftAktif | null;
   ringkasanAktif: Ringkasan | null;
@@ -101,6 +114,8 @@ export function ShiftClient({
   nextUrl?: string | null;
   autoOpenTutup?: boolean;
   kasMasukList: KasMasukItem[];
+  pendingHandover: PendingHandover;
+  kasirLain: KasirOption[];
 }) {
   // Auto-open modal buka shift kalau ada nextUrl dan belum ada shift aktif
   const [openBuka, setOpenBuka] = useState(Boolean(nextUrl && !myShiftAktif));
@@ -334,6 +349,7 @@ export function ShiftClient({
         <BukaModal
           onClose={() => setOpenBuka(false)}
           nextUrl={nextUrl ?? null}
+          pendingHandover={pendingHandover}
         />
       )}
       {openTutup && myShiftAktif && ringkasanAktif && (
@@ -341,6 +357,7 @@ export function ShiftClient({
           shiftId={myShiftAktif.id}
           ringkasan={ringkasanAktif}
           onClose={() => setOpenTutup(false)}
+          kasirLain={kasirLain}
         />
       )}
       {openEditUangAwal && myShiftAktif && (
@@ -475,24 +492,51 @@ function Stat({
 function BukaModal({
   onClose,
   nextUrl,
+  pendingHandover,
 }: {
   onClose: () => void;
   nextUrl: string | null;
+  pendingHandover: PendingHandover;
 }) {
-  const [openingCash, setOpeningCash] = useState("");
+  const initOpening = pendingHandover ? String(pendingHandover.amount) : "";
+  const [openingCash, setOpeningCash] = useState(initOpening);
+  const [extraSource, setExtraSource] = useState("setoran-owner");
+  const [extraCatatan, setExtraCatatan] = useState("");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
+  const openingNum = openingCash.trim() === "" ? null : Number(openingCash);
+  const handoverAmt = pendingHandover?.amount ?? 0;
+  const diff = openingNum !== null ? openingNum - handoverAmt : 0;
+  const needsExplanation = pendingHandover !== null && diff !== 0;
+  const isExtraPositive = diff > 0;
+
   function submit() {
     setError(null);
-    const cash = openingCash.trim() === "" ? null : Number(openingCash);
+    const cash = openingNum;
     if (cash !== null && (!Number.isFinite(cash) || cash < 0)) {
       setError("Jumlah harus angka >= 0 atau kosongkan untuk skip");
       return;
     }
+    if (needsExplanation) {
+      if (!extraSource) {
+        setError("Pilih kategori sumber uang tambahan");
+        return;
+      }
+      if (extraCatatan.trim().length < 3) {
+        setError("Catatan wajib (min 3 karakter)");
+        return;
+      }
+    }
     startTransition(async () => {
-      const r = await bukaShiftAction(cash);
+      const r = await bukaShiftAction({
+        openingCash: cash,
+        openingFromShiftId: pendingHandover?.fromShiftId ?? null,
+        openingExtraAmount: needsExplanation && isExtraPositive ? diff : 0,
+        openingExtraSource: needsExplanation && isExtraPositive ? extraSource : null,
+        openingExtraCatatan: needsExplanation ? extraCatatan.trim() : null,
+      });
       if ("error" in r) setError(r.error);
       else {
         onClose();
@@ -506,8 +550,8 @@ function BukaModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 grid place-items-center p-4">
-      <div className="bg-surface rounded-2xl max-w-md w-full p-5 space-y-4">
+    <div className="fixed inset-0 bg-black/50 z-50 grid place-items-center p-4 overflow-auto">
+      <div className="bg-surface rounded-2xl max-w-md w-full p-5 space-y-3 my-4">
         <div className="flex justify-between items-start">
           <h2 className="font-bold text-lg inline-flex items-center gap-1.5">
             <Play size={18} className="text-emerald-600" /> Buka Shift
@@ -516,15 +560,46 @@ function BukaModal({
             <X size={20} />
           </button>
         </div>
-        <div className="text-sm text-[color:var(--muted)]">
-          Catat berapa uang di laci awal shift (opsional). Sistem akan bandingkan dengan
-          uang fisik saat tutup shift untuk hitung selisih.
+
+        {pendingHandover && (
+          <div className="bg-brand-soft border-2 border-brand/30 rounded-lg p-3 space-y-1">
+            <div className="text-xs font-extrabold text-brand inline-flex items-center gap-1.5">
+              📥 Handover dari {pendingHandover.fromKasirNama}
+            </div>
+            <div className="text-sm">
+              Uang diserahkan:{" "}
+              <b className="text-emerald-700">{formatRupiah(pendingHandover.amount)}</b>
+            </div>
+            {pendingHandover.catatan && (
+              <div className="text-[11px] text-[color:var(--muted)] italic">
+                &quot;{pendingHandover.catatan}&quot;
+              </div>
+            )}
+            {pendingHandover.fotoUrl && (
+              <a
+                href={pendingHandover.fotoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] text-brand hover:underline inline-flex items-center gap-1"
+              >
+                📷 Lihat foto bukti
+              </a>
+            )}
+          </div>
+        )}
+
+        <div className="text-xs text-[color:var(--muted)]">
+          {pendingHandover
+            ? "Opening auto-suggest = uang handover. Kalau berbeda (mis. dapat tambahan dari owner), wajib jelaskan sumbernya."
+            : "Catat berapa uang di laci awal shift (opsional)."}
         </div>
+
         {nextUrl && (
           <div className="bg-sky-50 border border-sky-200 rounded-md p-2 text-[11px] text-sky-800">
             ℹ Setelah buka shift, Anda akan otomatis dilanjutkan ke halaman sebelumnya.
           </div>
         )}
+
         <div>
           <label className="text-xs font-bold block mb-1">Uang Awal di Laci (Rp)</label>
           <input
@@ -540,7 +615,69 @@ function BukaModal({
             mis. Rp 500.000 untuk kembalian. Kosongkan = skip perbandingan selisih.
           </div>
         </div>
-        {error && <div className="text-xs text-red-600">{error}</div>}
+
+        {needsExplanation && (
+          <div
+            className={`rounded-lg p-3 space-y-2 border-2 ${
+              isExtraPositive
+                ? "bg-amber-50 border-amber-300"
+                : "bg-red-50 border-red-300"
+            }`}
+          >
+            <div className="text-xs font-extrabold inline-flex items-center gap-1.5">
+              <AlertTriangle size={14} />
+              Opening {isExtraPositive ? "+" : ""}
+              {formatRupiah(diff)} dari handover — WAJIB jelaskan
+            </div>
+            {isExtraPositive ? (
+              <>
+                <div>
+                  <label className="text-[11px] font-bold block mb-1">
+                    Sumber uang tambahan
+                  </label>
+                  <select
+                    value={extraSource}
+                    onChange={(e) => setExtraSource(e.target.value)}
+                    className="w-full px-2 py-1.5 border border-line rounded text-sm bg-surface"
+                  >
+                    <option value="setoran-owner">Setoran modal dari owner</option>
+                    <option value="sisa-cash">Sisa cash dari kemarin</option>
+                    <option value="kas-masuk-lain">Kas masuk lain (pelunasan offline dll)</option>
+                    <option value="lainnya">Lainnya</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold block mb-1">
+                    Catatan (min 3 karakter)
+                  </label>
+                  <input
+                    type="text"
+                    value={extraCatatan}
+                    onChange={(e) => setExtraCatatan(e.target.value)}
+                    placeholder="mis: Owner kasih tambahan modal Rp 117rb pagi ini"
+                    className="w-full px-2 py-1.5 border border-line rounded text-sm"
+                  />
+                </div>
+              </>
+            ) : (
+              <div>
+                <label className="text-[11px] font-bold block mb-1">
+                  Alasan kenapa opening lebih kecil dari handover
+                </label>
+                <input
+                  type="text"
+                  value={extraCatatan}
+                  onChange={(e) => setExtraCatatan(e.target.value)}
+                  placeholder="mis: Rp X dibayar pengeluaran / diambil owner sebelum shift"
+                  className="w-full px-2 py-1.5 border border-line rounded text-sm"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {error && <div className="text-xs text-red-600 font-bold">{error}</div>}
+
         <div className="flex justify-end gap-2 pt-2 border-t border-line">
           <button onClick={onClose} className="px-4 py-2 border border-line rounded-md text-sm">
             Batal
@@ -563,13 +700,22 @@ function TutupModal({
   shiftId,
   ringkasan,
   onClose,
+  kasirLain,
 }: {
   shiftId: number;
   ringkasan: Ringkasan;
   onClose: () => void;
+  kasirLain: KasirOption[];
 }) {
   const [counted, setCounted] = useState(String(ringkasan.expected));
   const [catatan, setCatatan] = useState("");
+  // Handover state
+  const [handoverEnabled, setHandoverEnabled] = useState(false);
+  const [handoverAmount, setHandoverAmount] = useState("");
+  const [handoverToKasirId, setHandoverToKasirId] = useState("");
+  const [handoverBase64, setHandoverBase64] = useState<string | null>(null);
+  const [handoverMime, setHandoverMime] = useState<string | null>(null);
+  const [handoverCatatan, setHandoverCatatan] = useState("");
   const [buktiBase64, setBuktiBase64] = useState<string | null>(null);
   const [buktiMime, setBuktiMime] = useState<string | null>(null);
   const [selisihKategori, setSelisihKategori] = useState("");
@@ -595,6 +741,23 @@ function TutupModal({
     reader.readAsDataURL(file);
   }
 
+  const handoverAmountNum = handoverEnabled
+    ? Math.max(0, Math.floor(Number(handoverAmount) || 0))
+    : 0;
+
+  async function handleHandoverFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const dataUrl = reader.result as string;
+      const b64 = dataUrl.split(",")[1];
+      setHandoverBase64(b64);
+      setHandoverMime(file.type);
+    };
+    reader.readAsDataURL(file);
+  }
+
   function submit() {
     setError(null);
     if (hasSelisih) {
@@ -607,6 +770,22 @@ function TutupModal({
         return;
       }
     }
+    if (handoverEnabled) {
+      if (handoverAmountNum <= 0) {
+        setError("Jumlah handover harus > 0 (atau matikan toggle handover)");
+        return;
+      }
+      if (handoverAmountNum > countedNum) {
+        setError(
+          `Handover tidak boleh > uang fisik (${formatRupiah(countedNum)})`,
+        );
+        return;
+      }
+      if (!handoverToKasirId) {
+        setError("Pilih kasir yang menerima uang handover");
+        return;
+      }
+    }
     startTransition(async () => {
       const r = await tutupShiftAction({
         shiftId,
@@ -616,6 +795,11 @@ function TutupModal({
         buktiMimeType: buktiMime,
         selisihKategori: hasSelisih ? selisihKategori : null,
         selisihAlasan: hasSelisih ? selisihAlasan.trim() : null,
+        handoverAmount: handoverEnabled ? handoverAmountNum : 0,
+        handoverToKasirUserId: handoverEnabled ? handoverToKasirId : null,
+        handoverBase64: handoverEnabled ? handoverBase64 : null,
+        handoverMimeType: handoverEnabled ? handoverMime : null,
+        handoverCatatan: handoverEnabled ? handoverCatatan.trim() || null : null,
       });
       if ("error" in r) setError(r.error);
       else {
@@ -792,7 +976,89 @@ function TutupModal({
           )}
         </div>
 
-        {error && <div className="text-xs text-red-600">{error}</div>}
+        {/* Handover section */}
+        <div className="bg-brand-soft border border-brand/20 rounded-lg p-3 space-y-2">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={handoverEnabled}
+              onChange={(e) => setHandoverEnabled(e.target.checked)}
+              className="w-4 h-4"
+            />
+            <span className="text-xs font-extrabold text-brand inline-flex items-center gap-1.5">
+              📥 Serah-terima uang ke kasir berikutnya
+            </span>
+          </label>
+          <div className="text-[10px] text-[color:var(--muted)]">
+            Aktifkan kalau Anda menyerahkan uang laci ke kasir berikutnya.
+            Kasir penerima akan lihat info handover saat buka shift baru.
+          </div>
+
+          {handoverEnabled && (
+            <div className="space-y-2 pt-2 border-t border-brand/20">
+              <div>
+                <label className="text-[11px] font-bold block mb-1">
+                  Diserahkan kepada
+                </label>
+                <select
+                  value={handoverToKasirId}
+                  onChange={(e) => setHandoverToKasirId(e.target.value)}
+                  className="w-full px-2 py-1.5 border border-line rounded text-sm bg-surface"
+                >
+                  <option value="">— Pilih kasir —</option>
+                  {kasirLain.map((k) => (
+                    <option key={k.id} value={k.id}>
+                      {k.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-[11px] font-bold block mb-1">
+                  Jumlah diserahkan (Rp) — auto-fill uang fisik
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={countedNum}
+                  value={handoverAmount || String(countedNum)}
+                  onChange={(e) => setHandoverAmount(e.target.value)}
+                  className="w-full px-2 py-1.5 border border-line rounded text-sm font-mono font-bold"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold block mb-1">
+                  Foto bukti serah-terima (opsional)
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleHandoverFile}
+                  className="w-full text-xs"
+                />
+                {handoverBase64 && (
+                  <div className="text-[10px] text-emerald-700 mt-1">
+                    ✓ Foto handover siap upload
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="text-[11px] font-bold block mb-1">
+                  Catatan (opsional)
+                </label>
+                <input
+                  type="text"
+                  value={handoverCatatan}
+                  onChange={(e) => setHandoverCatatan(e.target.value)}
+                  placeholder="mis: Uang tunai Rp 65rb, kembalian Rp 100rb, dst"
+                  className="w-full px-2 py-1.5 border border-line rounded text-sm"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {error && <div className="text-xs text-red-600 font-bold">{error}</div>}
 
         <div className="flex justify-end gap-2 pt-2 border-t border-line">
           <button onClick={onClose} className="px-4 py-2 border border-line rounded-md text-sm">

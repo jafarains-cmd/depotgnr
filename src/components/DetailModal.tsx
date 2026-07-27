@@ -582,6 +582,70 @@ function ShiftView({
         )}
       </div>
 
+      {/* Handover section */}
+      {(data.openingFromKasirNama || data.handoverAmount) && (
+        <div className="bg-brand-soft border border-brand/20 rounded-lg p-3 space-y-2 text-xs">
+          <div className="font-extrabold text-brand text-sm inline-flex items-center gap-1.5">
+            🔁 Serah-terima Kas
+          </div>
+
+          {data.openingFromKasirNama && (
+            <div className="border-l-2 border-brand/40 pl-2 space-y-0.5">
+              <div className="text-[10px] font-bold text-[color:var(--muted)] uppercase tracking-wide">
+                📥 Terima dari
+              </div>
+              <div>
+                Kasir <b>{data.openingFromKasirNama}</b>
+                {data.openingFromShiftId && (
+                  <span className="text-[10px] text-[color:var(--muted)] ml-1">
+                    (shift #{data.openingFromShiftId})
+                  </span>
+                )}
+              </div>
+              {data.openingExtraAmount > 0 && (
+                <div className="text-amber-800">
+                  + Tambahan opening: <b>{formatRupiah(data.openingExtraAmount)}</b>
+                  <span className="text-[10px] text-[color:var(--muted)] ml-1">
+                    ({data.openingExtraSource})
+                  </span>
+                </div>
+              )}
+              {data.openingExtraCatatan && (
+                <div className="text-[10px] text-[color:var(--muted)] italic">
+                  &quot;{data.openingExtraCatatan}&quot;
+                </div>
+              )}
+            </div>
+          )}
+
+          {data.handoverAmount && data.handoverAmount > 0 && (
+            <div className="border-l-2 border-brand/40 pl-2 space-y-0.5">
+              <div className="text-[10px] font-bold text-[color:var(--muted)] uppercase tracking-wide">
+                📤 Serahkan ke
+              </div>
+              <div>
+                Kasir <b>{data.handoverToKasirNama ?? "—"}</b>: <b className="text-emerald-700">{formatRupiah(data.handoverAmount)}</b>
+              </div>
+              {data.handoverCatatan && (
+                <div className="text-[10px] text-[color:var(--muted)] italic">
+                  &quot;{data.handoverCatatan}&quot;
+                </div>
+              )}
+              {data.handoverFotoUrl && (
+                <a
+                  href={data.handoverFotoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] text-brand hover:underline inline-flex items-center gap-1"
+                >
+                  📷 Foto bukti serah-terima
+                </a>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {data.status === "closed" && (
         <div className="bg-[color:var(--surface2)] rounded-lg p-3 space-y-0.5 text-xs">
           <Row

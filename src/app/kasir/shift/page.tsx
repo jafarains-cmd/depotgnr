@@ -3,7 +3,8 @@ import { db } from "@/db";
 import { shiftKasir } from "@/db/schema/shift";
 import { user as userTable } from "@/db/schema/auth";
 import { requireRole } from "@/lib/permissions";
-import { getShiftAktif, getSemuaShiftAktif, ringkasanShift, SHIFT_REOPEN_WINDOW_MS } from "@/lib/shift";
+import { getShiftAktif, getSemuaShiftAktif, ringkasanShift, SHIFT_REOPEN_WINDOW_MS, getPendingHandoverForKasir } from "@/lib/shift";
+import { inArray } from "drizzle-orm";
 import { kasMasuk } from "@/db/schema/kas-masuk";
 import { ShiftClient } from "./ShiftClient";
 import { PageHeader } from "@/components/AppShell";
@@ -64,6 +65,19 @@ export default async function ShiftPage({
         .where(eq(kasMasuk.shiftId, myShiftAktif.id))
         .orderBy(desc(kasMasuk.createdAt))
     : [];
+
+  // Handover pending: kalau user ini belum ada shift open, cek apakah ada
+  // kasir lain yang menutup shift dan menyerahkan uang ke user ini.
+  const pendingHandover = !myShiftAktif
+    ? await getPendingHandoverForKasir(session.user.id)
+    : null;
+
+  // Daftar kasir lain (untuk dropdown "diserahkan kepada" saat tutup shift)
+  const kasirLain = await db
+    .select({ id: userTable.id, name: userTable.name })
+    .from(userTable)
+    .where(inArray(userTable.role, ["admin", "kasir"]))
+    .then((rows) => rows.filter((u) => u.id !== session.user.id));
 
   return (
     <div className="p-4 md:p-6 max-w-3xl">
@@ -148,6 +162,19 @@ export default async function ShiftPage({
           jumlah: k.jumlah,
           deskripsi: k.deskripsi,
         }))}
+        pendingHandover={
+          pendingHandover
+            ? {
+                fromShiftId: pendingHandover.id,
+                amount: pendingHandover.handoverAmount ?? 0,
+                fromKasirNama: pendingHandover.fromKasirNama ?? "—",
+                closedAt: pendingHandover.closedAt?.toISOString() ?? null,
+                catatan: pendingHandover.handoverCatatan,
+                fotoUrl: pendingHandover.handoverFotoUrl,
+              }
+            : null
+        }
+        kasirLain={kasirLain}
       />
     </div>
   );
