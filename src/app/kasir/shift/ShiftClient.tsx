@@ -25,6 +25,10 @@ import {
   tambahKasMasukAction,
   hapusKasMasukAction,
 } from "./kas-masuk-actions";
+import {
+  tambahPengeluaranKasirAction,
+  hapusPengeluaranKasirAction,
+} from "./pengeluaran-actions";
 import { formatRupiah } from "@/lib/utils";
 
 type MyShiftAktif = {
@@ -77,11 +81,31 @@ type KasMasukItem = {
   deskripsi: string | null;
 };
 
+type PengeluaranItem = {
+  id: number;
+  tanggal: string;
+  kategori: string;
+  jumlah: number;
+  deskripsi: string | null;
+  fotoNotaUrl: string | null;
+};
+
 const KATEGORI_LABEL: Record<string, string> = {
   "pelunasan-offline": "Pelunasan piutang offline",
   tip: "Tip pelanggan",
   "setoran-titip": "Setoran titip kasir",
   "kembalian-tidak-diambil": "Kembalian tidak diambil",
+  lainnya: "Lainnya",
+};
+
+const KATEGORI_PENGELUARAN_LABEL: Record<string, string> = {
+  bensin: "Bensin motor/mobil antar",
+  "ongkos-antar": "Ongkos kurir/antar",
+  "tip-kurir": "Tip kurir",
+  pemeliharaan: "Pemeliharaan alat",
+  "makan-kasir": "Makan/minum kasir & kurir",
+  "beli-galon-eceran": "Beli galon eceran cepat",
+  listrik: "Listrik/token/air",
   lainnya: "Lainnya",
 };
 
@@ -104,6 +128,7 @@ export function ShiftClient({
   nextUrl,
   autoOpenTutup,
   kasMasukList,
+  pengeluaranList,
   pendingHandover,
   kasirLain,
 }: {
@@ -114,6 +139,7 @@ export function ShiftClient({
   nextUrl?: string | null;
   autoOpenTutup?: boolean;
   kasMasukList: KasMasukItem[];
+  pengeluaranList: PengeluaranItem[];
   pendingHandover: PendingHandover;
   kasirLain: KasirOption[];
 }) {
@@ -235,6 +261,14 @@ export function ShiftClient({
         <KasMasukSection
           shiftId={myShiftAktif.id}
           items={kasMasukList}
+        />
+      )}
+
+      {/* Pengeluaran shift (bensin, ongkos kurir, dll) */}
+      {myShiftAktif && (
+        <PengeluaranSection
+          shiftId={myShiftAktif.id}
+          items={pengeluaranList}
         />
       )}
 
@@ -1261,6 +1295,263 @@ function KasMasukSection({
                     hour: "2-digit",
                     minute: "2-digit",
                   })}
+                </div>
+              </div>
+              <button
+                onClick={() =>
+                  handleHapus(
+                    it.id,
+                    `${formatRupiah(it.jumlah)} - ${it.deskripsi ?? it.kategori}`,
+                  )
+                }
+                disabled={pending}
+                className="text-red-600 hover:bg-red-50 p-1.5 rounded disabled:opacity-50"
+                title="Hapus"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function PengeluaranSection({
+  shiftId,
+  items,
+}: {
+  shiftId: number;
+  items: PengeluaranItem[];
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [showForm, setShowForm] = useState(false);
+  const [jumlah, setJumlah] = useState("");
+  const [kategori, setKategori] = useState("bensin");
+  const [deskripsi, setDeskripsi] = useState("");
+  const [fotoBase64, setFotoBase64] = useState<string | null>(null);
+  const [fotoMime, setFotoMime] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const total = items.reduce((s, it) => s + it.jumlah, 0);
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setFotoBase64(null);
+      setFotoMime(null);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const b64 = result.split(",")[1] ?? "";
+      setFotoBase64(b64);
+      setFotoMime(file.type);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleSubmit() {
+    setErr(null);
+    const j = parseInt(jumlah.replace(/\D/g, ""), 10);
+    if (!Number.isFinite(j) || j <= 0) {
+      setErr("Jumlah harus > 0");
+      return;
+    }
+    if (deskripsi.trim().length < 3) {
+      setErr("Keterangan wajib (min 3 karakter)");
+      return;
+    }
+    startTransition(async () => {
+      const res = await tambahPengeluaranKasirAction({
+        jumlah: j,
+        kategori,
+        deskripsi: deskripsi.trim(),
+        shiftId,
+        fotoBase64,
+        fotoMimeType: fotoMime,
+      });
+      if ("error" in res) {
+        setErr(res.error);
+        return;
+      }
+      setJumlah("");
+      setDeskripsi("");
+      setKategori("bensin");
+      setFotoBase64(null);
+      setFotoMime(null);
+      setShowForm(false);
+      router.refresh();
+    });
+  }
+
+  function handleHapus(id: number, label: string) {
+    const alasan = prompt(
+      `HAPUS pengeluaran "${label}"?\n\nAlasan (min 3 karakter):`,
+    );
+    if (!alasan || alasan.trim().length < 3) return;
+    startTransition(async () => {
+      const res = await hapusPengeluaranKasirAction(id, alasan.trim());
+      if ("error" in res) {
+        alert(`Gagal: ${res.error}`);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  return (
+    <section>
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-xs font-bold tracking-widest text-[color:var(--muted)] inline-flex items-center gap-1.5">
+          <Coins size={12} /> PENGELUARAN SHIFT
+          {total > 0 && (
+            <span className="text-red-700">· −{formatRupiah(total)}</span>
+          )}
+        </h2>
+        {!showForm && (
+          <button
+            onClick={() => setShowForm(true)}
+            className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1.5 hover:bg-red-700"
+          >
+            <Plus size={12} /> Tambah
+          </button>
+        )}
+      </div>
+      <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-[11px] text-red-900 leading-snug mb-2">
+        Pakai untuk uang yang <b>keluar dari laci</b> saat shift: bensin motor
+        antar, tip kurir, beli galon eceran cepat, dst. Jangan cuma tulis di
+        catatan — kalau tidak dicatat di sini, ekspektasi kas jadi salah.
+      </div>
+
+      {showForm && (
+        <div className="bg-surface border-2 border-red-300 rounded-xl p-3 mb-2 space-y-2">
+          <div>
+            <label className="text-[11px] font-bold text-[color:var(--muted)]">
+              Jumlah (Rp)
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={jumlah}
+              onChange={(e) => setJumlah(e.target.value.replace(/\D/g, ""))}
+              placeholder="20000"
+              className="w-full mt-1 px-3 py-2 border border-line rounded-lg text-sm font-bold"
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="text-[11px] font-bold text-[color:var(--muted)]">
+              Kategori
+            </label>
+            <select
+              value={kategori}
+              onChange={(e) => setKategori(e.target.value)}
+              className="w-full mt-1 px-3 py-2 border border-line rounded-lg text-sm bg-surface"
+            >
+              {Object.entries(KATEGORI_PENGELUARAN_LABEL).map(([k, label]) => (
+                <option key={k} value={k}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-[11px] font-bold text-[color:var(--muted)]">
+              Keterangan (min 3 karakter)
+            </label>
+            <input
+              type="text"
+              value={deskripsi}
+              onChange={(e) => setDeskripsi(e.target.value)}
+              placeholder="Bensin motor antar 3 jerigen"
+              className="w-full mt-1 px-3 py-2 border border-line rounded-lg text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-[11px] font-bold text-[color:var(--muted)]">
+              Foto nota (opsional)
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFile}
+              className="w-full mt-1 text-xs"
+            />
+            {fotoBase64 && (
+              <div className="text-[10px] text-emerald-700 mt-1">
+                ✓ Foto siap upload
+              </div>
+            )}
+          </div>
+          {err && (
+            <div className="text-xs text-red-600 font-bold">{err}</div>
+          )}
+          <div className="flex gap-2">
+            <button
+              onClick={handleSubmit}
+              disabled={pending}
+              className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg text-sm font-bold disabled:opacity-50"
+            >
+              {pending ? "Menyimpan…" : "Simpan"}
+            </button>
+            <button
+              onClick={() => {
+                setShowForm(false);
+                setErr(null);
+                setFotoBase64(null);
+                setFotoMime(null);
+              }}
+              disabled={pending}
+              className="px-3 py-2 border border-line rounded-lg text-sm font-bold"
+            >
+              Batal
+            </button>
+          </div>
+        </div>
+      )}
+
+      {items.length === 0 ? (
+        <div className="text-xs text-[color:var(--muted)] italic px-1">
+          Belum ada pengeluaran di shift ini.
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          {items.map((it) => (
+            <div
+              key={it.id}
+              className="bg-surface border border-line rounded-lg px-3 py-2 flex justify-between items-start gap-2"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-bold inline-flex items-center gap-2">
+                  −{formatRupiah(it.jumlah)}
+                  <span className="text-[10px] font-medium text-red-700 bg-red-100 px-1.5 py-0.5 rounded">
+                    {KATEGORI_PENGELUARAN_LABEL[it.kategori] ?? it.kategori}
+                  </span>
+                </div>
+                {it.deskripsi && (
+                  <div className="text-xs text-[color:var(--muted)] truncate">
+                    {it.deskripsi}
+                  </div>
+                )}
+                <div className="text-[10px] text-[color:var(--muted)] mt-0.5 inline-flex items-center gap-2">
+                  {new Date(it.tanggal).toLocaleString("id-ID", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                  {it.fotoNotaUrl && (
+                    <a
+                      href={it.fotoNotaUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      Nota
+                    </a>
+                  )}
                 </div>
               </div>
               <button

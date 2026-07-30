@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/permissions";
 import { getShiftAktif, getSemuaShiftAktif, ringkasanShift, SHIFT_REOPEN_WINDOW_MS, getPendingHandoverForKasir } from "@/lib/shift";
 import { inArray } from "drizzle-orm";
 import { kasMasuk } from "@/db/schema/kas-masuk";
+import { pengeluaran } from "@/db/schema/pengeluaran";
 import { ShiftClient } from "./ShiftClient";
 import { PageHeader } from "@/components/AppShell";
 
@@ -64,6 +65,15 @@ export default async function ShiftPage({
         .from(kasMasuk)
         .where(eq(kasMasuk.shiftId, myShiftAktif.id))
         .orderBy(desc(kasMasuk.createdAt))
+    : [];
+
+  // Daftar pengeluaran untuk shift aktif
+  const pengeluaranAktif = myShiftAktif
+    ? await db
+        .select()
+        .from(pengeluaran)
+        .where(eq(pengeluaran.shiftId, myShiftAktif.id))
+        .orderBy(desc(pengeluaran.createdAt))
     : [];
 
   // Handover pending: kalau user ini belum ada shift open, cek apakah ada
@@ -161,6 +171,14 @@ export default async function ShiftPage({
           kategori: k.kategori,
           jumlah: k.jumlah,
           deskripsi: k.deskripsi,
+        }))}
+        pengeluaranList={pengeluaranAktif.map((p) => ({
+          id: p.id,
+          tanggal: p.tanggal.toISOString(),
+          kategori: p.kategori,
+          jumlah: p.jumlah,
+          deskripsi: p.deskripsi,
+          fotoNotaUrl: p.fotoNotaUrl,
         }))}
         pendingHandover={
           pendingHandover
