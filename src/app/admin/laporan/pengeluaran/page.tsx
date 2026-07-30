@@ -14,7 +14,7 @@ import { FilterBar } from "../FilterBar";
 import { ExportActions } from "../ExportActions";
 import { PrintStyles, PrintHeader } from "../PrintStyles";
 import { AutoSubmitSelect } from "../AutoSubmitSelect";
-import { LaporanClickProvider, LaporanRow } from "../LaporanClickable";
+import { LaporanClickProvider, LaporanRow, LaporanCard } from "../LaporanClickable";
 
 export const dynamic = "force-dynamic";
 
@@ -155,61 +155,104 @@ export default async function PengeluaranReportPage({
       />
 
       <div className="bg-surface border border-line rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <LaporanClickProvider>
-          <table className="w-full text-xs">
-            <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
-              <tr>
-                <th className="p-2">Tanggal</th>
-                <th className="p-2">Kategori</th>
-                <th className="p-2">Deskripsi</th>
-                <th className="p-2">Dicatat oleh</th>
-                <th className="p-2 text-right">Jumlah</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {rows.map((r) => (
-                <LaporanRow key={r.id} target={{ kind: "pengeluaran", id: r.id }}>
-                  <td className="p-2 whitespace-nowrap">
+        <LaporanClickProvider>
+          {/* Desktop: table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
+                <tr>
+                  <th className="p-2">Tanggal</th>
+                  <th className="p-2">Kategori</th>
+                  <th className="p-2">Deskripsi</th>
+                  <th className="p-2">Dicatat oleh</th>
+                  <th className="p-2 text-right">Jumlah</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {rows.map((r) => (
+                  <LaporanRow key={r.id} target={{ kind: "pengeluaran", id: r.id }}>
+                    <td className="p-2 whitespace-nowrap">
+                      {r.tanggal.toLocaleDateString("id-ID", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "2-digit",
+                      })}
+                    </td>
+                    <td className="p-2 capitalize">{r.kategori.replace(/-/g, " ")}</td>
+                    <td className="p-2 max-w-[300px] truncate" title={r.deskripsi ?? ""}>
+                      {r.deskripsi ?? "-"}
+                    </td>
+                    <td className="p-2">{r.createdByName ?? "-"}</td>
+                    <td className="p-2 text-right font-bold text-rose-700">
+                      {formatRupiah(r.jumlah)}
+                    </td>
+                  </LaporanRow>
+                ))}
+                {rows.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-[color:var(--muted)]">
+                      Tidak ada pengeluaran pada filter ini.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+              {rows.length > 0 && (
+                <tfoot className="bg-[color:var(--surface2)] font-bold">
+                  <tr>
+                    <td colSpan={4} className="p-2 text-right">
+                      TOTAL halaman ini:
+                    </td>
+                    <td className="p-2 text-right text-rose-700">
+                      {formatRupiah(rows.reduce((s, r) => s + r.jumlah, 0))}
+                    </td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+
+          {/* Mobile: card list */}
+          <div className="md:hidden divide-y divide-line">
+            {rows.map((r) => (
+              <LaporanCard key={`m-${r.id}`} target={{ kind: "pengeluaran", id: r.id }}>
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-rose-50 text-rose-700 capitalize shrink-0">
+                    {r.kategori.replace(/-/g, " ")}
+                  </span>
+                  <div className="font-extrabold text-sm text-rose-700 shrink-0">
+                    −{formatRupiah(r.jumlah)}
+                  </div>
+                </div>
+                <div className="text-sm line-clamp-2">
+                  {r.deskripsi ?? "-"}
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-[color:var(--muted)] mt-1 gap-2">
+                  <span className="truncate">
                     {r.tanggal.toLocaleDateString("id-ID", {
                       day: "2-digit",
                       month: "short",
                       year: "2-digit",
                     })}
-                  </td>
-                  <td className="p-2 capitalize">{r.kategori.replace(/-/g, " ")}</td>
-                  <td className="p-2 max-w-[300px] truncate" title={r.deskripsi ?? ""}>
-                    {r.deskripsi ?? "-"}
-                  </td>
-                  <td className="p-2">{r.createdByName ?? "-"}</td>
-                  <td className="p-2 text-right font-bold text-rose-700">
-                    {formatRupiah(r.jumlah)}
-                  </td>
-                </LaporanRow>
-              ))}
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="p-8 text-center text-[color:var(--muted)]">
-                    Tidak ada pengeluaran pada filter ini.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-            {rows.length > 0 && (
-              <tfoot className="bg-[color:var(--surface2)] font-bold">
-                <tr>
-                  <td colSpan={4} className="p-2 text-right">
-                    TOTAL halaman ini:
-                  </td>
-                  <td className="p-2 text-right text-rose-700">
-                    {formatRupiah(rows.reduce((s, r) => s + r.jumlah, 0))}
-                  </td>
-                </tr>
-              </tfoot>
+                  </span>
+                  <span className="shrink-0">{r.createdByName ?? "-"}</span>
+                </div>
+              </LaporanCard>
+            ))}
+            {rows.length === 0 && (
+              <div className="p-8 text-center text-[color:var(--muted)] text-sm">
+                Tidak ada pengeluaran pada filter ini.
+              </div>
             )}
-          </table>
-          </LaporanClickProvider>
-        </div>
+            {rows.length > 0 && (
+              <div className="bg-[color:var(--surface2)] p-3 flex justify-between font-bold text-sm">
+                <span>TOTAL halaman ini:</span>
+                <span className="text-rose-700">
+                  {formatRupiah(rows.reduce((s, r) => s + r.jumlah, 0))}
+                </span>
+              </div>
+            )}
+          </div>
+        </LaporanClickProvider>
       </div>
 
       <Pagination page={page} totalPages={totalPages} total={total} />

@@ -15,7 +15,7 @@ import { LaporanNav } from "../LaporanNav";
 import { FilterBar } from "../FilterBar";
 import { ExportActions } from "../ExportActions";
 import { PrintStyles, PrintHeader } from "../PrintStyles";
-import { LaporanClickProvider, LaporanRow } from "../LaporanClickable";
+import { LaporanClickProvider, LaporanRow, LaporanCard } from "../LaporanClickable";
 
 export const dynamic = "force-dynamic";
 
@@ -188,81 +188,143 @@ export default async function PenjualanReportPage({
       />
 
       <div className="bg-surface border border-line rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <LaporanClickProvider>
-          <table className="w-full text-xs">
-            <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
-              <tr>
-                <th className="p-2">Tanggal</th>
-                <th className="p-2">No. Nota</th>
-                <th className="p-2">Kasir</th>
-                <th className="p-2">Pelanggan</th>
-                <th className="p-2">Items</th>
-                <th className="p-2 text-right">Qty</th>
-                <th className="p-2 text-right">Subtotal</th>
-                <th className="p-2 text-right">Diskon</th>
-                <th className="p-2 text-right">Total</th>
-                <th className="p-2">Bayar</th>
-                <th className="p-2">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {rows.map((r) => {
-                const its = itemMap.get(r.id) ?? [];
-                const qtyTotal = its.reduce((s, it) => s + it.qty, 0);
-                const itemsStr = its
-                  .map((it) => `${it.nama} (${it.qty} ${it.jenis})`)
-                  .join(", ");
-                return (
-                  <LaporanRow key={r.id} target={{ kind: "transaksi", id: r.id }}>
-                    <td className="p-2 whitespace-nowrap">
+        <LaporanClickProvider>
+          {/* Desktop: table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
+                <tr>
+                  <th className="p-2">Tanggal</th>
+                  <th className="p-2">No. Nota</th>
+                  <th className="p-2">Kasir</th>
+                  <th className="p-2">Pelanggan</th>
+                  <th className="p-2">Items</th>
+                  <th className="p-2 text-right">Qty</th>
+                  <th className="p-2 text-right">Subtotal</th>
+                  <th className="p-2 text-right">Diskon</th>
+                  <th className="p-2 text-right">Total</th>
+                  <th className="p-2">Bayar</th>
+                  <th className="p-2">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {rows.map((r) => {
+                  const its = itemMap.get(r.id) ?? [];
+                  const qtyTotal = its.reduce((s, it) => s + it.qty, 0);
+                  const itemsStr = its
+                    .map((it) => `${it.nama} (${it.qty} ${it.jenis})`)
+                    .join(", ");
+                  return (
+                    <LaporanRow key={r.id} target={{ kind: "transaksi", id: r.id }}>
+                      <td className="p-2 whitespace-nowrap">
+                        {r.createdAt.toLocaleString("id-ID", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </td>
+                      <td className="p-2 font-mono">{r.nomorNota}</td>
+                      <td className="p-2">{r.kasirNama ?? "-"}</td>
+                      <td className="p-2">{r.pelangganNama ?? "—"}</td>
+                      <td className="p-2 max-w-[260px] truncate" title={itemsStr}>
+                        {itemsStr || "-"}
+                      </td>
+                      <td className="p-2 text-right">{qtyTotal}</td>
+                      <td className="p-2 text-right">{formatRupiah(r.subtotal)}</td>
+                      <td className="p-2 text-right">{formatRupiah(r.diskon)}</td>
+                      <td className="p-2 text-right font-bold">{formatRupiah(r.total)}</td>
+                      <td className="p-2 uppercase">{r.metodeBayar}</td>
+                      <td className="p-2 uppercase">{r.status}</td>
+                    </LaporanRow>
+                  );
+                })}
+                {rows.length === 0 && (
+                  <tr>
+                    <td colSpan={11} className="p-8 text-center text-[color:var(--muted)]">
+                      Tidak ada transaksi pada filter ini.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+              {rows.length > 0 && (
+                <tfoot className="bg-[color:var(--surface2)] font-bold">
+                  <tr>
+                    <td colSpan={8} className="p-2 text-right">
+                      TOTAL halaman ini:
+                    </td>
+                    <td className="p-2 text-right text-brand">
+                      {formatRupiah(rows.reduce((s, r) => s + r.total, 0))}
+                    </td>
+                    <td colSpan={2}></td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+
+          {/* Mobile: card list */}
+          <div className="md:hidden divide-y divide-line">
+            {rows.map((r) => {
+              const its = itemMap.get(r.id) ?? [];
+              const qtyTotal = its.reduce((s, it) => s + it.qty, 0);
+              const itemsStr = its
+                .map((it) => `${it.nama} (${it.qty} ${it.jenis})`)
+                .join(", ");
+              return (
+                <LaporanCard key={`m-${r.id}`} target={{ kind: "transaksi", id: r.id }}>
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <div className="text-[11px] text-[color:var(--muted)] font-mono truncate">
+                      {r.nomorNota}
+                    </div>
+                    <div className="font-extrabold text-sm shrink-0">
+                      {formatRupiah(r.total)}
+                    </div>
+                  </div>
+                  <div className="text-sm font-bold truncate">
+                    {r.pelangganNama ?? "—"}
+                  </div>
+                  <div className="text-[11px] text-[color:var(--muted)] mt-0.5 line-clamp-2">
+                    {itemsStr || "-"}
+                  </div>
+                  {r.diskon > 0 && (
+                    <div className="text-[11px] text-amber-700 mt-0.5">
+                      Diskon: {formatRupiah(r.diskon)} · Subtotal {formatRupiah(r.subtotal)}
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between text-[11px] text-[color:var(--muted)] mt-1 gap-2">
+                    <span className="truncate">
                       {r.createdAt.toLocaleString("id-ID", {
                         day: "2-digit",
                         month: "short",
-                        year: "2-digit",
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
-                    </td>
-                    <td className="p-2 font-mono">{r.nomorNota}</td>
-                    <td className="p-2">{r.kasirNama ?? "-"}</td>
-                    <td className="p-2">{r.pelangganNama ?? "—"}</td>
-                    <td className="p-2 max-w-[260px] truncate" title={itemsStr}>
-                      {itemsStr || "-"}
-                    </td>
-                    <td className="p-2 text-right">{qtyTotal}</td>
-                    <td className="p-2 text-right">{formatRupiah(r.subtotal)}</td>
-                    <td className="p-2 text-right">{formatRupiah(r.diskon)}</td>
-                    <td className="p-2 text-right font-bold">{formatRupiah(r.total)}</td>
-                    <td className="p-2 uppercase">{r.metodeBayar}</td>
-                    <td className="p-2 uppercase">{r.status}</td>
-                  </LaporanRow>
-                );
-              })}
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={11} className="p-8 text-center text-[color:var(--muted)]">
-                    Tidak ada transaksi pada filter ini.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-            {rows.length > 0 && (
-              <tfoot className="bg-[color:var(--surface2)] font-bold">
-                <tr>
-                  <td colSpan={8} className="p-2 text-right">
-                    TOTAL halaman ini:
-                  </td>
-                  <td className="p-2 text-right text-brand">
-                    {formatRupiah(rows.reduce((s, r) => s + r.total, 0))}
-                  </td>
-                  <td colSpan={2}></td>
-                </tr>
-              </tfoot>
+                      {r.kasirNama && ` · ${r.kasirNama}`}
+                    </span>
+                    <span className="shrink-0">
+                      {qtyTotal} qty · {r.metodeBayar?.toUpperCase()}
+                    </span>
+                  </div>
+                </LaporanCard>
+              );
+            })}
+            {rows.length === 0 && (
+              <div className="p-8 text-center text-[color:var(--muted)] text-sm">
+                Tidak ada transaksi pada filter ini.
+              </div>
             )}
-          </table>
-          </LaporanClickProvider>
-        </div>
+            {rows.length > 0 && (
+              <div className="bg-[color:var(--surface2)] p-3 flex justify-between font-bold text-sm">
+                <span>TOTAL halaman ini:</span>
+                <span className="text-brand">
+                  {formatRupiah(rows.reduce((s, r) => s + r.total, 0))}
+                </span>
+              </div>
+            )}
+          </div>
+        </LaporanClickProvider>
       </div>
 
       <Pagination page={page} totalPages={totalPages} total={total} />

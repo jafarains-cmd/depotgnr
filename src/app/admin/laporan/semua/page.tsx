@@ -28,7 +28,7 @@ import { FilterBar } from "../FilterBar";
 import { ExportActions } from "../ExportActions";
 import { PrintStyles, PrintHeader } from "../PrintStyles";
 import { AutoSubmitSelect } from "../AutoSubmitSelect";
-import { LaporanClickProvider, LaporanRow } from "../LaporanClickable";
+import { LaporanClickProvider, LaporanRow, LaporanCard } from "../LaporanClickable";
 
 export const dynamic = "force-dynamic";
 
@@ -318,41 +318,107 @@ export default async function SemuaAktivitasPage({
       />
 
       <div className="bg-surface border border-line rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <LaporanClickProvider>
-          <table className="w-full text-xs">
-            <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
-              <tr>
-                <th className="p-2">Tanggal</th>
-                <th className="p-2">Sumber</th>
-                <th className="p-2">Nomor</th>
-                <th className="p-2">Kasir/Kurir</th>
-                <th className="p-2">Pelanggan</th>
-                <th className="p-2 text-right">Galon</th>
-                <th className="p-2">Bayar</th>
-                <th className="p-2">Status</th>
-                <th className="p-2 text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {paged.map((r) => (
-                <LaporanRow
-                  key={`${r.kind}-${r.id}`}
-                  target={{ kind: r.kind, id: r.id }}
-                  className={r.voided ? "opacity-50 line-through" : ""}
-                >
-                  <td className="p-2 whitespace-nowrap">
-                    {r.createdAt.toLocaleString("id-ID", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </td>
-                  <td className="p-2">
+        <LaporanClickProvider>
+          {/* Desktop: table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
+                <tr>
+                  <th className="p-2">Tanggal</th>
+                  <th className="p-2">Sumber</th>
+                  <th className="p-2">Nomor</th>
+                  <th className="p-2">Kasir/Kurir</th>
+                  <th className="p-2">Pelanggan</th>
+                  <th className="p-2 text-right">Galon</th>
+                  <th className="p-2">Bayar</th>
+                  <th className="p-2">Status</th>
+                  <th className="p-2 text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {paged.map((r) => (
+                  <LaporanRow
+                    key={`${r.kind}-${r.id}`}
+                    target={{ kind: r.kind, id: r.id }}
+                    className={r.voided ? "opacity-50 line-through" : ""}
+                  >
+                    <td className="p-2 whitespace-nowrap">
+                      {r.createdAt.toLocaleString("id-ID", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </td>
+                    <td className="p-2">
+                      <span
+                        className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                          r.kind === "order"
+                            ? "bg-blue-50 text-blue-700"
+                            : "bg-violet-50 text-violet-700"
+                        }`}
+                      >
+                        {r.sumber}
+                      </span>
+                    </td>
+                    <td className="p-2 font-mono">{r.nomor}</td>
+                    <td className="p-2">{r.kasirKurirNama ?? "-"}</td>
+                    <td className="p-2">{r.pelangganNama ?? "—"}</td>
+                    <td className="p-2 text-right">{r.qtyGalon}</td>
+                    <td className="p-2 uppercase">{r.metodeBayar ?? "-"}</td>
+                    <td className="p-2">
+                      <span
+                        className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                          STATUS_BADGE[r.statusBayar] ?? "bg-gray-100 text-gray-700"
+                        }`}
+                      >
+                        {r.statusBayar.toUpperCase()}
+                      </span>
+                      {r.statusOrder && r.statusOrder !== "selesai" && !r.voided && (
+                        <span className="ml-1 text-[10px] text-[color:var(--muted)] uppercase">
+                          · {r.statusOrder}
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-2 text-right font-bold">{formatRupiah(r.total)}</td>
+                  </LaporanRow>
+                ))}
+                {paged.length === 0 && (
+                  <tr>
+                    <td colSpan={9} className="p-8 text-center text-[color:var(--muted)]">
+                      Tidak ada aktivitas pada filter ini.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+              {paged.length > 0 && (
+                <tfoot className="bg-[color:var(--surface2)] font-bold">
+                  <tr>
+                    <td colSpan={8} className="p-2 text-right">
+                      TOTAL halaman ini:
+                    </td>
+                    <td className="p-2 text-right text-brand">
+                      {formatRupiah(paged.filter((r) => !r.voided).reduce((s, r) => s + r.total, 0))}
+                    </td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+
+          {/* Mobile: card list */}
+          <div className="md:hidden divide-y divide-line">
+            {paged.map((r) => (
+              <LaporanCard
+                key={`m-${r.kind}-${r.id}`}
+                target={{ kind: r.kind, id: r.id }}
+                className={r.voided ? "opacity-50" : ""}
+              >
+                <div className="flex items-start justify-between gap-2 mb-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                     <span
-                      className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                      className={`text-[10px] px-1.5 py-0.5 rounded font-bold shrink-0 ${
                         r.kind === "order"
                           ? "bg-blue-50 text-blue-700"
                           : "bg-violet-50 text-violet-700"
@@ -360,52 +426,61 @@ export default async function SemuaAktivitasPage({
                     >
                       {r.sumber}
                     </span>
-                  </td>
-                  <td className="p-2 font-mono">{r.nomor}</td>
-                  <td className="p-2">{r.kasirKurirNama ?? "-"}</td>
-                  <td className="p-2">{r.pelangganNama ?? "—"}</td>
-                  <td className="p-2 text-right">{r.qtyGalon}</td>
-                  <td className="p-2 uppercase">{r.metodeBayar ?? "-"}</td>
-                  <td className="p-2">
                     <span
-                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold shrink-0 ${
                         STATUS_BADGE[r.statusBayar] ?? "bg-gray-100 text-gray-700"
                       }`}
                     >
                       {r.statusBayar.toUpperCase()}
                     </span>
                     {r.statusOrder && r.statusOrder !== "selesai" && !r.voided && (
-                      <span className="ml-1 text-[10px] text-[color:var(--muted)] uppercase">
-                        · {r.statusOrder}
+                      <span className="text-[10px] text-[color:var(--muted)] uppercase">
+                        {r.statusOrder}
                       </span>
                     )}
-                  </td>
-                  <td className="p-2 text-right font-bold">{formatRupiah(r.total)}</td>
-                </LaporanRow>
-              ))}
-              {paged.length === 0 && (
-                <tr>
-                  <td colSpan={9} className="p-8 text-center text-[color:var(--muted)]">
-                    Tidak ada aktivitas pada filter ini.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-            {paged.length > 0 && (
-              <tfoot className="bg-[color:var(--surface2)] font-bold">
-                <tr>
-                  <td colSpan={8} className="p-2 text-right">
-                    TOTAL halaman ini:
-                  </td>
-                  <td className="p-2 text-right text-brand">
-                    {formatRupiah(paged.filter((r) => !r.voided).reduce((s, r) => s + r.total, 0))}
-                  </td>
-                </tr>
-              </tfoot>
+                  </div>
+                  <div className={`font-extrabold text-sm shrink-0 ${r.voided ? "line-through" : ""}`}>
+                    {formatRupiah(r.total)}
+                  </div>
+                </div>
+                <div className={`text-sm font-bold truncate ${r.voided ? "line-through" : ""}`}>
+                  {r.pelangganNama ?? "—"}
+                </div>
+                <div className="text-[11px] text-[color:var(--muted)] font-mono truncate">
+                  {r.nomor}
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-[color:var(--muted)] mt-1 gap-2">
+                  <span className="truncate">
+                    {r.createdAt.toLocaleString("id-ID", {
+                      day: "2-digit",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                    {r.kasirKurirNama && ` · ${r.kasirKurirNama}`}
+                  </span>
+                  <span className="shrink-0">
+                    {r.qtyGalon} galon
+                    {r.metodeBayar && ` · ${r.metodeBayar.toUpperCase()}`}
+                  </span>
+                </div>
+              </LaporanCard>
+            ))}
+            {paged.length === 0 && (
+              <div className="p-8 text-center text-[color:var(--muted)] text-sm">
+                Tidak ada aktivitas pada filter ini.
+              </div>
             )}
-          </table>
-          </LaporanClickProvider>
-        </div>
+            {paged.length > 0 && (
+              <div className="bg-[color:var(--surface2)] p-3 flex justify-between font-bold text-sm">
+                <span>TOTAL halaman ini:</span>
+                <span className="text-brand">
+                  {formatRupiah(paged.filter((r) => !r.voided).reduce((s, r) => s + r.total, 0))}
+                </span>
+              </div>
+            )}
+          </div>
+        </LaporanClickProvider>
       </div>
 
       <Pagination page={page} totalPages={totalPages} total={total} />

@@ -18,20 +18,21 @@ const TABS: Tab[] = [
 
 export function LaporanNav({ active }: { active: string }) {
   return (
-    <div className="flex gap-1 overflow-x-auto -mx-1 px-1 no-print">
+    <div className="grid grid-cols-3 gap-1 md:flex md:flex-wrap no-print">
       {TABS.map((t) => {
         const isActive = active === t.href;
         return (
           <Link
             key={t.href}
             href={t.href}
-            className={`whitespace-nowrap px-3 py-1.5 rounded-md text-xs font-bold inline-flex items-center gap-1.5 ${
+            className={`px-2 py-2 md:py-1.5 rounded-md text-[11px] md:text-xs font-bold inline-flex items-center justify-center md:justify-start gap-1.5 truncate ${
               isActive
                 ? "bg-brand text-white"
                 : "bg-[color:var(--surface2)] text-[color:var(--muted)] hover:text-ink"
             }`}
           >
-            {t.icon} {t.label}
+            {t.icon}
+            <span className="truncate">{t.label}</span>
           </Link>
         );
       })}

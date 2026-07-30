@@ -63,6 +63,22 @@ export function LaporanRow({ target, children, className }: RowProps) {
 }
 
 /**
+ * Div-based versi LaporanRow — dipakai untuk layout mobile (card).
+ * Tetap clickable → membuka DetailModal yang sama dengan tabel desktop.
+ */
+export function LaporanCard({ target, children, className }: RowProps) {
+  const { open } = useLaporanClick();
+  return (
+    <div
+      onClick={() => open(target)}
+      className={`cursor-pointer hover:bg-brand-soft transition p-3 ${className ?? ""}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+/**
  * Pengeluaran belum punya DetailModal-kind sendiri. Sementara pakai
  * modal ringan yang fetch data via server action inline.
  */

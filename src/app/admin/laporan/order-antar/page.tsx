@@ -15,7 +15,7 @@ import { FilterBar } from "../FilterBar";
 import { ExportActions } from "../ExportActions";
 import { PrintStyles, PrintHeader } from "../PrintStyles";
 import { AutoSubmitSelect } from "../AutoSubmitSelect";
-import { LaporanClickProvider, LaporanRow } from "../LaporanClickable";
+import { LaporanClickProvider, LaporanRow, LaporanCard } from "../LaporanClickable";
 
 export const dynamic = "force-dynamic";
 
@@ -201,85 +201,157 @@ export default async function OrderAntarReportPage({
       />
 
       <div className="bg-surface border border-line rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <LaporanClickProvider>
-          <table className="w-full text-xs">
-            <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
-              <tr>
-                <th className="p-2">Tanggal</th>
-                <th className="p-2">No. Order</th>
-                <th className="p-2">Status</th>
-                <th className="p-2">Kurir</th>
-                <th className="p-2">Pelanggan</th>
-                <th className="p-2">Telp</th>
-                <th className="p-2">Alamat</th>
-                <th className="p-2 text-right">Galon</th>
-                <th className="p-2">Bayar</th>
-                <th className="p-2 text-right">Total</th>
-                <th className="p-2">Antar pada</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {rows.map((r) => (
-                <LaporanRow key={r.id} target={{ kind: "order", id: r.id }}>
-                  <td className="p-2 whitespace-nowrap">
+        <LaporanClickProvider>
+          {/* Desktop: table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
+                <tr>
+                  <th className="p-2">Tanggal</th>
+                  <th className="p-2">No. Order</th>
+                  <th className="p-2">Status</th>
+                  <th className="p-2">Kurir</th>
+                  <th className="p-2">Pelanggan</th>
+                  <th className="p-2">Telp</th>
+                  <th className="p-2">Alamat</th>
+                  <th className="p-2 text-right">Galon</th>
+                  <th className="p-2">Bayar</th>
+                  <th className="p-2 text-right">Total</th>
+                  <th className="p-2">Antar pada</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {rows.map((r) => (
+                  <LaporanRow key={r.id} target={{ kind: "order", id: r.id }}>
+                    <td className="p-2 whitespace-nowrap">
+                      {r.createdAt.toLocaleString("id-ID", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </td>
+                    <td className="p-2 font-mono">{r.nomorOrder}</td>
+                    <td className="p-2 uppercase">{r.status}</td>
+                    <td className="p-2">{r.kurirNama ?? "-"}</td>
+                    <td className="p-2">{r.pelangganNama ?? "—"}</td>
+                    <td className="p-2">{r.pelangganTelp ?? "-"}</td>
+                    <td className="p-2 max-w-[200px] truncate" title={r.alamatAntar ?? ""}>
+                      {r.alamatAntar ?? "-"}
+                    </td>
+                    <td className="p-2 text-right">{galonMap.get(r.id) ?? 0}</td>
+                    <td className="p-2 uppercase">
+                      {(r.metodeBayar ?? "-") + " / " + r.statusBayar}
+                    </td>
+                    <td className="p-2 text-right font-bold">
+                      {formatRupiah(r.totalEstimasi)}
+                    </td>
+                    <td className="p-2 whitespace-nowrap">
+                      {r.diantarAt
+                        ? r.diantarAt.toLocaleDateString("id-ID", {
+                            day: "2-digit",
+                            month: "short",
+                          })
+                        : "-"}
+                    </td>
+                  </LaporanRow>
+                ))}
+                {rows.length === 0 && (
+                  <tr>
+                    <td colSpan={11} className="p-8 text-center text-[color:var(--muted)]">
+                      Tidak ada order pada filter ini.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+              {rows.length > 0 && (
+                <tfoot className="bg-[color:var(--surface2)] font-bold">
+                  <tr>
+                    <td colSpan={9} className="p-2 text-right">
+                      TOTAL halaman ini:
+                    </td>
+                    <td className="p-2 text-right text-brand">
+                      {formatRupiah(rows.reduce((s, r) => s + r.totalEstimasi, 0))}
+                    </td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+
+          {/* Mobile: card list */}
+          <div className="md:hidden divide-y divide-line">
+            {rows.map((r) => (
+              <LaporanCard key={`m-${r.id}`} target={{ kind: "order", id: r.id }}>
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-blue-50 text-blue-700 uppercase shrink-0">
+                      {r.status}
+                    </span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold shrink-0 ${
+                        r.statusBayar === "lunas"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-amber-100 text-amber-800"
+                      }`}
+                    >
+                      {r.statusBayar.toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="font-extrabold text-sm shrink-0">
+                    {formatRupiah(r.totalEstimasi)}
+                  </div>
+                </div>
+                <div className="text-sm font-bold truncate">
+                  {r.pelangganNama ?? "—"}
+                  {r.pelangganTelp && (
+                    <span className="text-[11px] text-[color:var(--muted)] font-normal ml-1">
+                      · {r.pelangganTelp}
+                    </span>
+                  )}
+                </div>
+                <div className="text-[11px] text-[color:var(--muted)] font-mono truncate">
+                  {r.nomorOrder}
+                </div>
+                {r.alamatAntar && (
+                  <div className="text-[11px] text-[color:var(--muted)] mt-0.5 line-clamp-2">
+                    📍 {r.alamatAntar}
+                  </div>
+                )}
+                <div className="flex items-center justify-between text-[11px] text-[color:var(--muted)] mt-1 gap-2">
+                  <span className="truncate">
                     {r.createdAt.toLocaleString("id-ID", {
                       day: "2-digit",
                       month: "short",
-                      year: "2-digit",
                       hour: "2-digit",
                       minute: "2-digit",
                     })}
-                  </td>
-                  <td className="p-2 font-mono">{r.nomorOrder}</td>
-                  <td className="p-2 uppercase">{r.status}</td>
-                  <td className="p-2">{r.kurirNama ?? "-"}</td>
-                  <td className="p-2">{r.pelangganNama ?? "—"}</td>
-                  <td className="p-2">{r.pelangganTelp ?? "-"}</td>
-                  <td className="p-2 max-w-[200px] truncate" title={r.alamatAntar ?? ""}>
-                    {r.alamatAntar ?? "-"}
-                  </td>
-                  <td className="p-2 text-right">{galonMap.get(r.id) ?? 0}</td>
-                  <td className="p-2 uppercase">
-                    {(r.metodeBayar ?? "-") + " / " + r.statusBayar}
-                  </td>
-                  <td className="p-2 text-right font-bold">
-                    {formatRupiah(r.totalEstimasi)}
-                  </td>
-                  <td className="p-2 whitespace-nowrap">
-                    {r.diantarAt
-                      ? r.diantarAt.toLocaleDateString("id-ID", {
-                          day: "2-digit",
-                          month: "short",
-                        })
-                      : "-"}
-                  </td>
-                </LaporanRow>
-              ))}
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={11} className="p-8 text-center text-[color:var(--muted)]">
-                    Tidak ada order pada filter ini.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-            {rows.length > 0 && (
-              <tfoot className="bg-[color:var(--surface2)] font-bold">
-                <tr>
-                  <td colSpan={9} className="p-2 text-right">
-                    TOTAL halaman ini:
-                  </td>
-                  <td className="p-2 text-right text-brand">
-                    {formatRupiah(rows.reduce((s, r) => s + r.totalEstimasi, 0))}
-                  </td>
-                  <td></td>
-                </tr>
-              </tfoot>
+                    {r.kurirNama && ` · ${r.kurirNama}`}
+                  </span>
+                  <span className="shrink-0">
+                    {galonMap.get(r.id) ?? 0} galon
+                    {r.metodeBayar && ` · ${r.metodeBayar.toUpperCase()}`}
+                  </span>
+                </div>
+              </LaporanCard>
+            ))}
+            {rows.length === 0 && (
+              <div className="p-8 text-center text-[color:var(--muted)] text-sm">
+                Tidak ada order pada filter ini.
+              </div>
             )}
-          </table>
-          </LaporanClickProvider>
-        </div>
+            {rows.length > 0 && (
+              <div className="bg-[color:var(--surface2)] p-3 flex justify-between font-bold text-sm">
+                <span>TOTAL halaman ini:</span>
+                <span className="text-brand">
+                  {formatRupiah(rows.reduce((s, r) => s + r.totalEstimasi, 0))}
+                </span>
+              </div>
+            )}
+          </div>
+        </LaporanClickProvider>
       </div>
 
       <Pagination page={page} totalPages={totalPages} total={total} />

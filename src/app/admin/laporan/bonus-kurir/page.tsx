@@ -15,7 +15,7 @@ import { LaporanNav } from "../LaporanNav";
 import { FilterBar } from "../FilterBar";
 import { ExportActions } from "../ExportActions";
 import { PrintStyles, PrintHeader } from "../PrintStyles";
-import { LaporanClickProvider, LaporanRow } from "../LaporanClickable";
+import { LaporanClickProvider, LaporanRow, LaporanCard } from "../LaporanClickable";
 import { AutoSubmitSelect } from "../AutoSubmitSelect";
 
 export const dynamic = "force-dynamic";
@@ -150,76 +150,131 @@ export default async function BonusKurirReportPage({
       />
 
       <div className="bg-surface border border-line rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <LaporanClickProvider>
-          <table className="w-full text-xs">
-            <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
-              <tr>
-                <th className="p-2">Tanggal</th>
-                <th className="p-2">No. Order</th>
-                <th className="p-2">Kurir</th>
-                <th className="p-2">Pelanggan</th>
-                <th className="p-2 text-right">Galon</th>
-                <th className="p-2 text-right">Rate</th>
-                <th className="p-2 text-right">Total Bonus</th>
-                <th className="p-2">Status</th>
-                <th className="p-2">Dibayar pada</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {rows.map((r) => (
-                <LaporanRow key={r.id} target={{ kind: "order", id: r.orderId }}>
-                  <td className="p-2 whitespace-nowrap">
+        <LaporanClickProvider>
+          {/* Desktop: table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
+                <tr>
+                  <th className="p-2">Tanggal</th>
+                  <th className="p-2">No. Order</th>
+                  <th className="p-2">Kurir</th>
+                  <th className="p-2">Pelanggan</th>
+                  <th className="p-2 text-right">Galon</th>
+                  <th className="p-2 text-right">Rate</th>
+                  <th className="p-2 text-right">Total Bonus</th>
+                  <th className="p-2">Status</th>
+                  <th className="p-2">Dibayar pada</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {rows.map((r) => (
+                  <LaporanRow key={r.id} target={{ kind: "order", id: r.orderId }}>
+                    <td className="p-2 whitespace-nowrap">
+                      {r.createdAt.toLocaleDateString("id-ID", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "2-digit",
+                      })}
+                    </td>
+                    <td className="p-2 font-mono">{r.nomorOrder ?? `#${r.orderId}`}</td>
+                    <td className="p-2">{r.kurirNama ?? "-"}</td>
+                    <td className="p-2">{r.pelangganNama ?? "-"}</td>
+                    <td className="p-2 text-right">{r.jumlahGalon}</td>
+                    <td className="p-2 text-right">{formatRupiah(r.ratePerGalon)}</td>
+                    <td className="p-2 text-right font-bold text-amber-700">
+                      {formatRupiah(r.total)}
+                    </td>
+                    <td className="p-2 uppercase">{r.status}</td>
+                    <td className="p-2 whitespace-nowrap">
+                      {r.paidAt
+                        ? r.paidAt.toLocaleDateString("id-ID", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "2-digit",
+                          })
+                        : "-"}
+                    </td>
+                  </LaporanRow>
+                ))}
+                {rows.length === 0 && (
+                  <tr>
+                    <td colSpan={9} className="p-8 text-center text-[color:var(--muted)]">
+                      Tidak ada bonus pada filter ini.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+              {rows.length > 0 && (
+                <tfoot className="bg-[color:var(--surface2)] font-bold">
+                  <tr>
+                    <td colSpan={6} className="p-2 text-right">
+                      TOTAL halaman ini:
+                    </td>
+                    <td className="p-2 text-right text-amber-700">
+                      {formatRupiah(rows.reduce((s, r) => s + r.total, 0))}
+                    </td>
+                    <td colSpan={2}></td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+
+          {/* Mobile: card list */}
+          <div className="md:hidden divide-y divide-line">
+            {rows.map((r) => (
+              <LaporanCard key={`m-${r.id}`} target={{ kind: "order", id: r.orderId }}>
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <span
+                    className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase shrink-0 ${
+                      r.status === "dibayar"
+                        ? "bg-emerald-100 text-emerald-800"
+                        : "bg-amber-100 text-amber-800"
+                    }`}
+                  >
+                    {r.status}
+                  </span>
+                  <div className="font-extrabold text-sm text-amber-700 shrink-0">
+                    {formatRupiah(r.total)}
+                  </div>
+                </div>
+                <div className="text-sm font-bold truncate">
+                  {r.kurirNama ?? "-"}
+                </div>
+                <div className="text-[11px] text-[color:var(--muted)] truncate">
+                  {r.pelangganNama ?? "-"} · <span className="font-mono">{r.nomorOrder ?? `#${r.orderId}`}</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-[color:var(--muted)] mt-1 gap-2">
+                  <span className="truncate">
                     {r.createdAt.toLocaleDateString("id-ID", {
                       day: "2-digit",
                       month: "short",
                       year: "2-digit",
                     })}
-                  </td>
-                  <td className="p-2 font-mono">{r.nomorOrder ?? `#${r.orderId}`}</td>
-                  <td className="p-2">{r.kurirNama ?? "-"}</td>
-                  <td className="p-2">{r.pelangganNama ?? "-"}</td>
-                  <td className="p-2 text-right">{r.jumlahGalon}</td>
-                  <td className="p-2 text-right">{formatRupiah(r.ratePerGalon)}</td>
-                  <td className="p-2 text-right font-bold text-amber-700">
-                    {formatRupiah(r.total)}
-                  </td>
-                  <td className="p-2 uppercase">{r.status}</td>
-                  <td className="p-2 whitespace-nowrap">
-                    {r.paidAt
-                      ? r.paidAt.toLocaleDateString("id-ID", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "2-digit",
-                        })
-                      : "-"}
-                  </td>
-                </LaporanRow>
-              ))}
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={9} className="p-8 text-center text-[color:var(--muted)]">
-                    Tidak ada bonus pada filter ini.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-            {rows.length > 0 && (
-              <tfoot className="bg-[color:var(--surface2)] font-bold">
-                <tr>
-                  <td colSpan={6} className="p-2 text-right">
-                    TOTAL halaman ini:
-                  </td>
-                  <td className="p-2 text-right text-amber-700">
-                    {formatRupiah(rows.reduce((s, r) => s + r.total, 0))}
-                  </td>
-                  <td colSpan={2}></td>
-                </tr>
-              </tfoot>
+                    {r.paidAt && ` · dibayar ${r.paidAt.toLocaleDateString("id-ID", { day: "2-digit", month: "short" })}`}
+                  </span>
+                  <span className="shrink-0">
+                    {r.jumlahGalon} × {formatRupiah(r.ratePerGalon)}
+                  </span>
+                </div>
+              </LaporanCard>
+            ))}
+            {rows.length === 0 && (
+              <div className="p-8 text-center text-[color:var(--muted)] text-sm">
+                Tidak ada bonus pada filter ini.
+              </div>
             )}
-          </table>
-          </LaporanClickProvider>
-        </div>
+            {rows.length > 0 && (
+              <div className="bg-[color:var(--surface2)] p-3 flex justify-between font-bold text-sm">
+                <span>TOTAL halaman ini:</span>
+                <span className="text-amber-700">
+                  {formatRupiah(rows.reduce((s, r) => s + r.total, 0))}
+                </span>
+              </div>
+            )}
+          </div>
+        </LaporanClickProvider>
       </div>
 
       <Pagination page={page} totalPages={totalPages} total={total} />
