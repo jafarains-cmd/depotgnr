@@ -295,13 +295,15 @@ export default async function SemuaAktivitasPage({
         />
       </form>
 
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="grid grid-cols-3 gap-2 text-sm flex-1 min-w-0">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div className="grid grid-cols-3 gap-2 text-sm md:flex-1 min-w-0">
           <SumCard label="Aktivitas" value={String(total)} />
           <SumCard label="Omzet" value={formatRupiah(totalOmzet)} highlight />
           <SumCard label="Galon" value={String(totalGalon)} />
         </div>
-        <PageSizeSelect value={limit} />
+        <div className="flex justify-end">
+          <PageSizeSelect value={limit} />
+        </div>
       </div>
 
       <ExportActions
@@ -499,14 +501,16 @@ function SumCard({
 }) {
   return (
     <div
-      className={`rounded-xl border border-line px-3 py-2 ${
+      className={`rounded-xl border border-line px-2 py-2 md:px-3 min-w-0 ${
         highlight ? "bg-emerald-50 text-emerald-700" : "bg-surface"
       }`}
     >
-      <div className="text-[10px] tracking-widest font-bold text-[color:var(--muted)]">
+      <div className="text-[10px] tracking-widest font-bold text-[color:var(--muted)] truncate">
         {label}
       </div>
-      <div className="text-base font-extrabold mt-0.5">{value}</div>
+      <div className="text-sm md:text-base font-extrabold mt-0.5 tabular-nums truncate">
+        {value}
+      </div>
     </div>
   );
 }

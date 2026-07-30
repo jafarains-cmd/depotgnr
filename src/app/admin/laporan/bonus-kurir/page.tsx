@@ -134,14 +134,16 @@ export default async function BonusKurirReportPage({
         />
       </form>
 
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="grid grid-cols-4 gap-2 text-sm flex-1 min-w-0">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm md:flex-1 min-w-0">
           <SumCard label="Pengantaran" value={String(total)} />
           <SumCard label="Galon" value={String(summary.totalGalon)} />
           <SumCard label="Pending" value={formatRupiah(summary.pendingTotal)} color="bg-amber-50 text-amber-700" />
           <SumCard label="Dibayar" value={formatRupiah(summary.paidTotal)} color="bg-emerald-50 text-emerald-700" />
         </div>
-        <PageSizeSelect value={limit} />
+        <div className="flex justify-end">
+          <PageSizeSelect value={limit} />
+        </div>
       </div>
 
       <ExportActions
@@ -292,11 +294,13 @@ function SumCard({
   color?: string;
 }) {
   return (
-    <div className={`rounded-xl border border-line px-3 py-2 ${color ?? "bg-surface"}`}>
-      <div className="text-[10px] tracking-widest font-bold text-[color:var(--muted)]">
+    <div className={`rounded-xl border border-line px-2 py-2 md:px-3 min-w-0 ${color ?? "bg-surface"}`}>
+      <div className="text-[10px] tracking-widest font-bold text-[color:var(--muted)] truncate">
         {label}
       </div>
-      <div className="text-base font-extrabold mt-0.5">{value}</div>
+      <div className="text-sm md:text-base font-extrabold mt-0.5 tabular-nums truncate">
+        {value}
+      </div>
     </div>
   );
 }
