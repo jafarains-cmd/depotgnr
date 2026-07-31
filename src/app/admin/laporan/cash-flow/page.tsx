@@ -1,4 +1,4 @@
-import { sql, gte, lte, and, eq, isNull, isNotNull, ne, desc, or } from "drizzle-orm";
+import { sql, gte, lte, lt, and, eq, isNull, isNotNull, ne, desc, or } from "drizzle-orm";
 import { db } from "@/db";
 import { transaksi } from "@/db/schema/transaksi";
 import { orderHeader } from "@/db/schema/order";
@@ -46,42 +46,63 @@ export default async function CashFlowPage({
     .where(and(...posConds));
 
   // ====== 2. Order lunas (pakai bayarAt sebagai anchor tanggal) ======
-  const orderConds = [
+  // Split jadi 2 query: fresh (selesai di periode yang sama) vs piutang lama.
+  // Alasan split: sql`... >= ${date}` template di drizzle tidak convert Date ke
+  // integer seconds untuk SQLite mode:"timestamp". Pakai helper gte/lt yang
+  // aware column type.
+  const orderBaseConds = [
     eq(orderHeader.statusBayar, "lunas"),
     isNotNull(orderHeader.bayarAt),
   ];
-  if (from) orderConds.push(gte(orderHeader.bayarAt, from));
-  if (to) orderConds.push(lte(orderHeader.bayarAt, to));
+  if (from) orderBaseConds.push(gte(orderHeader.bayarAt, from));
+  if (to) orderBaseConds.push(lte(orderHeader.bayarAt, to));
 
-  // Fresh: selesai di periode ini (bayar di periode yang sama)
-  // Piutang lama: selesai sebelum range.from, baru dibayar di periode ini
-  const freshExpr = from
-    ? sql<number>`coalesce(sum(case when ${orderHeader.selesaiAt} >= ${from} then ${orderHeader.totalEstimasi} else 0 end), 0)`
-    : sql<number>`coalesce(sum(${orderHeader.totalEstimasi}), 0)`;
-  const piutangLamaExpr = from
-    ? sql<number>`coalesce(sum(case when ${orderHeader.selesaiAt} < ${from} then ${orderHeader.totalEstimasi} else 0 end), 0)`
-    : sql<number>`0`;
-  const freshCountExpr = from
-    ? sql<number>`sum(case when ${orderHeader.selesaiAt} >= ${from} then 1 else 0 end)`
-    : sql<number>`count(*)`;
-  const piutangLamaCountExpr = from
-    ? sql<number>`sum(case when ${orderHeader.selesaiAt} < ${from} then 1 else 0 end)`
-    : sql<number>`0`;
+  const orderAggFields = {
+    total: sql<number>`coalesce(sum(${orderHeader.totalEstimasi}), 0)`,
+    cash: sql<number>`coalesce(sum(case when ${orderHeader.metodeBayar} in ('cash','cod') then ${orderHeader.totalEstimasi} else 0 end), 0)`,
+    transfer: sql<number>`coalesce(sum(case when ${orderHeader.metodeBayar} in ('transfer','dana') then ${orderHeader.totalEstimasi} else 0 end), 0)`,
+    qris: sql<number>`coalesce(sum(case when ${orderHeader.metodeBayar} = 'qris' then ${orderHeader.totalEstimasi} else 0 end), 0)`,
+    jumlah: sql<number>`count(*)`,
+  };
 
-  const [orderRow] = await db
-    .select({
-      total: sql<number>`coalesce(sum(${orderHeader.totalEstimasi}), 0)`,
-      fresh: freshExpr,
-      piutangLama: piutangLamaExpr,
-      freshCount: freshCountExpr,
-      piutangLamaCount: piutangLamaCountExpr,
-      cash: sql<number>`coalesce(sum(case when ${orderHeader.metodeBayar} in ('cash','cod') then ${orderHeader.totalEstimasi} else 0 end), 0)`,
-      transfer: sql<number>`coalesce(sum(case when ${orderHeader.metodeBayar} in ('transfer','dana') then ${orderHeader.totalEstimasi} else 0 end), 0)`,
-      qris: sql<number>`coalesce(sum(case when ${orderHeader.metodeBayar} = 'qris' then ${orderHeader.totalEstimasi} else 0 end), 0)`,
-      jumlah: sql<number>`count(*)`,
-    })
+  // Fresh: order lunas + selesai di periode ini (atau tanpa filter periode)
+  const freshConds = [...orderBaseConds];
+  if (from) freshConds.push(gte(orderHeader.selesaiAt, from));
+  const [freshRow] = await db
+    .select(orderAggFields)
     .from(orderHeader)
-    .where(and(...orderConds));
+    .where(and(...freshConds));
+
+  // Piutang lama: order lunas + selesai SEBELUM periode ini (baru dibayar di periode ini)
+  let piutangLamaRow = { total: 0, jumlah: 0, cash: 0, transfer: 0, qris: 0 };
+  if (from) {
+    const plConds = [...orderBaseConds, lt(orderHeader.selesaiAt, from)];
+    const [row] = await db
+      .select(orderAggFields)
+      .from(orderHeader)
+      .where(and(...plConds));
+    if (row) {
+      piutangLamaRow = {
+        total: Number(row.total ?? 0),
+        jumlah: Number(row.jumlah ?? 0),
+        cash: Number(row.cash ?? 0),
+        transfer: Number(row.transfer ?? 0),
+        qris: Number(row.qris ?? 0),
+      };
+    }
+  }
+
+  const orderRow = {
+    total: Number(freshRow?.total ?? 0) + piutangLamaRow.total,
+    fresh: Number(freshRow?.total ?? 0),
+    piutangLama: piutangLamaRow.total,
+    freshCount: Number(freshRow?.jumlah ?? 0),
+    piutangLamaCount: piutangLamaRow.jumlah,
+    cash: Number(freshRow?.cash ?? 0) + piutangLamaRow.cash,
+    transfer: Number(freshRow?.transfer ?? 0) + piutangLamaRow.transfer,
+    qris: Number(freshRow?.qris ?? 0) + piutangLamaRow.qris,
+    jumlah: Number(freshRow?.jumlah ?? 0) + piutangLamaRow.jumlah,
+  };
 
   // ====== 3. Kas Masuk Lain ======
   const kmConds = [];
