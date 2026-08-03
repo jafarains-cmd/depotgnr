@@ -1,7 +1,10 @@
+import { alias } from "drizzle-orm/sqlite-core";
 import { and, eq, gte, lte, sql, isNull, desc } from "drizzle-orm";
 import { db } from "@/db";
 import { transaksi } from "@/db/schema/transaksi";
 import { orderHeader } from "@/db/schema/order";
+import { pelanggan as pelangganTable } from "@/db/schema/pelanggan";
+import { shiftKasir } from "@/db/schema/shift";
 import { rekonsiliasiBank } from "@/db/schema/rekonsiliasi-bank";
 import { user as userTable } from "@/db/schema/auth";
 import { PageHeader } from "@/components/AppShell";
@@ -102,7 +105,78 @@ export default async function RekonsiliasiPage({
     )
     .orderBy(desc(rekonsiliasiBank.tanggal));
 
+  // Query 4: DETAIL transaksi POS langsung (siapa kasir input & shift siapa)
+  const kasirUser = alias(userTable, "kasir_user");
+  const shiftOwnerUser = alias(userTable, "shift_owner_user");
+  const posDetail = await db
+    .select({
+      id: transaksi.id,
+      hari: sql<string>`strftime('%Y-%m-%d', ${transaksi.createdAt}, 'unixepoch', 'localtime')`,
+      metode: transaksi.metodeBayar,
+      nomor: transaksi.nomorNota,
+      total: transaksi.total,
+      createdAt: transaksi.createdAt,
+      kasirInputNama: kasirUser.name,
+      shiftKasirNama: shiftOwnerUser.name,
+      pelangganNama: pelangganTable.nama,
+    })
+    .from(transaksi)
+    .leftJoin(kasirUser, eq(transaksi.kasirUserId, kasirUser.id))
+    .leftJoin(shiftKasir, eq(transaksi.shiftId, shiftKasir.id))
+    .leftJoin(shiftOwnerUser, eq(shiftKasir.kasirUserId, shiftOwnerUser.id))
+    .leftJoin(pelangganTable, eq(transaksi.pelangganId, pelangganTable.id))
+    .where(
+      and(
+        isNull(transaksi.refOrderId),
+        eq(transaksi.status, "lunas"),
+        isNull(transaksi.voidedAt),
+        gte(transaksi.createdAt, startRange),
+        lte(transaksi.createdAt, endRange),
+        sql`${transaksi.metodeBayar} in ('transfer', 'qris')`,
+      ),
+    )
+    .orderBy(desc(transaksi.createdAt));
+
+  // Query 5: DETAIL order lunas (kurir antar & kasir yang konfirmasi)
+  const kurirUser = alias(userTable, "kurir_user");
+  const konfirmasiUser = alias(userTable, "konfirmasi_user");
+  const orderDetail = await db
+    .select({
+      id: orderHeader.id,
+      hari: sql<string>`strftime('%Y-%m-%d', ${orderHeader.bayarAt}, 'unixepoch', 'localtime')`,
+      metode: orderHeader.metodeBayar,
+      nomor: orderHeader.nomorOrder,
+      total: orderHeader.totalEstimasi,
+      bayarAt: orderHeader.bayarAt,
+      kurirNama: kurirUser.name,
+      shiftKasirNama: konfirmasiUser.name,
+      pelangganNama: pelangganTable.nama,
+    })
+    .from(orderHeader)
+    .leftJoin(kurirUser, eq(orderHeader.kurirUserId, kurirUser.id))
+    .leftJoin(konfirmasiUser, eq(orderHeader.bayarDikonfirmasiOleh, konfirmasiUser.id))
+    .leftJoin(pelangganTable, eq(orderHeader.pelangganId, pelangganTable.id))
+    .where(
+      and(
+        eq(orderHeader.statusBayar, "lunas"),
+        gte(orderHeader.bayarAt, startRange),
+        lte(orderHeader.bayarAt, endRange),
+        sql`${orderHeader.metodeBayar} in ('transfer', 'dana', 'qris')`,
+      ),
+    )
+    .orderBy(desc(orderHeader.bayarAt));
+
   // Merge: bikin map { "YYYY-MM-DD": { transfer: {...}, qris: {...} } }
+  type DetailTx = {
+    id: number;
+    jenis: "pos" | "order";
+    nomor: string;
+    pelangganNama: string | null;
+    petugasNama: string | null;
+    shiftKasirNama: string | null;
+    jam: string;
+    total: number;
+  };
   type HariMetode = {
     omzetSistem: number;
     rekon: {
@@ -113,31 +187,38 @@ export default async function RekonsiliasiPage({
       verifiedAt: string;
       verifiedByName: string | null;
     } | null;
+    detail: DetailTx[];
   };
   const hariMap = new Map<string, { transfer: HariMetode; qris: HariMetode }>();
 
-  // Isi omzet sistem dari POS
-  for (const r of posRows) {
-    if (!hariMap.has(r.hari)) {
-      hariMap.set(r.hari, {
-        transfer: { omzetSistem: 0, rekon: null },
-        qris: { omzetSistem: 0, rekon: null },
+  function ensureBucket(hari: string) {
+    if (!hariMap.has(hari)) {
+      hariMap.set(hari, {
+        transfer: { omzetSistem: 0, rekon: null, detail: [] },
+        qris: { omzetSistem: 0, rekon: null, detail: [] },
       });
     }
-    const bucket = hariMap.get(r.hari)!;
+    return hariMap.get(hari)!;
+  }
+
+  function fmtJam(d: Date | null | undefined): string {
+    if (!d) return "-";
+    return d.toLocaleTimeString("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  // Isi omzet sistem dari POS aggregate
+  for (const r of posRows) {
+    const bucket = ensureBucket(r.hari);
     if (r.metode === "transfer") bucket.transfer.omzetSistem += Number(r.total);
     if (r.metode === "qris") bucket.qris.omzetSistem += Number(r.total);
   }
 
-  // Tambah omzet order (transfer + dana → transfer bucket, qris → qris bucket)
+  // Tambah omzet order aggregate (transfer + dana → transfer bucket, qris → qris)
   for (const r of orderRows) {
-    if (!hariMap.has(r.hari)) {
-      hariMap.set(r.hari, {
-        transfer: { omzetSistem: 0, rekon: null },
-        qris: { omzetSistem: 0, rekon: null },
-      });
-    }
-    const bucket = hariMap.get(r.hari)!;
+    const bucket = ensureBucket(r.hari);
     if (r.metode === "transfer" || r.metode === "dana") {
       bucket.transfer.omzetSistem += Number(r.total);
     }
@@ -146,16 +227,48 @@ export default async function RekonsiliasiPage({
     }
   }
 
+  // Isi detail POS
+  for (const d of posDetail) {
+    const bucket = ensureBucket(d.hari);
+    const detail: DetailTx = {
+      id: d.id,
+      jenis: "pos",
+      nomor: d.nomor,
+      pelangganNama: d.pelangganNama,
+      petugasNama: d.kasirInputNama,
+      shiftKasirNama: d.shiftKasirNama,
+      jam: fmtJam(d.createdAt),
+      total: Number(d.total),
+    };
+    if (d.metode === "transfer") bucket.transfer.detail.push(detail);
+    if (d.metode === "qris") bucket.qris.detail.push(detail);
+  }
+
+  // Isi detail Order (transfer/dana/qris)
+  for (const d of orderDetail) {
+    const bucket = ensureBucket(d.hari);
+    const detail: DetailTx = {
+      id: d.id,
+      jenis: "order",
+      nomor: d.nomor,
+      pelangganNama: d.pelangganNama,
+      petugasNama: d.kurirNama,
+      shiftKasirNama: d.shiftKasirNama,
+      jam: fmtJam(d.bayarAt),
+      total: Number(d.total),
+    };
+    if (d.metode === "transfer" || d.metode === "dana") {
+      bucket.transfer.detail.push(detail);
+    }
+    if (d.metode === "qris") {
+      bucket.qris.detail.push(detail);
+    }
+  }
+
   // Isi rekon existing
   for (const r of rekonRows) {
     const hariStr = r.tanggal.toISOString().slice(0, 10);
-    if (!hariMap.has(hariStr)) {
-      hariMap.set(hariStr, {
-        transfer: { omzetSistem: 0, rekon: null },
-        qris: { omzetSistem: 0, rekon: null },
-      });
-    }
-    const bucket = hariMap.get(hariStr)!;
+    const bucket = ensureBucket(hariStr);
     const rekonData = {
       id: r.id,
       saldoAktual: r.saldoAktual,

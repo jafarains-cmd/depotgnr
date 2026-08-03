@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, X, AlertTriangle, Trash2, Edit3 } from "lucide-react";
+import { Check, X, AlertTriangle, Trash2, Edit3, ChevronDown } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
 import { verifikasiHarianAction, hapusVerifikasiAction } from "./actions";
 
@@ -15,10 +15,27 @@ type Rekon = {
   verifiedByName: string | null;
 } | null;
 
+type DetailTx = {
+  id: number;
+  jenis: "pos" | "order";
+  nomor: string;
+  pelangganNama: string | null;
+  petugasNama: string | null;
+  shiftKasirNama: string | null;
+  jam: string;
+  total: number;
+};
+
+type MetodeBucket = {
+  omzetSistem: number;
+  rekon: Rekon;
+  detail: DetailTx[];
+};
+
 type HariItem = {
   tanggal: string; // YYYY-MM-DD
-  transfer: { omzetSistem: number; rekon: Rekon };
-  qris: { omzetSistem: number; rekon: Rekon };
+  transfer: MetodeBucket;
+  qris: MetodeBucket;
 };
 
 export function RekonsiliasiClient({ hariList }: { hariList: HariItem[] }) {
@@ -56,12 +73,14 @@ function HariCard({ item }: { item: HariItem }) {
           metode="transfer"
           omzetSistem={item.transfer.omzetSistem}
           rekon={item.transfer.rekon}
+          detail={item.transfer.detail}
         />
         <MetodeRow
           tanggal={item.tanggal}
           metode="qris"
           omzetSistem={item.qris.omzetSistem}
           rekon={item.qris.rekon}
+          detail={item.qris.detail}
         />
       </div>
     </div>
@@ -73,11 +92,13 @@ function MetodeRow({
   metode,
   omzetSistem,
   rekon,
+  detail,
 }: {
   tanggal: string;
   metode: "transfer" | "qris";
   omzetSistem: number;
   rekon: Rekon;
+  detail: DetailTx[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -228,6 +249,7 @@ function MetodeRow({
           })}
           {rekon.verifiedByName && ` · ${rekon.verifiedByName}`}
         </div>
+        {detail.length > 0 && <DetailList items={detail} />}
       </div>
     );
   }
@@ -325,6 +347,83 @@ function MetodeRow({
           >
             <X size={12} /> Batal
           </button>
+        )}
+      </div>
+      {detail.length > 0 && <DetailList items={detail} />}
+    </div>
+  );
+}
+
+function DetailList({ items }: { items: DetailTx[] }) {
+  return (
+    <details className="mt-3 group">
+      <summary className="cursor-pointer text-[11px] text-brand font-bold inline-flex items-center gap-1 select-none">
+        <ChevronDown
+          size={12}
+          className="transition group-open:rotate-180"
+        />
+        Lihat {items.length} transaksi rincian
+      </summary>
+      <div className="mt-2 space-y-1.5 border-t border-line pt-2">
+        {items.map((it) => (
+          <DetailItem key={`${it.jenis}-${it.id}`} it={it} />
+        ))}
+      </div>
+    </details>
+  );
+}
+
+function DetailItem({ it }: { it: DetailTx }) {
+  const jenisColor =
+    it.jenis === "order"
+      ? "bg-blue-50 text-blue-700"
+      : "bg-violet-50 text-violet-700";
+  const jenisLabel = it.jenis === "order" ? "ORDER" : "POS";
+  const petugasLabel = it.jenis === "order" ? "Kurir" : "Kasir";
+  const shiftBeda =
+    it.shiftKasirNama &&
+    it.petugasNama &&
+    it.shiftKasirNama !== it.petugasNama;
+
+  return (
+    <div className="text-[11px] bg-[color:var(--surface2)] rounded-lg px-2.5 py-2">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span
+            className={`text-[9px] px-1 py-0.5 rounded font-bold shrink-0 ${jenisColor}`}
+          >
+            {jenisLabel}
+          </span>
+          <span className="font-mono text-[10px] text-[color:var(--muted)] truncate">
+            {it.nomor}
+          </span>
+          <span className="text-[10px] text-[color:var(--muted)] shrink-0">
+            {it.jam}
+          </span>
+        </div>
+        <span className="font-extrabold tabular-nums shrink-0">
+          {formatRupiah(it.total)}
+        </span>
+      </div>
+      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+        <span>
+          <span className="text-[color:var(--muted)]">Pelanggan: </span>
+          <span className="font-semibold">{it.pelangganNama ?? "—"}</span>
+        </span>
+        <span>
+          <span className="text-[color:var(--muted)]">{petugasLabel}: </span>
+          <span className="font-semibold">{it.petugasNama ?? "—"}</span>
+        </span>
+        {it.shiftKasirNama && (
+          <span
+            className={
+              shiftBeda ? "text-amber-800 font-semibold" : "text-[color:var(--muted)]"
+            }
+          >
+            <span className="text-[color:var(--muted)]">Shift: </span>
+            {it.shiftKasirNama}
+            {shiftBeda && " ⚠"}
+          </span>
         )}
       </div>
     </div>
