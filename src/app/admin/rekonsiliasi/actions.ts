@@ -8,6 +8,7 @@ import { transaksi } from "@/db/schema/transaksi";
 import { orderHeader } from "@/db/schema/order";
 import { requireRole } from "@/lib/permissions";
 import { logAudit } from "@/lib/audit";
+import { uploadAsset } from "@/lib/drive";
 
 type Metode = "transfer" | "qris";
 
@@ -89,6 +90,9 @@ export async function verifikasiHarianAction(args: {
   metode: string;
   saldoAktual: number;
   catatan?: string;
+  fotoBase64?: string | null;
+  fotoMimeType?: string | null;
+  hapusBuktiFoto?: boolean;
 }): Promise<{ ok: true; id: number; selisih: number } | { error: string }> {
   const session = await requireRole(["admin"]);
 
@@ -124,12 +128,26 @@ export async function verifikasiHarianAction(args: {
     ),
   });
 
+  // Handle foto: upload baru kalau ada, keep existing kalau tidak, atau hapus
+  let buktiFotoUrl: string | null = existing?.buktiFotoUrl ?? null;
+  if (args.hapusBuktiFoto) {
+    buktiFotoUrl = null;
+  } else if (args.fotoBase64 && args.fotoMimeType) {
+    const up = await uploadAsset({
+      prefix: `rekonsiliasi-${args.tanggalIso}-${args.metode}`,
+      base64: args.fotoBase64,
+      mimeType: args.fotoMimeType,
+    });
+    if (up.ok && up.url) buktiFotoUrl = up.url;
+  }
+
   let recordId: number;
   const beforeSnapshot = existing
     ? {
         saldoAktual: existing.saldoAktual,
         selisih: existing.selisih,
         catatan: existing.catatan,
+        buktiFotoUrl: existing.buktiFotoUrl,
       }
     : null;
 
@@ -141,6 +159,7 @@ export async function verifikasiHarianAction(args: {
         saldoAktual: saldo,
         selisih,
         catatan: catatan || null,
+        buktiFotoUrl,
         verifiedBy: session.user.id,
         verifiedAt: now,
         updatedAt: now,
@@ -157,6 +176,7 @@ export async function verifikasiHarianAction(args: {
         saldoAktual: saldo,
         selisih,
         catatan: catatan || null,
+        buktiFotoUrl,
         verifiedBy: session.user.id,
         verifiedAt: now,
         createdAt: now,
@@ -180,6 +200,7 @@ export async function verifikasiHarianAction(args: {
       saldoAktual: saldo,
       selisih,
       catatan: catatan || null,
+      buktiFotoUrl,
     },
   });
 

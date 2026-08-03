@@ -92,6 +92,7 @@ export default async function RekonsiliasiPage({
       saldoAktual: rekonsiliasiBank.saldoAktual,
       selisih: rekonsiliasiBank.selisih,
       catatan: rekonsiliasiBank.catatan,
+      buktiFotoUrl: rekonsiliasiBank.buktiFotoUrl,
       verifiedAt: rekonsiliasiBank.verifiedAt,
       verifiedByName: userTable.name,
     })
@@ -184,6 +185,7 @@ export default async function RekonsiliasiPage({
       saldoAktual: number;
       selisih: number;
       catatan: string | null;
+      buktiFotoUrl: string | null;
       verifiedAt: string;
       verifiedByName: string | null;
     } | null;
@@ -274,6 +276,7 @@ export default async function RekonsiliasiPage({
       saldoAktual: r.saldoAktual,
       selisih: r.selisih,
       catatan: r.catatan,
+      buktiFotoUrl: r.buktiFotoUrl,
       verifiedAt: r.verifiedAt.toISOString(),
       verifiedByName: r.verifiedByName,
     };

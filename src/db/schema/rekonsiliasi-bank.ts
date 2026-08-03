@@ -19,6 +19,7 @@ export const rekonsiliasiBank = sqliteTable(
     saldoAktual: integer("saldo_aktual").notNull(),
     selisih: integer("selisih").notNull(),
     catatan: text("catatan"),
+    buktiFotoUrl: text("bukti_foto_url"),
     verifiedBy: text("verified_by").references(() => user.id, {
       onDelete: "set null",
     }),

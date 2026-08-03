@@ -11,6 +11,7 @@ type Rekon = {
   saldoAktual: number;
   selisih: number;
   catatan: string | null;
+  buktiFotoUrl: string | null;
   verifiedAt: string;
   verifiedByName: string | null;
 } | null;
@@ -106,6 +107,30 @@ function MetodeRow({
   const [saldo, setSaldo] = useState(String(rekon?.saldoAktual ?? omzetSistem));
   const [catatan, setCatatan] = useState(rekon?.catatan ?? "");
   const [err, setErr] = useState<string | null>(null);
+  const [fotoBase64, setFotoBase64] = useState<string | null>(null);
+  const [fotoMime, setFotoMime] = useState<string | null>(null);
+  const [fotoNama, setFotoNama] = useState<string | null>(null);
+  const [hapusBukti, setHapusBukti] = useState(false);
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setFotoBase64(null);
+      setFotoMime(null);
+      setFotoNama(null);
+      return;
+    }
+    setFotoNama(file.name);
+    setHapusBukti(false);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const b64 = result.split(",")[1] ?? "";
+      setFotoBase64(b64);
+      setFotoMime(file.type);
+    };
+    reader.readAsDataURL(file);
+  }
 
   const label = metode === "transfer" ? "Transfer Bank" : "QRIS";
   const badgeColor =
@@ -144,12 +169,19 @@ function MetodeRow({
         metode,
         saldoAktual: currentSaldo,
         catatan: catatan.trim(),
+        fotoBase64,
+        fotoMimeType: fotoMime,
+        hapusBuktiFoto: hapusBukti,
       });
       if ("error" in res) {
         setErr(res.error);
         return;
       }
       setEditMode(false);
+      setFotoBase64(null);
+      setFotoMime(null);
+      setFotoNama(null);
+      setHapusBukti(false);
       router.refresh();
     });
   }
@@ -240,16 +272,37 @@ function MetodeRow({
             &quot;{rekon.catatan}&quot;
           </div>
         )}
-        <div className="text-[10px] text-[color:var(--muted)] mt-1">
-          Diverifikasi {new Date(rekon.verifiedAt).toLocaleString("id-ID", {
-            day: "2-digit",
-            month: "short",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-          {rekon.verifiedByName && ` · ${rekon.verifiedByName}`}
+        <div className="flex items-center justify-between gap-2 flex-wrap mt-1">
+          <div className="text-[10px] text-[color:var(--muted)]">
+            Diverifikasi {new Date(rekon.verifiedAt).toLocaleString("id-ID", {
+              day: "2-digit",
+              month: "short",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+            {rekon.verifiedByName && ` · ${rekon.verifiedByName}`}
+          </div>
+          {rekon.buktiFotoUrl && (
+            <a
+              href={rekon.buktiFotoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-brand font-bold inline-flex items-center gap-1 hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              📷 Lihat bukti
+            </a>
+          )}
         </div>
-        {detail.length > 0 && <DetailList items={detail} />}
+        {detail.length > 0 ? (
+          <DetailList items={detail} />
+        ) : (
+          omzetSistem > 0 && (
+            <div className="mt-2 text-[10px] text-[color:var(--muted)] italic">
+              Detail rincian tidak tersedia (data lama sebelum fitur ini).
+            </div>
+          )
+        )}
       </div>
     );
   }
@@ -322,6 +375,54 @@ function MetodeRow({
         />
       </div>
 
+      <div className="mb-2">
+        <label className="text-[10px] text-[color:var(--muted)] font-bold">
+          Bukti transfer / screenshot QRIS merchant (opsional)
+        </label>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleFile}
+          className="w-full mt-0.5 text-[11px]"
+        />
+        {fotoBase64 && (
+          <div className="text-[10px] text-emerald-700 mt-0.5">
+            ✓ {fotoNama} siap upload
+          </div>
+        )}
+        {rekon?.buktiFotoUrl && !fotoBase64 && !hapusBukti && (
+          <div className="flex items-center gap-2 mt-1 text-[10px]">
+            <a
+              href={rekon.buktiFotoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand font-bold hover:underline"
+            >
+              📷 Bukti tersimpan
+            </a>
+            <button
+              type="button"
+              onClick={() => setHapusBukti(true)}
+              className="text-red-600 hover:underline"
+            >
+              Hapus bukti
+            </button>
+          </div>
+        )}
+        {hapusBukti && (
+          <div className="text-[10px] text-red-700 mt-0.5">
+            Bukti lama akan dihapus saat simpan.{" "}
+            <button
+              type="button"
+              onClick={() => setHapusBukti(false)}
+              className="underline"
+            >
+              Batal
+            </button>
+          </div>
+        )}
+      </div>
+
       {err && (
         <div className="text-xs text-red-600 font-bold mb-2">{err}</div>
       )}
@@ -341,6 +442,10 @@ function MetodeRow({
               setErr(null);
               setSaldo(String(rekon?.saldoAktual ?? omzetSistem));
               setCatatan(rekon?.catatan ?? "");
+              setFotoBase64(null);
+              setFotoMime(null);
+              setFotoNama(null);
+              setHapusBukti(false);
             }}
             disabled={pending}
             className="px-3 py-1.5 border border-line rounded text-xs font-bold inline-flex items-center gap-1"
@@ -349,7 +454,19 @@ function MetodeRow({
           </button>
         )}
       </div>
-      {detail.length > 0 && <DetailList items={detail} />}
+      {detail.length > 0 ? (
+        <DetailList items={detail} />
+      ) : (
+        omzetSistem > 0 && (
+          <div className="mt-3 text-[10px] text-[color:var(--muted)] italic border-t border-line pt-2">
+            Detail rincian tidak tersedia — buka halaman{" "}
+            <a href="/admin/laporan/semua" className="text-brand underline">
+              Semua Aktivitas
+            </a>{" "}
+            untuk cari transaksi manual.
+          </div>
+        )
+      )}
     </div>
   );
 }
