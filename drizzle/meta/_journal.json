@@ -253,6 +253,13 @@
       "when": 1780100000000,
       "tag": "0035_handover_shift",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1780200000000,
+      "tag": "0036_rekonsiliasi_bank",
+      "breakpoints": true
     }
   ]
 }

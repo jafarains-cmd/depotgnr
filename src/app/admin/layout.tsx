@@ -21,6 +21,7 @@ import {
   Wrench,
   MessageSquareWarning,
   ShieldCheck,
+  ArrowLeftRight,
 } from "lucide-react";
 import { AppShell, type NavGroup } from "@/components/AppShell";
 import { requireRole } from "@/lib/permissions";
@@ -186,6 +187,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           label: "Nota Gabungan",
           icon: <FileStack size={16} />,
           iconColor: "text-violet-600",
+        },
+        {
+          href: "/admin/rekonsiliasi",
+          label: "Rekonsiliasi Bank",
+          icon: <ArrowLeftRight size={16} />,
+          iconColor: "text-blue-600",
         },
         {
           href: "/admin/laporan",
