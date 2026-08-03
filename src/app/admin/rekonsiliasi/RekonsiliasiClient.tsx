@@ -25,6 +25,7 @@ type DetailTx = {
   shiftKasirNama: string | null;
   jam: string;
   total: number;
+  buktiBayarUrl: string | null;
 };
 
 type MetodeBucket = {
@@ -377,8 +378,13 @@ function MetodeRow({
 
       <div className="mb-2">
         <label className="text-[10px] text-[color:var(--muted)] font-bold">
-          Bukti transfer / screenshot QRIS merchant (opsional)
+          Screenshot mutasi bank / rekap QRIS harian (opsional)
         </label>
+        <div className="text-[10px] text-[color:var(--muted)] italic mb-1">
+          Bukti bayar per transaksi dari pelanggan otomatis muncul di
+          &quot;Lihat rincian&quot; bawah. Yang di sini adalah screenshot rekap
+          harian dari mobile banking / QRIS merchant.
+        </div>
         <input
           type="file"
           accept="image/*"
@@ -398,20 +404,20 @@ function MetodeRow({
               rel="noopener noreferrer"
               className="text-brand font-bold hover:underline"
             >
-              📷 Bukti tersimpan
+              📷 Screenshot tersimpan
             </a>
             <button
               type="button"
               onClick={() => setHapusBukti(true)}
               className="text-red-600 hover:underline"
             >
-              Hapus bukti
+              Hapus
             </button>
           </div>
         )}
         {hapusBukti && (
           <div className="text-[10px] text-red-700 mt-0.5">
-            Bukti lama akan dihapus saat simpan.{" "}
+            Screenshot lama akan dihapus saat simpan.{" "}
             <button
               type="button"
               onClick={() => setHapusBukti(false)}
@@ -518,9 +524,22 @@ function DetailItem({ it }: { it: DetailTx }) {
             {it.jam}
           </span>
         </div>
-        <span className="font-extrabold tabular-nums shrink-0">
-          {formatRupiah(it.total)}
-        </span>
+        <div className="flex items-center gap-2 shrink-0">
+          {it.buktiBayarUrl && (
+            <a
+              href={it.buktiBayarUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-brand font-bold hover:underline inline-flex items-center gap-0.5"
+              title="Bukti bayar dari pelanggan"
+            >
+              📷 Bukti
+            </a>
+          )}
+          <span className="font-extrabold tabular-nums">
+            {formatRupiah(it.total)}
+          </span>
+        </div>
       </div>
       <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
         <span>

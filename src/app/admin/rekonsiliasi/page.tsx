@@ -149,6 +149,7 @@ export default async function RekonsiliasiPage({
       nomor: orderHeader.nomorOrder,
       total: orderHeader.totalEstimasi,
       bayarAt: orderHeader.bayarAt,
+      buktiBayarUrl: orderHeader.buktiBayarUrl,
       kurirNama: kurirUser.name,
       shiftKasirNama: konfirmasiUser.name,
       pelangganNama: pelangganTable.nama,
@@ -177,6 +178,7 @@ export default async function RekonsiliasiPage({
     shiftKasirNama: string | null;
     jam: string;
     total: number;
+    buktiBayarUrl: string | null;
   };
   type HariMetode = {
     omzetSistem: number;
@@ -229,7 +231,7 @@ export default async function RekonsiliasiPage({
     }
   }
 
-  // Isi detail POS
+  // Isi detail POS (POS langsung tidak punya buktiBayarUrl — admin/kasir input manual)
   for (const d of posDetail) {
     const bucket = ensureBucket(d.hari);
     const detail: DetailTx = {
@@ -241,12 +243,13 @@ export default async function RekonsiliasiPage({
       shiftKasirNama: d.shiftKasirNama,
       jam: fmtJam(d.createdAt),
       total: Number(d.total),
+      buktiBayarUrl: null,
     };
     if (d.metode === "transfer") bucket.transfer.detail.push(detail);
     if (d.metode === "qris") bucket.qris.detail.push(detail);
   }
 
-  // Isi detail Order (transfer/dana/qris)
+  // Isi detail Order (transfer/dana/qris) — buktiBayarUrl dari pelanggan (kalau upload)
   for (const d of orderDetail) {
     const bucket = ensureBucket(d.hari);
     const detail: DetailTx = {
@@ -258,6 +261,7 @@ export default async function RekonsiliasiPage({
       shiftKasirNama: d.shiftKasirNama,
       jam: fmtJam(d.bayarAt),
       total: Number(d.total),
+      buktiBayarUrl: d.buktiBayarUrl,
     };
     if (d.metode === "transfer" || d.metode === "dana") {
       bucket.transfer.detail.push(detail);
