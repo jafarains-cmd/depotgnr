@@ -30,6 +30,7 @@ import {
   hapusPengeluaranKasirAction,
 } from "./pengeluaran-actions";
 import { formatRupiah } from "@/lib/utils";
+import { RupiahInput } from "@/components/RupiahInput";
 
 type MyShiftAktif = {
   id: number;
@@ -462,13 +463,11 @@ function EditUangAwalModal({
         </div>
         <div>
           <label className="text-xs font-bold block mb-1">Uang Awal Baru (Rp)</label>
-          <input
-            type="number"
-            min={0}
+          <RupiahInput
             value={nilai}
-            onChange={(e) => setNilai(e.target.value)}
-            className="w-full px-3 py-2 border border-line rounded-md text-lg font-mono"
+            onChange={setNilai}
             autoFocus
+            className="w-full px-3 py-2 border border-line rounded-md text-lg font-mono"
           />
         </div>
         <div>
@@ -636,14 +635,12 @@ function BukaModal({
 
         <div>
           <label className="text-xs font-bold block mb-1">Uang Awal di Laci (Rp)</label>
-          <input
-            type="number"
-            min={0}
+          <RupiahInput
             value={openingCash}
-            onChange={(e) => setOpeningCash(e.target.value)}
+            onChange={setOpeningCash}
             placeholder="Kosongkan kalau tidak mau hitung"
-            className="w-full px-3 py-2 border border-line rounded-md text-lg font-mono"
             autoFocus
+            className="w-full px-3 py-2 border border-line rounded-md text-lg font-mono"
           />
           <div className="text-[10px] text-[color:var(--muted)] mt-1">
             mis. Rp 500.000 untuk kembalian. Kosongkan = skip perbandingan selisih.
@@ -911,13 +908,11 @@ function TutupModal({
           <label className="text-xs font-bold block mb-1 inline-flex items-center gap-1">
             <Coins size={12} /> Uang Fisik di Laci (hitung manual)
           </label>
-          <input
-            type="number"
-            min={0}
+          <RupiahInput
             value={counted}
-            onChange={(e) => setCounted(e.target.value)}
-            className="w-full px-3 py-2 border border-line rounded-md text-lg font-mono font-bold"
+            onChange={setCounted}
             autoFocus
+            className="w-full px-3 py-2 border border-line rounded-md text-lg font-mono font-bold"
           />
         </div>
 
@@ -1051,12 +1046,9 @@ function TutupModal({
                 <label className="text-[11px] font-bold block mb-1">
                   Jumlah diserahkan (Rp) — auto-fill uang fisik
                 </label>
-                <input
-                  type="number"
-                  min={0}
-                  max={countedNum}
+                <RupiahInput
                   value={handoverAmount || String(countedNum)}
-                  onChange={(e) => setHandoverAmount(e.target.value)}
+                  onChange={setHandoverAmount}
                   className="w-full px-2 py-1.5 border border-line rounded text-sm font-mono font-bold"
                 />
               </div>
@@ -1204,14 +1196,12 @@ function KasMasukSection({
             <label className="text-[11px] font-bold text-[color:var(--muted)]">
               Jumlah (Rp)
             </label>
-            <input
-              type="text"
-              inputMode="numeric"
+            <RupiahInput
               value={jumlah}
-              onChange={(e) => setJumlah(e.target.value.replace(/\D/g, ""))}
+              onChange={setJumlah}
               placeholder="10000"
-              className="w-full mt-1 px-3 py-2 border border-line rounded-lg text-sm font-bold"
               autoFocus
+              className="w-full mt-1 px-3 py-2 border border-line rounded-lg text-sm font-bold"
             />
           </div>
           <div>
@@ -1433,14 +1423,12 @@ function PengeluaranSection({
             <label className="text-[11px] font-bold text-[color:var(--muted)]">
               Jumlah (Rp)
             </label>
-            <input
-              type="text"
-              inputMode="numeric"
+            <RupiahInput
               value={jumlah}
-              onChange={(e) => setJumlah(e.target.value.replace(/\D/g, ""))}
+              onChange={setJumlah}
               placeholder="20000"
-              className="w-full mt-1 px-3 py-2 border border-line rounded-lg text-sm font-bold"
               autoFocus
+              className="w-full mt-1 px-3 py-2 border border-line rounded-lg text-sm font-bold"
             />
           </div>
           <div>

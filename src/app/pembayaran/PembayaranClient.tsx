@@ -9,6 +9,7 @@ import { formatRupiah } from "@/lib/utils";
 import { normalizeDriveUrl, isPdfUrl } from "@/lib/drive-url";
 import { DetailModal } from "@/components/DetailModal";
 import { useToast } from "@/components/Toast";
+import { RupiahInput } from "@/components/RupiahInput";
 
 export type Row = {
   id: number;
@@ -619,13 +620,11 @@ function CicilanModal({
 
         <div>
           <label className="text-xs font-bold block mb-1">Jumlah Bayar (Rp)</label>
-          <input
-            type="number"
-            min={0}
+          <RupiahInput
             value={jumlah}
-            onChange={(e) => setJumlah(e.target.value)}
-            className="w-full px-3 py-2 border border-line rounded-md text-lg font-mono"
+            onChange={setJumlah}
             autoFocus
+            className="w-full px-3 py-2 border border-line rounded-md text-lg font-mono"
           />
           <div className="flex gap-1.5 mt-2 flex-wrap">
             {presetButtons.map((p) => (

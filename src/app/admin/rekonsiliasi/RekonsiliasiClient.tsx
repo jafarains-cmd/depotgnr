@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check, X, AlertTriangle, Trash2, Edit3, ChevronDown } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
 import { verifikasiHarianAction, hapusVerifikasiAction } from "./actions";
+import { RupiahInput } from "@/components/RupiahInput";
 
 type Rekon = {
   id: number;
@@ -331,14 +332,12 @@ function MetodeRow({
           <label className="text-[10px] text-[color:var(--muted)] font-bold">
             Saldo Aktual (dari mobile banking)
           </label>
-          <input
-            type="text"
-            inputMode="numeric"
+          <RupiahInput
             value={saldo}
-            onChange={(e) => setSaldo(e.target.value.replace(/\D/g, ""))}
+            onChange={setSaldo}
             placeholder={String(omzetSistem)}
-            className="w-full mt-0.5 px-2 py-1.5 border border-line rounded text-sm font-bold tabular-nums"
             autoFocus={editMode}
+            className="w-full mt-0.5 px-2 py-1.5 border border-line rounded text-sm font-bold tabular-nums"
           />
         </div>
       </div>
