@@ -17,9 +17,19 @@ import { bestEffort } from "@/lib/best-effort";
 import { recordKurirBonus } from "@/lib/bonus";
 import { syncTransaksiFromOrder } from "@/lib/transaksi-sync";
 import { getShiftAktif } from "@/lib/shift";
+import { uploadAsset } from "@/lib/drive";
+
+type MetodeOrder = "cash" | "transfer" | "qris" | "dana" | "cod";
+const METODE_VALID: MetodeOrder[] = ["cash", "transfer", "qris", "dana", "cod"];
 
 export async function konfirmasiBayar(
   orderId: number,
+  opts?: {
+    metodeBayarOverride?: string | null;
+    catatan?: string | null;
+    fotoBase64?: string | null;
+    fotoMimeType?: string | null;
+  },
 ): Promise<{ ok: true } | { error: string }> {
   const session = await requireRole(["admin", "kasir"]);
 
@@ -27,24 +37,51 @@ export async function konfirmasiBayar(
   if (!o) return { error: "Order tidak ditemukan" };
   if (o.statusBayar === "lunas") return { error: "Sudah lunas" };
 
+  // Metode akhir: override kalau valid, kalau tidak pakai existing
+  let metodeAkhir: MetodeOrder | null = o.metodeBayar as MetodeOrder | null;
+  const override = opts?.metodeBayarOverride?.trim();
+  if (override) {
+    if (!METODE_VALID.includes(override as MetodeOrder)) {
+      return { error: "Metode bayar tidak valid" };
+    }
+    metodeAkhir = override as MetodeOrder;
+  }
+
+  // Upload foto bukti kalau ada (best-effort — tidak block konfirmasi kalau gagal)
+  let buktiBayarUrl: string | null = o.buktiBayarUrl;
+  if (opts?.fotoBase64 && opts?.fotoMimeType) {
+    const up = await uploadAsset({
+      prefix: `bukti-bayar-${o.nomorOrder}`,
+      base64: opts.fotoBase64,
+      mimeType: opts.fotoMimeType,
+    });
+    if (up.ok && up.url) buktiBayarUrl = up.url;
+  }
+
+  // Gabung catatan admin ke catatan order (jangan overwrite catatan lama)
+  const now = new Date();
+  const catatanAdmin = opts?.catatan?.trim();
+  const catatanBaru = catatanAdmin
+    ? `${o.catatan ? o.catatan + " · " : ""}[Konfirmasi ${session.user.name}: ${catatanAdmin}]`
+    : o.catatan;
+
   await db
     .update(orderHeader)
     .set({
       statusBayar: "lunas",
-      paidPartial: o.totalEstimasi, // tutup penuh (consistent dengan effective check)
-      bayarAt: new Date(),
+      paidPartial: o.totalEstimasi,
+      bayarAt: now,
       bayarDikonfirmasiOleh: session.user.id,
-      updatedAt: new Date(),
+      metodeBayar: metodeAkhir,
+      buktiBayarUrl,
+      catatan: catatanBaru,
+      updatedAt: now,
     })
     .where(eq(orderHeader.id, orderId));
 
   bestEffort("notifLunas", notifLunas(orderId));
   bestEffort("earnFromOrderIfEligible", earnFromOrderIfEligible(orderId));
-  // Catat bonus kurir kalau order sudah selesai (recordKurirBonus idempoten + cek selesai+lunas)
   bestEffort("recordKurirBonus", recordKurirBonus(orderId));
-  // Sync ke tabel transaksi. Kalau kasir yang konfirmasi punya shift open,
-  // override shift_id supaya uang piutang masuk ke ekspektasi cash shift
-  // SEKARANG, bukan shift order asal (yang mungkin sudah closed).
   const shift = await getShiftAktif(session.user.id);
   bestEffort(
     "syncTransaksiFromOrder",
@@ -66,6 +103,8 @@ export async function bayarPiutangPartial(args: {
   orderId: number;
   jumlahBayar: number;
   catatan?: string;
+  fotoBase64?: string | null;
+  fotoMimeType?: string | null;
 }): Promise<
   | { ok: true; lunas: boolean; sisaPiutang: number; totalDibayar: number }
   | { error: string }
@@ -87,6 +126,17 @@ export async function bayarPiutangPartial(args: {
   const lunas = newPaidPartial >= o.totalEstimasi;
   const now = new Date();
 
+  // Upload foto bukti kalau ada (best-effort)
+  let buktiBayarUrl: string | null = o.buktiBayarUrl;
+  if (args.fotoBase64 && args.fotoMimeType) {
+    const up = await uploadAsset({
+      prefix: `bukti-cicilan-${o.nomorOrder}`,
+      base64: args.fotoBase64,
+      mimeType: args.fotoMimeType,
+    });
+    if (up.ok && up.url) buktiBayarUrl = up.url;
+  }
+
   await db
     .update(orderHeader)
     .set({
@@ -94,6 +144,7 @@ export async function bayarPiutangPartial(args: {
       statusBayar: lunas ? "lunas" : o.statusBayar,
       bayarAt: lunas ? now : o.bayarAt,
       bayarDikonfirmasiOleh: lunas ? session.user.id : o.bayarDikonfirmasiOleh,
+      buktiBayarUrl,
       catatan: args.catatan?.trim()
         ? `${o.catatan ? o.catatan + " · " : ""}[Cicilan ${formatRupiah(dialokasikan)} oleh ${session.user.name}${args.catatan ? `: ${args.catatan}` : ""}]`
         : o.catatan,

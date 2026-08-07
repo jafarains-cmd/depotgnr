@@ -55,6 +55,7 @@ export function PembayaranClient({
     return Math.max(0, r.total - r.paidPartial);
   }
   const [bayarPartialFor, setBayarPartialFor] = useState<Row | null>(null);
+  const [konfirmasiLunasFor, setKonfirmasiLunasFor] = useState<Row | null>(null);
 
   function umurHari(r: Row): number {
     const ref = r.selesaiAt ?? r.diantarAt ?? r.createdAt;
@@ -180,6 +181,17 @@ export function PembayaranClient({
             if (r.lunas) toast.show(`✓ Lunas penuh — ${formatRupiah(r.totalDibayar)}`);
             else toast.show(`💵 Cicilan ${formatRupiah(r.totalDibayar)} dicatat. Sisa ${formatRupiah(r.sisaPiutang)}`);
             setBayarPartialFor(null);
+          }}
+        />
+      )}
+
+      {konfirmasiLunasFor && (
+        <KonfirmasiLunasModal
+          row={konfirmasiLunasFor}
+          onClose={() => setKonfirmasiLunasFor(null)}
+          onDone={() => {
+            toast.show(`✓ ${konfirmasiLunasFor?.nomorOrder} dikonfirmasi lunas`);
+            setKonfirmasiLunasFor(null);
           }}
         />
       )}
@@ -312,21 +324,7 @@ export function PembayaranClient({
               <div className="flex gap-2 pt-3 border-t border-line">
                 <button
                   disabled={pending}
-                  onClick={() => {
-                    let msg: string;
-                    if (isPiutang(r)) {
-                      msg = r.buktiUrl
-                        ? `⚠ MOHON PERIKSA BUKTI PEMBAYARAN dulu di card ini sebelum menandai lunas.\n\nTandai LUNAS piutang ${r.nomorOrder} (${formatRupiah(r.total)})?`
-                        : `ℹ BELUM ADA BUKTI PEMBAYARAN dari pelanggan.\n\nLanjut tandai LUNAS piutang ${r.nomorOrder} (${formatRupiah(r.total)})? Pastikan pelanggan sudah benar-benar bayar.`;
-                    } else {
-                      msg = `⚠ MOHON PERIKSA BUKTI PEMBAYARAN dulu di card ini sebelum konfirmasi.\n\nKonfirmasi pembayaran ${r.nomorOrder} sebesar ${formatRupiah(r.total)}?`;
-                    }
-                    if (confirm(msg)) {
-                      startTransition(async () => {
-                        await konfirmasiBayar(r.id);
-                      });
-                    }
-                  }}
+                  onClick={() => setKonfirmasiLunasFor(r)}
                   className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-extrabold inline-flex items-center justify-center gap-1.5 disabled:opacity-50 active:scale-[0.98] transition"
                 >
                   <Check size={14} /> {isPiutang(r) ? "Lunas Penuh" : "Konfirmasi Lunas"}
@@ -553,6 +551,9 @@ function CicilanModal({
   const sisaSekarang = Math.max(0, row.total - row.paidPartial);
   const [jumlah, setJumlah] = useState(String(sisaSekarang));
   const [catatan, setCatatan] = useState("");
+  const [fotoBase64, setFotoBase64] = useState<string | null>(null);
+  const [fotoMime, setFotoMime] = useState<string | null>(null);
+  const [fotoNama, setFotoNama] = useState<string>("");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -561,6 +562,10 @@ function CicilanModal({
   const akanLunas = dialokasikan >= sisaSekarang;
   const sisaSetelah = Math.max(0, sisaSekarang - dialokasikan);
 
+  // Non-cash metode → foto disarankan (transfer/qris/dana)
+  const isNonCash =
+    row.metode === "transfer" || row.metode === "qris" || row.metode === "dana";
+
   const presetButtons = [
     { label: "Lunas", value: sisaSekarang },
     { label: "1/2", value: Math.floor(sisaSekarang / 2) },
@@ -568,6 +573,25 @@ function CicilanModal({
     { label: "Bulat 10k", value: Math.floor(sisaSekarang / 10000) * 10000 },
     { label: "Bulat 5k", value: Math.floor(sisaSekarang / 5000) * 5000 },
   ].filter((p) => p.value > 0 && p.value <= sisaSekarang);
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setFotoBase64(null);
+      setFotoMime(null);
+      setFotoNama("");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const b64 = result.split(",")[1] ?? "";
+      setFotoBase64(b64);
+      setFotoMime(file.type);
+      setFotoNama(file.name);
+    };
+    reader.readAsDataURL(file);
+  }
 
   function submit() {
     setError(null);
@@ -580,6 +604,8 @@ function CicilanModal({
         orderId: row.id,
         jumlahBayar: jumlahNum,
         catatan: catatan.trim() || undefined,
+        fotoBase64,
+        fotoMimeType: fotoMime,
       });
       if ("error" in r) setError(r.error);
       else onDone({ lunas: r.lunas, sisaPiutang: r.sisaPiutang, totalDibayar: r.totalDibayar });
@@ -667,6 +693,39 @@ function CicilanModal({
           />
         </div>
 
+        {/* Foto bukti — muncul kalau metode non-cash */}
+        {isNonCash && (
+          <div>
+            <label className="text-xs font-bold block mb-1">
+              Bukti Transfer / QRIS (opsional)
+            </label>
+            {row.buktiUrl && !fotoBase64 && (
+              <div className="mb-1 text-[11px] flex items-center gap-2">
+                <a
+                  href={row.buktiUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-brand font-bold hover:underline"
+                >
+                  📷 Bukti sebelumnya ada
+                </a>
+                <span className="text-[color:var(--muted)]">— boleh ganti dengan yang baru</span>
+              </div>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFile}
+              className="w-full text-xs"
+            />
+            {fotoBase64 && (
+              <div className="text-[11px] text-emerald-700 mt-1">
+                ✓ {fotoNama} siap upload
+              </div>
+            )}
+          </div>
+        )}
+
         {error && <div className="text-xs text-red-600">{error}</div>}
 
         <div className="flex justify-end gap-2 pt-2 border-t border-line">
@@ -684,6 +743,202 @@ function CicilanModal({
           >
             {pending && <Loader2 size={14} className="animate-spin" />}
             Catat Pembayaran
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const METODE_OPTIONS: { value: string; label: string }[] = [
+  { value: "cash", label: "Cash / Tunai" },
+  { value: "transfer", label: "Transfer Bank" },
+  { value: "qris", label: "QRIS" },
+  { value: "dana", label: "DANA / E-wallet" },
+  { value: "cod", label: "COD" },
+];
+
+function KonfirmasiLunasModal({
+  row,
+  onClose,
+  onDone,
+}: {
+  row: Row;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const initialMetode = row.metode ?? "cash";
+  const [metode, setMetode] = useState<string>(initialMetode);
+  const [catatan, setCatatan] = useState("");
+  const [fotoBase64, setFotoBase64] = useState<string | null>(null);
+  const [fotoMime, setFotoMime] = useState<string | null>(null);
+  const [fotoNama, setFotoNama] = useState<string>("");
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const isNonCash =
+    metode === "transfer" || metode === "qris" || metode === "dana";
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setFotoBase64(null);
+      setFotoMime(null);
+      setFotoNama("");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const b64 = result.split(",")[1] ?? "";
+      setFotoBase64(b64);
+      setFotoMime(file.type);
+      setFotoNama(file.name);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function submit() {
+    setError(null);
+    startTransition(async () => {
+      const r = await konfirmasiBayar(row.id, {
+        metodeBayarOverride: metode !== initialMetode ? metode : null,
+        catatan: catatan.trim() || null,
+        fotoBase64,
+        fotoMimeType: fotoMime,
+      });
+      if ("error" in r) setError(r.error);
+      else onDone();
+    });
+  }
+
+  const sisa = Math.max(0, row.total - row.paidPartial);
+  const metodeBerubah = metode !== initialMetode;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 grid place-items-center p-4">
+      <div className="bg-surface rounded-2xl max-w-md w-full p-5 space-y-3 max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-start">
+          <div>
+            <h2 className="font-bold text-lg inline-flex items-center gap-1.5">
+              <Check size={18} className="text-emerald-600" /> Konfirmasi Lunas
+            </h2>
+            <div className="text-xs text-[color:var(--muted)] mt-0.5">
+              {row.nomorOrder} · {row.pelangganNama ?? "—"}
+            </div>
+          </div>
+          <button onClick={onClose}>
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Info order */}
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 space-y-1 text-xs">
+          <div className="flex justify-between">
+            <span className="text-[color:var(--muted)]">Total order</span>
+            <b>{formatRupiah(row.total)}</b>
+          </div>
+          {row.paidPartial > 0 && (
+            <div className="flex justify-between">
+              <span className="text-[color:var(--muted)]">Sudah dibayar</span>
+              <b className="text-emerald-700">{formatRupiah(row.paidPartial)}</b>
+            </div>
+          )}
+          <div className="flex justify-between pt-1 border-t border-emerald-200 font-bold">
+            <span>Jumlah dilunaskan</span>
+            <span className="text-emerald-800">{formatRupiah(sisa)}</span>
+          </div>
+        </div>
+
+        {/* Metode bayar aktual */}
+        <div>
+          <label className="text-xs font-bold block mb-1">
+            Metode Bayar {metodeBerubah && <span className="text-amber-700">(diubah)</span>}
+          </label>
+          <select
+            value={metode}
+            onChange={(e) => setMetode(e.target.value)}
+            className="w-full px-3 py-2 border border-line rounded-md text-sm bg-surface"
+          >
+            {METODE_OPTIONS.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+                {m.value === initialMetode ? " (asal)" : ""}
+              </option>
+            ))}
+          </select>
+          {metodeBerubah && (
+            <div className="text-[10px] text-amber-700 mt-1">
+              ⓘ Order asal pakai {initialMetode.toUpperCase()}, sekarang jadi {metode.toUpperCase()}
+            </div>
+          )}
+        </div>
+
+        {/* Foto bukti — muncul kalau metode non-cash */}
+        {isNonCash && (
+          <div>
+            <label className="text-xs font-bold block mb-1">
+              Bukti Transfer / QRIS (opsional)
+            </label>
+            <div className="text-[10px] text-[color:var(--muted)] italic mb-1">
+              Upload screenshot dari WA / mobile banking. Otomatis muncul di
+              halaman Rekonsiliasi Bank.
+            </div>
+            {row.buktiUrl && !fotoBase64 && (
+              <div className="mb-1 text-[11px] flex items-center gap-2">
+                <a
+                  href={row.buktiUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-brand font-bold hover:underline"
+                >
+                  📷 Bukti sebelumnya ada
+                </a>
+                <span className="text-[color:var(--muted)]">— boleh ganti kalau perlu</span>
+              </div>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFile}
+              className="w-full text-xs"
+            />
+            {fotoBase64 && (
+              <div className="text-[11px] text-emerald-700 mt-1">
+                ✓ {fotoNama} siap upload
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Catatan */}
+        <div>
+          <label className="text-xs font-bold block mb-1">Catatan (opsional)</label>
+          <input
+            value={catatan}
+            onChange={(e) => setCatatan(e.target.value)}
+            placeholder="mis: bayar via BCA a.n. Ani, cek WA jam 14:00"
+            className="w-full px-3 py-2 border border-line rounded-md text-sm"
+          />
+        </div>
+
+        {error && <div className="text-xs text-red-600 font-bold">{error}</div>}
+
+        <div className="flex justify-end gap-2 pt-2 border-t border-line">
+          <button
+            onClick={onClose}
+            disabled={pending}
+            className="px-4 py-2 border border-line rounded-md text-sm"
+          >
+            Batal
+          </button>
+          <button
+            onClick={submit}
+            disabled={pending}
+            className="px-4 py-2 bg-emerald-600 text-white rounded-md text-sm font-bold inline-flex items-center gap-1.5 disabled:opacity-50"
+          >
+            {pending && <Loader2 size={14} className="animate-spin" />}
+            <Check size={14} /> Konfirmasi Lunas
           </button>
         </div>
       </div>
