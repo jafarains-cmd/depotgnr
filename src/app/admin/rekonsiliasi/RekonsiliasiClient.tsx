@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Check, X, AlertTriangle, Trash2, Edit3, ChevronDown } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
 import { verifikasiHarianAction, hapusVerifikasiAction } from "./actions";
@@ -103,7 +102,6 @@ function MetodeRow({
   rekon: Rekon;
   detail: DetailTx[];
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [editMode, setEditMode] = useState(false);
   const [saldo, setSaldo] = useState(String(rekon?.saldoAktual ?? omzetSistem));
@@ -166,7 +164,6 @@ function MetodeRow({
       return;
     }
     startTransition(async () => {
-      console.log("[Rekonsiliasi] submitting", { tanggal, metode, saldo: currentSaldo });
       try {
         const res = await verifikasiHarianAction({
           tanggalIso: tanggal,
@@ -177,10 +174,8 @@ function MetodeRow({
           fotoMimeType: fotoMime,
           hapusBuktiFoto: hapusBukti,
         });
-        console.log("[Rekonsiliasi] response", res);
         if ("error" in res) {
           setErr(res.error);
-          alert(`GAGAL: ${res.error}`);
           return;
         }
         setEditMode(false);
@@ -188,13 +183,12 @@ function MetodeRow({
         setFotoMime(null);
         setFotoNama(null);
         setHapusBukti(false);
-        alert(`✓ Berhasil disimpan. Selisih: Rp ${res.selisih.toLocaleString("id-ID")}`);
-        router.refresh();
+        // router.refresh() kadang tidak re-fetch di production build.
+        // Pakai window.location.reload() untuk guaranteed fresh data.
+        window.location.reload();
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        console.error("[Rekonsiliasi] throw", e);
         setErr(`Gagal: ${msg}`);
-        alert(`ERROR: ${msg}`);
       }
     });
   }
@@ -211,7 +205,7 @@ function MetodeRow({
         alert(`Gagal: ${res.error}`);
         return;
       }
-      router.refresh();
+      window.location.reload();
     });
   }
 
