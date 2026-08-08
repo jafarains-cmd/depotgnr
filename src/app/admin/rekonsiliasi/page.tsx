@@ -272,8 +272,18 @@ export default async function RekonsiliasiPage({
   }
 
   // Isi rekon existing
+  // PENTING: pakai local date (bukan toISOString yang UTC).
+  // omzet POS/order pakai strftime('...', 'localtime') → key "YYYY-MM-DD" local.
+  // Kalau pakai toISOString().slice(0,10), rekon tanggal 09 Agu 00:00 WITA
+  // (= 08 Agu 16:00 UTC) akan ter-attach ke bucket "2026-08-08" — mismatch.
+  function toLocalDateStr(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
   for (const r of rekonRows) {
-    const hariStr = r.tanggal.toISOString().slice(0, 10);
+    const hariStr = toLocalDateStr(r.tanggal);
     const bucket = ensureBucket(hariStr);
     const rekonData = {
       id: r.id,
