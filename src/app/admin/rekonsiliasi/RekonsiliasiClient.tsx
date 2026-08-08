@@ -166,6 +166,7 @@ function MetodeRow({
       return;
     }
     startTransition(async () => {
+      console.log("[Rekonsiliasi] submitting", { tanggal, metode, saldo: currentSaldo });
       try {
         const res = await verifikasiHarianAction({
           tanggalIso: tanggal,
@@ -176,8 +177,10 @@ function MetodeRow({
           fotoMimeType: fotoMime,
           hapusBuktiFoto: hapusBukti,
         });
+        console.log("[Rekonsiliasi] response", res);
         if ("error" in res) {
           setErr(res.error);
+          alert(`GAGAL: ${res.error}`);
           return;
         }
         setEditMode(false);
@@ -185,10 +188,13 @@ function MetodeRow({
         setFotoMime(null);
         setFotoNama(null);
         setHapusBukti(false);
+        alert(`✓ Berhasil disimpan. Selisih: Rp ${res.selisih.toLocaleString("id-ID")}`);
         router.refresh();
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        setErr(`Gagal koneksi ke server: ${msg}`);
+        console.error("[Rekonsiliasi] throw", e);
+        setErr(`Gagal: ${msg}`);
+        alert(`ERROR: ${msg}`);
       }
     });
   }
