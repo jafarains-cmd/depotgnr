@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq, gte, lte, sql, isNull } from "drizzle-orm";
+import { and, eq, gte, lte, sql, isNull, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { rekonsiliasiBank } from "@/db/schema/rekonsiliasi-bank";
 import { transaksi } from "@/db/schema/transaksi";
@@ -61,8 +61,10 @@ async function hitungOmzetSistem(tanggal: Date, metode: Metode): Promise<number>
 
   // 2. Order lunas — map metode order → metode rekonsiliasi
   // transfer includes 'dana' (e-wallet fallback), qris hanya 'qris'
-  const orderMetodeList: string[] =
-    metode === "transfer" ? ["transfer", "dana"] : ["qris"];
+  const orderMetodeList =
+    metode === "transfer"
+      ? (["transfer", "dana"] as const)
+      : (["qris"] as const);
 
   const [orderRow] = await db
     .select({
@@ -74,7 +76,7 @@ async function hitungOmzetSistem(tanggal: Date, metode: Metode): Promise<number>
         eq(orderHeader.statusBayar, "lunas"),
         gte(orderHeader.bayarAt, dayStart),
         lte(orderHeader.bayarAt, dayEnd),
-        sql`${orderHeader.metodeBayar} in ${orderMetodeList}`,
+        inArray(orderHeader.metodeBayar, [...orderMetodeList]),
       ),
     );
 
