@@ -27,7 +27,7 @@ export function TambahGalonButton({ produkList }: { produkList: Produk[] }) {
         onClick={() => setOpen(true)}
         className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition"
       >
-        <Plus size={14} /> Tambah / Adjust Baseline
+        <Plus size={14} /> Sesuaikan Pinjaman
       </button>
       {open && (
         <TambahGalonModal produkList={produkList} onClose={() => setOpen(false)} />
@@ -144,17 +144,30 @@ function TambahGalonModal({
         <div className="flex justify-between items-start">
           <h2 className="font-bold text-lg inline-flex items-center gap-1.5">
             <Truck size={18} className="text-amber-600" />
-            Tambah / Adjust Galon Dipinjam
+            Sesuaikan Galon Pinjaman
           </h2>
           <button onClick={onClose} disabled={pending}>
             <X size={20} />
           </button>
         </div>
 
-        <div className="text-xs text-[color:var(--muted)] bg-amber-50 border border-amber-200 rounded-lg p-2.5">
-          Fitur ini untuk <b>koreksi manual</b> atau <b>catat baseline</b>{" "}
-          pelanggan lama yang belum tercatat di sistem. Untuk transaksi normal,
-          pakai POS Kasir atau konfirmasi kurir.
+        <div className="text-xs text-[color:var(--muted)] bg-amber-50 border border-amber-200 rounded-lg p-2.5 leading-relaxed">
+          Gunakan untuk:
+          <ul className="list-disc list-inside mt-1 space-y-0.5">
+            <li>
+              <b>Kurangi</b> — pelanggan mengembalikan galon depot
+            </li>
+            <li>
+              <b>Tambah</b> — pelanggan pinjam galon tambahan (di luar POS)
+            </li>
+            <li>
+              <b>Koreksi</b> — perbaiki selisih hitung / catat baseline
+              pelanggan lama
+            </li>
+          </ul>
+          <div className="mt-1 text-[color:var(--muted)]">
+            Untuk transaksi normal, tetap pakai POS Kasir / konfirmasi kurir.
+          </div>
         </div>
 
         {/* Search pelanggan */}
@@ -289,7 +302,13 @@ function TambahGalonModal({
                 value={alasan}
                 onChange={(e) => setAlasan(e.target.value)}
                 rows={2}
-                placeholder="mis: Baseline audit tanggal 8 Jul — Pak Anton sudah pinjam 5 galon depot sejak Mei"
+                placeholder={
+                  selisih < 0
+                    ? "mis: Ibu Ani kembalikan 2 galon"
+                    : selisih > 0
+                      ? "mis: Pak Anton pinjam 3 galon tambahan"
+                      : "mis: koreksi baseline / catat pinjaman lama"
+                }
                 className="w-full px-3 py-2 border border-line rounded-md text-sm"
               />
             </div>
