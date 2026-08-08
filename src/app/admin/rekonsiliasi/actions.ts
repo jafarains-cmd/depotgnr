@@ -96,118 +96,130 @@ export async function verifikasiHarianAction(args: {
   fotoMimeType?: string | null;
   hapusBuktiFoto?: boolean;
 }): Promise<{ ok: true; id: number; selisih: number } | { error: string }> {
-  const session = await requireRole(["admin"]);
+  try {
+    const session = await requireRole(["admin"]);
 
-  if (!isMetodeValid(args.metode)) {
-    return { error: "Metode harus 'transfer' atau 'qris'" };
-  }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(args.tanggalIso)) {
-    return { error: "Tanggal tidak valid (format YYYY-MM-DD)" };
-  }
-  const saldo = Math.floor(args.saldoAktual);
-  if (!Number.isFinite(saldo) || saldo < 0) {
-    return { error: "Saldo aktual harus >= 0" };
-  }
+    if (!isMetodeValid(args.metode)) {
+      return { error: "Metode harus 'transfer' atau 'qris'" };
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(args.tanggalIso)) {
+      return { error: "Tanggal tidak valid (format YYYY-MM-DD)" };
+    }
+    const saldo = Math.floor(args.saldoAktual);
+    if (!Number.isFinite(saldo) || saldo < 0) {
+      return { error: "Saldo aktual harus >= 0" };
+    }
 
-  const tanggal = startOfDay(args.tanggalIso);
-  const omzetSistem = await hitungOmzetSistem(tanggal, args.metode);
-  const selisih = saldo - omzetSistem;
-  const catatan = (args.catatan ?? "").trim();
+    const tanggal = startOfDay(args.tanggalIso);
+    const omzetSistem = await hitungOmzetSistem(tanggal, args.metode);
+    const selisih = saldo - omzetSistem;
+    const catatan = (args.catatan ?? "").trim();
 
-  if (selisih !== 0 && catatan.length < 3) {
-    return {
-      error: `Selisih ${selisih > 0 ? "+" : ""}${selisih.toLocaleString("id-ID")} terdeteksi — catatan wajib (min 3 karakter)`,
-    };
-  }
+    if (selisih !== 0 && catatan.length < 3) {
+      return {
+        error: `Selisih ${selisih > 0 ? "+" : ""}${selisih.toLocaleString("id-ID")} terdeteksi — catatan wajib (min 3 karakter)`,
+      };
+    }
 
-  const now = new Date();
+    const now = new Date();
 
-  // Upsert
-  const existing = await db.query.rekonsiliasiBank.findFirst({
-    where: and(
-      eq(rekonsiliasiBank.tanggal, tanggal),
-      eq(rekonsiliasiBank.metode, args.metode),
-    ),
-  });
-
-  // Handle foto: upload baru kalau ada, keep existing kalau tidak, atau hapus
-  let buktiFotoUrl: string | null = existing?.buktiFotoUrl ?? null;
-  if (args.hapusBuktiFoto) {
-    buktiFotoUrl = null;
-  } else if (args.fotoBase64 && args.fotoMimeType) {
-    const up = await uploadAsset({
-      prefix: `rekonsiliasi-${args.tanggalIso}-${args.metode}`,
-      base64: args.fotoBase64,
-      mimeType: args.fotoMimeType,
+    // Upsert
+    const existing = await db.query.rekonsiliasiBank.findFirst({
+      where: and(
+        eq(rekonsiliasiBank.tanggal, tanggal),
+        eq(rekonsiliasiBank.metode, args.metode),
+      ),
     });
-    if (up.ok && up.url) buktiFotoUrl = up.url;
-  }
 
-  let recordId: number;
-  const beforeSnapshot = existing
-    ? {
-        saldoAktual: existing.saldoAktual,
-        selisih: existing.selisih,
-        catatan: existing.catatan,
-        buktiFotoUrl: existing.buktiFotoUrl,
-      }
-    : null;
+    // Handle foto: upload baru kalau ada, keep existing kalau tidak, atau hapus
+    let buktiFotoUrl: string | null = existing?.buktiFotoUrl ?? null;
+    if (args.hapusBuktiFoto) {
+      buktiFotoUrl = null;
+    } else if (args.fotoBase64 && args.fotoMimeType) {
+      const up = await uploadAsset({
+        prefix: `rekonsiliasi-${args.tanggalIso}-${args.metode}`,
+        base64: args.fotoBase64,
+        mimeType: args.fotoMimeType,
+      });
+      if (up.ok && up.url) buktiFotoUrl = up.url;
+    }
 
-  if (existing) {
-    await db
-      .update(rekonsiliasiBank)
-      .set({
-        omzetSistem,
-        saldoAktual: saldo,
-        selisih,
-        catatan: catatan || null,
-        buktiFotoUrl,
-        verifiedBy: session.user.id,
-        verifiedAt: now,
-        updatedAt: now,
-      })
-      .where(eq(rekonsiliasiBank.id, existing.id));
-    recordId = existing.id;
-  } else {
-    const [inserted] = await db
-      .insert(rekonsiliasiBank)
-      .values({
-        tanggal,
+    let recordId: number;
+    const beforeSnapshot = existing
+      ? {
+          saldoAktual: existing.saldoAktual,
+          selisih: existing.selisih,
+          catatan: existing.catatan,
+          buktiFotoUrl: existing.buktiFotoUrl,
+        }
+      : null;
+
+    if (existing) {
+      await db
+        .update(rekonsiliasiBank)
+        .set({
+          omzetSistem,
+          saldoAktual: saldo,
+          selisih,
+          catatan: catatan || null,
+          buktiFotoUrl,
+          verifiedBy: session.user.id,
+          verifiedAt: now,
+          updatedAt: now,
+        })
+        .where(eq(rekonsiliasiBank.id, existing.id));
+      recordId = existing.id;
+    } else {
+      const [inserted] = await db
+        .insert(rekonsiliasiBank)
+        .values({
+          tanggal,
+          metode: args.metode,
+          omzetSistem,
+          saldoAktual: saldo,
+          selisih,
+          catatan: catatan || null,
+          buktiFotoUrl,
+          verifiedBy: session.user.id,
+          verifiedAt: now,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning({ id: rekonsiliasiBank.id });
+      if (!inserted) return { error: "Gagal simpan verifikasi" };
+      recordId = inserted.id;
+    }
+
+    await logAudit({
+      actorUserId: session.user.id,
+      action: existing ? "rekonsiliasi.update" : "rekonsiliasi.create",
+      entity: "rekonsiliasi_bank",
+      entityId: recordId,
+      before: beforeSnapshot,
+      after: {
+        tanggal: args.tanggalIso,
         metode: args.metode,
         omzetSistem,
         saldoAktual: saldo,
         selisih,
         catatan: catatan || null,
         buktiFotoUrl,
-        verifiedBy: session.user.id,
-        verifiedAt: now,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning({ id: rekonsiliasiBank.id });
-    if (!inserted) return { error: "Gagal simpan verifikasi" };
-    recordId = inserted.id;
+      },
+    });
+
+    revalidatePath("/admin/rekonsiliasi");
+    return { ok: true, id: recordId, selisih };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[verifikasiHarianAction] failed:", msg, err);
+    // Hint kalau kolom belum ada di DB (migration belum applied)
+    if (msg.toLowerCase().includes("no such column")) {
+      return {
+        error: `Kolom DB belum ada. Migration belum applied — hubungi admin server. Detail: ${msg}`,
+      };
+    }
+    return { error: `Server error: ${msg}` };
   }
-
-  await logAudit({
-    actorUserId: session.user.id,
-    action: existing ? "rekonsiliasi.update" : "rekonsiliasi.create",
-    entity: "rekonsiliasi_bank",
-    entityId: recordId,
-    before: beforeSnapshot,
-    after: {
-      tanggal: args.tanggalIso,
-      metode: args.metode,
-      omzetSistem,
-      saldoAktual: saldo,
-      selisih,
-      catatan: catatan || null,
-      buktiFotoUrl,
-    },
-  });
-
-  revalidatePath("/admin/rekonsiliasi");
-  return { ok: true, id: recordId, selisih };
 }
 
 /**

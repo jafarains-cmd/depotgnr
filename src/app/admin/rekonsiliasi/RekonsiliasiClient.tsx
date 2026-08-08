@@ -166,25 +166,30 @@ function MetodeRow({
       return;
     }
     startTransition(async () => {
-      const res = await verifikasiHarianAction({
-        tanggalIso: tanggal,
-        metode,
-        saldoAktual: currentSaldo,
-        catatan: catatan.trim(),
-        fotoBase64,
-        fotoMimeType: fotoMime,
-        hapusBuktiFoto: hapusBukti,
-      });
-      if ("error" in res) {
-        setErr(res.error);
-        return;
+      try {
+        const res = await verifikasiHarianAction({
+          tanggalIso: tanggal,
+          metode,
+          saldoAktual: currentSaldo,
+          catatan: catatan.trim(),
+          fotoBase64,
+          fotoMimeType: fotoMime,
+          hapusBuktiFoto: hapusBukti,
+        });
+        if ("error" in res) {
+          setErr(res.error);
+          return;
+        }
+        setEditMode(false);
+        setFotoBase64(null);
+        setFotoMime(null);
+        setFotoNama(null);
+        setHapusBukti(false);
+        router.refresh();
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        setErr(`Gagal koneksi ke server: ${msg}`);
       }
-      setEditMode(false);
-      setFotoBase64(null);
-      setFotoMime(null);
-      setFotoNama(null);
-      setHapusBukti(false);
-      router.refresh();
     });
   }
 
