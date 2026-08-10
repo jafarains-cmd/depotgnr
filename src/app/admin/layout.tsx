@@ -22,6 +22,7 @@ import {
   MessageSquareWarning,
   ShieldCheck,
   ArrowLeftRight,
+  Tag,
 } from "lucide-react";
 import { AppShell, type NavGroup } from "@/components/AppShell";
 import { requireRole } from "@/lib/permissions";
@@ -235,6 +236,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           icon: <Coins size={16} />,
           iconColor: "text-amber-600",
           badgeKey: "shiftStale",
+        },
+        {
+          href: "/admin/kategori-biaya",
+          label: "Kategori Biaya",
+          icon: <Tag size={16} />,
+          iconColor: "text-teal-600",
         },
         {
           href: "/admin/pengaturan",
