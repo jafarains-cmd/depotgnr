@@ -542,19 +542,43 @@ function CatatGantiForm({ row, onClose }: { row: Row; onClose: () => void }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [tanggal, setTanggal] = useState(new Date().toISOString().slice(0, 10));
-  const [biaya, setBiaya] = useState("");
+  const [biaya, setBiaya] = useState(row.hargaBeli ? String(row.hargaBeli) : "");
   const [catatan, setCatatan] = useState("");
+  const [alasanGanti, setAlasanGanti] = useState("");
   const [trackPengeluaran, setTrackPengeluaran] = useState(true);
+
+  // Hitung umur pakai sekarang (untuk deteksi cepat kalau ganti prematur)
+  const umurPakaiHari = row.tanggalPasang
+    ? Math.round(
+        (new Date(tanggal).getTime() - new Date(row.tanggalPasang).getTime()) /
+          (24 * 60 * 60 * 1000),
+      )
+    : row.gantiTerakhir
+      ? Math.round(
+          (new Date(tanggal).getTime() -
+            new Date(row.gantiTerakhir).getTime()) /
+            (24 * 60 * 60 * 1000),
+        )
+      : null;
+
+  const prematur = umurPakaiHari !== null && umurPakaiHari < row.intervalHari * 0.75;
 
   function submit() {
     setError(null);
     const n = biaya ? parseInt(biaya.replace(/[^0-9]/g, ""), 10) : 0;
+    if (prematur && alasanGanti.trim().length < 3) {
+      setError(
+        `Umur cuma ${umurPakaiHari} hari (target ${row.intervalHari} hari) — alasan wajib supaya bisa track kualitas air.`,
+      );
+      return;
+    }
     startTransition(async () => {
       const r = await catatGantiFilter({
         filterId: row.id,
         gantiAt: tanggal,
         biaya: n,
         catatan,
+        alasanGanti: alasanGanti.trim() || undefined,
         trackKePengeluaran: trackPengeluaran,
       });
       if ("error" in r) setError(r.error);
@@ -576,6 +600,31 @@ function CatatGantiForm({ row, onClose }: { row: Row; onClose: () => void }) {
         </button>
       </div>
 
+      {/* Info umur pakai */}
+      {umurPakaiHari !== null && (
+        <div
+          className={`rounded-lg p-2.5 text-xs ${
+            prematur
+              ? "bg-amber-100 border border-amber-300 text-amber-900"
+              : "bg-white border border-emerald-200"
+          }`}
+        >
+          <div className="font-bold">
+            {prematur ? "⚠ " : "✓ "}Umur pakai: <b>{umurPakaiHari} hari</b>{" "}
+            <span className="text-[color:var(--muted)] font-normal">
+              (target {row.intervalHari} hari ={" "}
+              {Math.round((umurPakaiHari / row.intervalHari) * 100)}%)
+            </span>
+          </div>
+          {prematur && (
+            <div className="mt-1 text-[11px]">
+              Umur pendek — kemungkinan indikator: kualitas air baku turun,
+              pemakaian tinggi, atau pre-filter perlu dicek.
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="text-xs font-medium block mb-1">Tanggal Ganti</label>
@@ -587,7 +636,9 @@ function CatatGantiForm({ row, onClose }: { row: Row; onClose: () => void }) {
           />
         </div>
         <div>
-          <label className="text-xs font-medium block mb-1">Biaya (Rp, opsional)</label>
+          <label className="text-xs font-medium block mb-1">
+            Biaya {row.hargaBeli && "(update harga baru)"}
+          </label>
           <input
             type="text"
             inputMode="numeric"
@@ -596,16 +647,36 @@ function CatatGantiForm({ row, onClose }: { row: Row; onClose: () => void }) {
             placeholder="200000"
             className="w-full px-3 py-2 border border-line rounded-md text-sm font-mono"
           />
+          {row.hargaBeli && (
+            <div className="text-[10px] text-[color:var(--muted)] mt-0.5">
+              Harga sebelumnya: {formatRupiah(row.hargaBeli)}
+            </div>
+          )}
         </div>
       </div>
 
+      {prematur && (
+        <div>
+          <label className="text-xs font-medium block mb-1 text-amber-900">
+            Alasan ganti lebih cepat <span className="text-red-600">(WAJIB)</span>
+          </label>
+          <input
+            type="text"
+            value={alasanGanti}
+            onChange={(e) => setAlasanGanti(e.target.value)}
+            placeholder="mis: warna air kuning, tekanan turun, cartridge pecah"
+            className="w-full px-3 py-2 border border-amber-300 rounded-md text-sm"
+          />
+        </div>
+      )}
+
       <div>
-        <label className="text-xs font-medium block mb-1">Catatan (opsional)</label>
+        <label className="text-xs font-medium block mb-1">Catatan tambahan (opsional)</label>
         <textarea
           value={catatan}
           onChange={(e) => setCatatan(e.target.value)}
           rows={2}
-          placeholder="mis: ganti karena warna air kuning"
+          placeholder="Supplier baru, brand, dll"
           className="w-full px-3 py-2 border border-line rounded-md text-sm"
         />
       </div>
@@ -617,11 +688,19 @@ function CatatGantiForm({ row, onClose }: { row: Row; onClose: () => void }) {
             checked={trackPengeluaran}
             onChange={(e) => setTrackPengeluaran(e.target.checked)}
           />
-          Catat juga sebagai pengeluaran kategori "filter"
+          Catat juga sebagai pengeluaran{" "}
+          {row.kategoriBiayaId ? "(pakai kategori master)" : '(kategori "filter")'}
         </label>
       )}
 
-      {error && <div className="text-xs text-red-600">{error}</div>}
+      {error && <div className="text-xs text-red-600 font-bold">{error}</div>}
+
+      {row.kategoriBiayaId && (
+        <div className="bg-violet-50 border border-violet-200 rounded p-2 text-[11px] text-violet-900">
+          ℹ Sparepart ini di-amortisasi. Tanggal pasang akan di-reset ke
+          tanggal ganti — periode amortisasi baru dimulai.
+        </div>
+      )}
 
       <div className="flex justify-end gap-2 pt-2 border-t border-emerald-200">
         <button

@@ -93,13 +93,18 @@ export async function toggleFilterAktif(
 
 /**
  * Catat penggantian filter. Update gantiTerakhir + insert ke filterLog.
- * Optional: kalau biaya > 0, auto-create entry di pengeluaran (kategori filter).
+ *
+ * Untuk sparepart amortisasi (filter yang di-link ke master):
+ *  - Reset tanggalPasang ke tanggal ganti (mulai periode amortisasi baru)
+ *  - Update hargaBeli kalau ada harga baru (track historical price)
+ *  - Auto-create pengeluaran dengan kategori dari master (bukan hardcoded)
  */
 export async function catatGantiFilter(args: {
   filterId: number;
   gantiAt: string; // ISO date YYYY-MM-DD
   biaya?: number;
   catatan?: string;
+  alasanGanti?: string;
   trackKePengeluaran?: boolean;
 }): Promise<{ ok: true } | { error: string }> {
   const session = await requireRole(["admin"]);
@@ -110,6 +115,22 @@ export async function catatGantiFilter(args: {
   const f = await db.query.filter.findFirst({ where: eq(filter.id, args.filterId) });
   if (!f) return { error: "Filter tidak ditemukan" };
 
+  // Gabung catatan + alasan ganti (kalau ada)
+  const catatanLog = [args.catatan?.trim(), args.alasanGanti?.trim()]
+    .filter(Boolean)
+    .join(" · ") || null;
+
+  // Resolve kategori master kalau ada (untuk klasifikasi pengeluaran)
+  let kategoriSlug = "filter"; // fallback lama
+  let kategoriBiayaId: number | null = null;
+  if (f.kategoriBiayaId) {
+    const kat = await getKategoriById(f.kategoriBiayaId);
+    if (kat) {
+      kategoriSlug = kat.slug;
+      kategoriBiayaId = kat.id;
+    }
+  }
+
   await db.transaction((tx) => {
     tx.insert(filterLog)
       .values({
@@ -117,11 +138,29 @@ export async function catatGantiFilter(args: {
         gantiAt: tanggal,
         gantiBy: session.user.id,
         biaya,
-        catatan: args.catatan?.trim() || null,
+        catatan: catatanLog,
       })
       .run();
+
+    // Update filter:
+    //  - gantiTerakhir = tanggal ganti
+    //  - tanggalPasang = tanggal ganti (mulai periode amortisasi baru)
+    //  - hargaBeli = update kalau ada biaya baru (track harga historis)
+    const filterUpdate: {
+      gantiTerakhir: Date;
+      tanggalPasang: Date;
+      hargaBeli?: number;
+      updatedAt: Date;
+    } = {
+      gantiTerakhir: tanggal,
+      tanggalPasang: tanggal,
+      updatedAt: new Date(),
+    };
+    if (biaya > 0) {
+      filterUpdate.hargaBeli = biaya;
+    }
     tx.update(filter)
-      .set({ gantiTerakhir: tanggal, updatedAt: new Date() })
+      .set(filterUpdate)
       .where(eq(filter.id, args.filterId))
       .run();
 
@@ -130,9 +169,10 @@ export async function catatGantiFilter(args: {
       tx.insert(pengeluaran)
         .values({
           tanggal,
-          kategori: "filter",
+          kategori: kategoriSlug,
+          kategoriBiayaId,
           jumlah: biaya,
-          deskripsi: `Ganti ${f.nama}${args.catatan ? ` — ${args.catatan}` : ""}`,
+          deskripsi: `Ganti ${f.nama}${catatanLog ? ` — ${catatanLog}` : ""}`,
           createdBy: session.user.id,
           updatedAt: new Date(),
         })
@@ -145,6 +185,7 @@ export async function catatGantiFilter(args: {
   if (biaya > 0) {
     revalidatePath("/admin/pengeluaran");
     revalidatePath("/admin/laporan");
+    revalidatePath("/admin/laporan/laba");
   }
   return { ok: true };
 }
