@@ -9,6 +9,7 @@ import { shiftKasir } from "@/db/schema/shift";
 import { getShiftAktif, ringkasanShift } from "@/lib/shift";
 import { logAudit } from "@/lib/audit";
 import { uploadAsset } from "@/lib/drive";
+import { getKategoriBySlug, getKategoriById } from "@/lib/kategori-biaya";
 
 async function recomputeIfClosed(shiftId: number): Promise<void> {
   const shift = await db.query.shiftKasir.findFirst({
@@ -31,114 +32,119 @@ async function recomputeIfClosed(shiftId: number): Promise<void> {
   await db.update(shiftKasir).set(updates).where(eq(shiftKasir.id, shiftId));
 }
 
-// Kategori pengeluaran yang biasa terjadi di operasional kasir/kurir
-const KATEGORI_VALID = [
-  "bensin",
-  "ongkos-antar",
-  "tip-kurir",
-  "pemeliharaan",
-  "makan-kasir",
-  "beli-galon-eceran",
-  "listrik",
-  "lainnya",
-] as const;
-
-type KategoriPengeluaran = (typeof KATEGORI_VALID)[number];
-
-function isKategoriValid(k: string): k is KategoriPengeluaran {
-  return (KATEGORI_VALID as readonly string[]).includes(k);
-}
-
 export async function tambahPengeluaranKasirAction(args: {
   jumlah: number;
-  kategori: string;
+  /** Slug kategori (backward-compat) atau id numerik master. */
+  kategori?: string;
+  kategoriBiayaId?: number | null;
   deskripsi: string;
   shiftId?: number;
   fotoBase64?: string | null;
   fotoMimeType?: string | null;
 }): Promise<{ ok: true; id: number } | { error: string }> {
-  const session = await requireRole(["admin", "kasir"]);
+  try {
+    const session = await requireRole(["admin", "kasir"]);
 
-  const jumlah = Math.floor(args.jumlah);
-  if (!Number.isFinite(jumlah) || jumlah <= 0) {
-    return { error: "Jumlah harus > 0" };
-  }
-  if (!isKategoriValid(args.kategori)) {
-    return { error: "Kategori tidak valid" };
-  }
-  const deskripsi = (args.deskripsi ?? "").trim();
-  if (deskripsi.length < 3) {
-    return { error: "Keterangan wajib (min 3 karakter)" };
-  }
-
-  let shiftId: number | null = args.shiftId ?? null;
-  if (!shiftId) {
-    const aktif = await getShiftAktif(session.user.id);
-    shiftId = aktif?.id ?? null;
-  }
-  if (!shiftId) {
-    return { error: "Tidak ada shift aktif. Buka shift dulu." };
-  }
-
-  const shift = await db.query.shiftKasir.findFirst({
-    where: eq(shiftKasir.id, shiftId),
-  });
-  if (!shift) return { error: "Shift tidak ditemukan" };
-
-  const isAdmin = session.user.role === "admin";
-  if (!isAdmin) {
-    if (shift.kasirUserId !== session.user.id) {
-      return { error: "Hanya kasir pemilik shift atau admin yang bisa tambah" };
+    const jumlah = Math.floor(args.jumlah);
+    if (!Number.isFinite(jumlah) || jumlah <= 0) {
+      return { error: "Jumlah harus > 0" };
     }
-    if (shift.status !== "open") {
-      return { error: "Shift sudah ditutup. Minta admin untuk koreksi." };
-    }
-  }
 
-  // Upload foto nota kalau ada (best-effort)
-  let fotoUrl: string | null = null;
-  if (args.fotoBase64 && args.fotoMimeType) {
-    const up = await uploadAsset({
-      prefix: `pengeluaran-shift-${shiftId}`,
-      base64: args.fotoBase64,
-      mimeType: args.fotoMimeType,
+    // Resolve kategori dari master (id > slug fallback)
+    let kategoriBiayaId: number | null = args.kategoriBiayaId ?? null;
+    let kategoriSlug: string = args.kategori?.trim() ?? "";
+    if (kategoriBiayaId) {
+      const kat = await getKategoriById(kategoriBiayaId);
+      if (!kat) return { error: "Kategori tidak ditemukan di master" };
+      kategoriSlug = kat.slug;
+    } else if (kategoriSlug) {
+      // Fallback: cari master by slug
+      const kat = await getKategoriBySlug(kategoriSlug);
+      if (kat) kategoriBiayaId = kat.id;
+      // Kalau tidak ada di master, tetap simpan sebagai string (backward-compat)
+    }
+    if (!kategoriSlug) {
+      return { error: "Kategori wajib dipilih" };
+    }
+
+    const deskripsi = (args.deskripsi ?? "").trim();
+    if (deskripsi.length < 3) {
+      return { error: "Keterangan wajib (min 3 karakter)" };
+    }
+
+    let shiftId: number | null = args.shiftId ?? null;
+    if (!shiftId) {
+      const aktif = await getShiftAktif(session.user.id);
+      shiftId = aktif?.id ?? null;
+    }
+    if (!shiftId) {
+      return { error: "Tidak ada shift aktif. Buka shift dulu." };
+    }
+
+    const shift = await db.query.shiftKasir.findFirst({
+      where: eq(shiftKasir.id, shiftId),
     });
-    if (up.ok && up.url) fotoUrl = up.url;
+    if (!shift) return { error: "Shift tidak ditemukan" };
+
+    const isAdmin = session.user.role === "admin";
+    if (!isAdmin) {
+      if (shift.kasirUserId !== session.user.id) {
+        return { error: "Hanya kasir pemilik shift atau admin yang bisa tambah" };
+      }
+      if (shift.status !== "open") {
+        return { error: "Shift sudah ditutup. Minta admin untuk koreksi." };
+      }
+    }
+
+    // Upload foto nota kalau ada (best-effort)
+    let fotoUrl: string | null = null;
+    if (args.fotoBase64 && args.fotoMimeType) {
+      const up = await uploadAsset({
+        prefix: `pengeluaran-shift-${shiftId}`,
+        base64: args.fotoBase64,
+        mimeType: args.fotoMimeType,
+      });
+      if (up.ok && up.url) fotoUrl = up.url;
+    }
+
+    const now = new Date();
+    const inserted = await db
+      .insert(pengeluaran)
+      .values({
+        tanggal: now,
+        kategori: kategoriSlug,
+        kategoriBiayaId,
+        jumlah,
+        deskripsi,
+        fotoNotaUrl: fotoUrl,
+        createdBy: session.user.id,
+        shiftId,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning({ id: pengeluaran.id });
+
+    const newId = inserted[0]?.id;
+    if (!newId) return { error: "Gagal simpan pengeluaran" };
+
+    await recomputeIfClosed(shiftId);
+
+    await logAudit({
+      actorUserId: session.user.id,
+      action: "pengeluaran.tambah-kasir",
+      entity: "pengeluaran",
+      entityId: newId,
+      after: { jumlah, kategori: kategoriSlug, kategoriBiayaId, deskripsi, shiftId },
+    });
+
+    revalidatePath("/kasir/shift");
+    revalidatePath("/admin/shift");
+    revalidatePath("/admin/pengeluaran");
+    return { ok: true, id: newId };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { error: `Gagal: ${msg}` };
   }
-
-  const now = new Date();
-  const inserted = await db
-    .insert(pengeluaran)
-    .values({
-      tanggal: now,
-      kategori: args.kategori,
-      jumlah,
-      deskripsi,
-      fotoNotaUrl: fotoUrl,
-      createdBy: session.user.id,
-      shiftId,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .returning({ id: pengeluaran.id });
-
-  const newId = inserted[0]?.id;
-  if (!newId) return { error: "Gagal simpan pengeluaran" };
-
-  await recomputeIfClosed(shiftId);
-
-  await logAudit({
-    actorUserId: session.user.id,
-    action: "pengeluaran.tambah-kasir",
-    entity: "pengeluaran",
-    entityId: newId,
-    after: { jumlah, kategori: args.kategori, deskripsi, shiftId },
-  });
-
-  revalidatePath("/kasir/shift");
-  revalidatePath("/admin/shift");
-  revalidatePath("/admin/pengeluaran");
-  return { ok: true, id: newId };
 }
 
 export async function hapusPengeluaranKasirAction(

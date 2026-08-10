@@ -1,5 +1,6 @@
 import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
 import { user } from "./auth";
+import { kategoriBiaya } from "./kategori-biaya";
 
 /**
  * Bahan baku consumable: tutup galon, segel, label, dll.
@@ -14,6 +15,10 @@ export const bahanBaku = sqliteTable(
     stok: integer("stok").notNull().default(0),
     threshold: integer("threshold").notNull().default(0), // alert kalau stok < threshold
     hargaSatuan: integer("harga_satuan").notNull().default(0), // optional, untuk auto-cost
+    /** FK ke master kategori_biaya (opsional — kalau di-link, pembelian masuk COGS di laporan). */
+    kategoriBiayaId: integer("kategori_biaya_id").references(() => kategoriBiaya.id, {
+      onDelete: "set null",
+    }),
     aktif: integer("aktif", { mode: "boolean" }).notNull().default(true),
     catatan: text("catatan"),
     createdAt: integer("created_at", { mode: "timestamp" })
@@ -25,6 +30,7 @@ export const bahanBaku = sqliteTable(
   },
   (t) => ({
     aktifIdx: index("bahan_baku_aktif_idx").on(t.aktif),
+    kategoriBiayaIdx: index("bahan_baku_kategori_biaya_idx").on(t.kategoriBiayaId),
   }),
 );
 

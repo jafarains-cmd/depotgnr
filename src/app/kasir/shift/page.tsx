@@ -7,6 +7,7 @@ import { getShiftAktif, getSemuaShiftAktif, ringkasanShift, SHIFT_REOPEN_WINDOW_
 import { inArray } from "drizzle-orm";
 import { kasMasuk } from "@/db/schema/kas-masuk";
 import { pengeluaran } from "@/db/schema/pengeluaran";
+import { getKategoriAktif } from "@/lib/kategori-biaya";
 import { ShiftClient } from "./ShiftClient";
 import { PageHeader } from "@/components/AppShell";
 
@@ -88,6 +89,9 @@ export default async function ShiftPage({
     .from(userTable)
     .where(inArray(userTable.role, ["admin", "kasir"]))
     .then((rows) => rows.filter((u) => u.id !== session.user.id));
+
+  // Kategori pengeluaran dari master (tipe operasional + sparepart utk pemeliharaan mendadak)
+  const kategoriPengeluaranMaster = await getKategoriAktif("operasional");
 
   return (
     <div className="p-4 md:p-6 max-w-3xl">
@@ -193,6 +197,11 @@ export default async function ShiftPage({
             : null
         }
         kasirLain={kasirLain}
+        kategoriPengeluaranMaster={kategoriPengeluaranMaster.map((k) => ({
+          id: k.id,
+          slug: k.slug,
+          nama: k.nama,
+        }))}
       />
     </div>
   );

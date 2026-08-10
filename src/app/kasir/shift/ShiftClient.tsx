@@ -99,17 +99,6 @@ const KATEGORI_LABEL: Record<string, string> = {
   lainnya: "Lainnya",
 };
 
-const KATEGORI_PENGELUARAN_LABEL: Record<string, string> = {
-  bensin: "Bensin motor/mobil antar",
-  "ongkos-antar": "Ongkos kurir/antar",
-  "tip-kurir": "Tip kurir",
-  pemeliharaan: "Pemeliharaan alat",
-  "makan-kasir": "Makan/minum kasir & kurir",
-  "beli-galon-eceran": "Beli galon eceran cepat",
-  listrik: "Listrik/token/air",
-  lainnya: "Lainnya",
-};
-
 type PendingHandover = {
   fromShiftId: number;
   amount: number;
@@ -132,6 +121,7 @@ export function ShiftClient({
   pengeluaranList,
   pendingHandover,
   kasirLain,
+  kategoriPengeluaranMaster,
 }: {
   myShiftAktif: MyShiftAktif | null;
   ringkasanAktif: Ringkasan | null;
@@ -143,6 +133,7 @@ export function ShiftClient({
   pengeluaranList: PengeluaranItem[];
   pendingHandover: PendingHandover;
   kasirLain: KasirOption[];
+  kategoriPengeluaranMaster: { id: number; slug: string; nama: string }[];
 }) {
   // Auto-open modal buka shift kalau ada nextUrl dan belum ada shift aktif
   const [openBuka, setOpenBuka] = useState(Boolean(nextUrl && !myShiftAktif));
@@ -270,6 +261,7 @@ export function ShiftClient({
         <PengeluaranSection
           shiftId={myShiftAktif.id}
           items={pengeluaranList}
+          kategoriMaster={kategoriPengeluaranMaster}
         />
       )}
 
@@ -1311,21 +1303,34 @@ function KasMasukSection({
 function PengeluaranSection({
   shiftId,
   items,
+  kategoriMaster,
 }: {
   shiftId: number;
   items: PengeluaranItem[];
+  kategoriMaster: { id: number; slug: string; nama: string }[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [showForm, setShowForm] = useState(false);
   const [jumlah, setJumlah] = useState("");
-  const [kategori, setKategori] = useState("bensin");
+  const defaultKategoriId = kategoriMaster[0]?.id ?? 0;
+  const [kategoriBiayaId, setKategoriBiayaId] = useState(defaultKategoriId);
   const [deskripsi, setDeskripsi] = useState("");
   const [fotoBase64, setFotoBase64] = useState<string | null>(null);
   const [fotoMime, setFotoMime] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   const total = items.reduce((s, it) => s + it.jumlah, 0);
+
+  // Lookup slug → nama dari master (untuk display item existing).
+  // Fallback: format slug jadi Title Case kalau tidak ada di master.
+  const slugToNama = new Map(kategoriMaster.map((k) => [k.slug, k.nama]));
+  function displayKategori(slug: string): string {
+    return (
+      slugToNama.get(slug) ??
+      slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+    );
+  }
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -1355,10 +1360,14 @@ function PengeluaranSection({
       setErr("Keterangan wajib (min 3 karakter)");
       return;
     }
+    if (!kategoriBiayaId) {
+      setErr("Kategori wajib dipilih");
+      return;
+    }
     startTransition(async () => {
       const res = await tambahPengeluaranKasirAction({
         jumlah: j,
-        kategori,
+        kategoriBiayaId,
         deskripsi: deskripsi.trim(),
         shiftId,
         fotoBase64,
@@ -1370,7 +1379,7 @@ function PengeluaranSection({
       }
       setJumlah("");
       setDeskripsi("");
-      setKategori("bensin");
+      setKategoriBiayaId(defaultKategoriId);
       setFotoBase64(null);
       setFotoMime(null);
       setShowForm(false);
@@ -1436,13 +1445,13 @@ function PengeluaranSection({
               Kategori
             </label>
             <select
-              value={kategori}
-              onChange={(e) => setKategori(e.target.value)}
+              value={kategoriBiayaId}
+              onChange={(e) => setKategoriBiayaId(Number(e.target.value))}
               className="w-full mt-1 px-3 py-2 border border-line rounded-lg text-sm bg-surface"
             >
-              {Object.entries(KATEGORI_PENGELUARAN_LABEL).map(([k, label]) => (
-                <option key={k} value={k}>
-                  {label}
+              {kategoriMaster.map((k) => (
+                <option key={k.id} value={k.id}>
+                  {k.nama}
                 </option>
               ))}
             </select>
@@ -1517,7 +1526,7 @@ function PengeluaranSection({
                 <div className="text-sm font-bold inline-flex items-center gap-2">
                   −{formatRupiah(it.jumlah)}
                   <span className="text-[10px] font-medium text-red-700 bg-red-100 px-1.5 py-0.5 rounded">
-                    {KATEGORI_PENGELUARAN_LABEL[it.kategori] ?? it.kategori}
+                    {displayKategori(it.kategori)}
                   </span>
                 </div>
                 {it.deskripsi && (
