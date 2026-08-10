@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { filter, filterLog } from "@/db/schema/filter";
 import { pengeluaran } from "@/db/schema/pengeluaran";
 import { requireRole } from "@/lib/permissions";
+import { getKategoriById } from "@/lib/kategori-biaya";
 
 type SaveFilterInput = {
   id?: number;
@@ -13,6 +14,12 @@ type SaveFilterInput = {
   kategori: "carbon" | "sediment" | "membran_ro" | "uv_lamp" | "lainnya";
   intervalHari: number;
   catatan?: string;
+  /** FK ke master kategori_biaya (opsional). Kalau ada, dipakai untuk amortisasi. */
+  kategoriBiayaId?: number | null;
+  /** Harga beli untuk amortisasi (opsional). */
+  hargaBeli?: number | null;
+  /** Tanggal pasang (opsional, default = sekarang untuk record baru). */
+  tanggalPasang?: string | null;
 };
 
 export async function saveFilter(
@@ -26,10 +33,29 @@ export async function saveFilter(
   }
   if (input.intervalHari > 3650) return { error: "Interval terlalu panjang (>10 tahun)" };
 
+  // Validasi kategoriBiayaId kalau ada — harus valid + tipe sparepart
+  let kategoriBiayaId: number | null = input.kategoriBiayaId ?? null;
+  if (kategoriBiayaId) {
+    const kat = await getKategoriById(kategoriBiayaId);
+    if (!kat) return { error: "Kategori biaya tidak ditemukan di master" };
+    if (kat.tipe !== "sparepart") {
+      return { error: "Kategori harus bertipe 'sparepart' untuk amortisasi" };
+    }
+  }
+
+  const hargaBeli =
+    input.hargaBeli && input.hargaBeli > 0 ? Math.floor(input.hargaBeli) : null;
+  const tanggalPasang = input.tanggalPasang
+    ? new Date(input.tanggalPasang)
+    : null;
+
   const data = {
     nama,
     kategori: input.kategori,
+    kategoriBiayaId,
     intervalHari: input.intervalHari,
+    hargaBeli,
+    tanggalPasang: tanggalPasang && !isNaN(tanggalPasang.getTime()) ? tanggalPasang : null,
     catatan: input.catatan?.trim() || null,
     updatedAt: new Date(),
   };

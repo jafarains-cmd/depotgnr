@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/permissions";
 import { PemeliharaanClient } from "./PemeliharaanClient";
 import { KATEGORI_FILTER } from "./kategori";
 import { computeFilterStatus } from "@/lib/filter-status";
+import { getKategoriAktif } from "@/lib/kategori-biaya";
 
 export const dynamic = "force-dynamic";
 
@@ -50,8 +51,14 @@ export default async function PemeliharaanPage() {
       status: s.status,
       daysLeft: s.daysLeft,
       nextDueAt: s.nextDueAt?.toISOString() ?? null,
+      kategoriBiayaId: f.kategoriBiayaId,
+      hargaBeli: f.hargaBeli,
+      tanggalPasang: f.tanggalPasang?.toISOString() ?? null,
     };
   });
+
+  // Sparepart master untuk auto-fill amortisasi
+  const sparepartMaster = await getKategoriAktif("sparepart");
 
   return (
     <div className="p-4 md:p-6 max-w-5xl space-y-4">
@@ -63,6 +70,12 @@ export default async function PemeliharaanPage() {
       <PemeliharaanClient
         rows={rows}
         kategoriOptions={[...KATEGORI_FILTER]}
+        sparepartMaster={sparepartMaster.map((k) => ({
+          id: k.id,
+          nama: k.nama,
+          umurHariDefault: k.umurHariDefault,
+          hargaEstimasi: k.hargaEstimasi,
+        }))}
         recentLogs={recentLogs.map((l) => ({
           id: l.id,
           filterId: l.filterId,

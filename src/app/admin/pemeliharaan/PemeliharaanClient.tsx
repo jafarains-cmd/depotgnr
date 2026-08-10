@@ -39,6 +39,16 @@ export type Row = {
   status: FilterStatus;
   daysLeft: number | null;
   nextDueAt: string | null;
+  kategoriBiayaId: number | null;
+  hargaBeli: number | null;
+  tanggalPasang: string | null;
+};
+
+export type SparepartMaster = {
+  id: number;
+  nama: string;
+  umurHariDefault: number | null;
+  hargaEstimasi: number | null;
 };
 
 export type LogRow = {
@@ -56,10 +66,12 @@ type KategoriOption = { value: string; label: string; defaultInterval: number };
 export function PemeliharaanClient({
   rows,
   kategoriOptions,
+  sparepartMaster,
   recentLogs,
 }: {
   rows: Row[];
   kategoriOptions: KategoriOption[];
+  sparepartMaster: SparepartMaster[];
   recentLogs: LogRow[];
 }) {
   const fmt = useFormatTanggal();
@@ -100,6 +112,7 @@ export function PemeliharaanClient({
         <FilterForm
           initial={editing ?? undefined}
           kategoriOptions={kategoriOptions}
+          sparepartMaster={sparepartMaster}
           onClose={() => {
             setCreating(false);
             setEditing(null);
@@ -311,10 +324,12 @@ function DeleteButton({ id, nama }: { id: number; nama: string }) {
 function FilterForm({
   initial,
   kategoriOptions,
+  sparepartMaster,
   onClose,
 }: {
   initial?: Row;
   kategoriOptions: KategoriOption[];
+  sparepartMaster: SparepartMaster[];
   onClose: () => void;
 }) {
   const [pending, startTransition] = useTransition();
@@ -327,6 +342,20 @@ function FilterForm({
     String(initial?.intervalHari ?? 180),
   );
   const [catatan, setCatatan] = useState(initial?.catatan ?? "");
+  // Amortisasi fields (Fase 2)
+  const [kategoriBiayaId, setKategoriBiayaId] = useState<string>(
+    initial?.kategoriBiayaId ? String(initial.kategoriBiayaId) : "",
+  );
+  const [hargaBeli, setHargaBeli] = useState(
+    initial?.hargaBeli ? String(initial.hargaBeli) : "",
+  );
+  const [tanggalPasang, setTanggalPasang] = useState(
+    initial?.tanggalPasang
+      ? initial.tanggalPasang.slice(0, 10)
+      : initial
+        ? ""
+        : new Date().toISOString().slice(0, 10),
+  );
 
   function handleKategoriChange(k: string) {
     setKategori(k as Kategori);
@@ -336,9 +365,24 @@ function FilterForm({
     }
   }
 
+  function handleMasterChange(id: string) {
+    setKategoriBiayaId(id);
+    // Auto-fill umur & harga default kalau pilih master
+    if (!id) return;
+    const master = sparepartMaster.find((m) => m.id === Number(id));
+    if (master) {
+      if (master.umurHariDefault) setIntervalHari(String(master.umurHariDefault));
+      if (master.hargaEstimasi && !hargaBeli)
+        setHargaBeli(String(master.hargaEstimasi));
+      // Auto-fill nama kalau kosong
+      if (!nama.trim()) setNama(master.nama);
+    }
+  }
+
   function submit() {
     setError(null);
     const n = parseInt(intervalHari, 10);
+    const hb = hargaBeli ? parseInt(hargaBeli.replace(/\D/g, ""), 10) : null;
     startTransition(async () => {
       const r = await saveFilter({
         id: initial?.id,
@@ -346,6 +390,9 @@ function FilterForm({
         kategori,
         intervalHari: n,
         catatan,
+        kategoriBiayaId: kategoriBiayaId ? Number(kategoriBiayaId) : null,
+        hargaBeli: hb,
+        tanggalPasang: tanggalPasang || null,
       });
       if ("error" in r) setError(r.error);
       else onClose();
@@ -396,6 +443,65 @@ function FilterForm({
             className="w-full px-3 py-2 border border-line rounded-md text-sm"
           />
         </div>
+      </div>
+
+      {/* Amortisasi (link ke master kategori sparepart) */}
+      <div className="bg-violet-50 border border-violet-200 rounded-lg p-3 space-y-2">
+        <div className="text-xs font-bold text-violet-900">
+          🔗 Link ke Master Sparepart (opsional — untuk analisis laba)
+        </div>
+        <div className="text-[10px] text-violet-800 leading-relaxed">
+          Kalau di-link, biaya akan otomatis di-amortisasi (tersebar rata sesuai
+          umur pakai) di Laporan Laba.
+        </div>
+
+        <div>
+          <label className="text-xs font-medium block mb-1">
+            Master Sparepart
+          </label>
+          <select
+            value={kategoriBiayaId}
+            onChange={(e) => handleMasterChange(e.target.value)}
+            className="w-full px-3 py-2 border border-line rounded-md text-sm bg-surface"
+          >
+            <option value="">— Tidak di-link (tidak diamortisasi) —</option>
+            {sparepartMaster.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.nama}
+                {m.umurHariDefault && ` (~${Math.round(m.umurHariDefault / 30)} bln)`}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {kategoriBiayaId && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium block mb-1">
+                Harga Beli (Rp)
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={hargaBeli}
+                onChange={(e) => setHargaBeli(e.target.value.replace(/\D/g, ""))}
+                placeholder="300000"
+                className="w-full px-3 py-2 border border-line rounded-md text-sm font-mono"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium block mb-1">
+                Tanggal Pasang
+              </label>
+              <input
+                type="date"
+                value={tanggalPasang}
+                onChange={(e) => setTanggalPasang(e.target.value)}
+                className="w-full px-3 py-2 border border-line rounded-md text-sm"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <div>
