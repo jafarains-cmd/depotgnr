@@ -17,6 +17,24 @@ export const auth = betterAuth({
       verification: schema.verification,
     },
   }),
+  // Session TTL panjang supaya pelanggan/staff tidak sering logout.
+  // - expiresIn 90 hari: kalau tidak buka app 3 bulan, baru logout
+  // - updateAge 7 hari: session auto-extend seminggu sekali saat ada request
+  // - freshAge 0: skip re-authentication requirement untuk aksi sensitif
+  session: {
+    expiresIn: 60 * 60 * 24 * 90, // 90 hari
+    updateAge: 60 * 60 * 24 * 7, // refresh mingguan
+    freshAge: 0,
+  },
+  // Cookie config: persistent 90 hari (bukan session-only) supaya cookie
+  // tidak hilang saat browser tutup. sameSite lax = default Better Auth
+  // (aman untuk form action + navigasi normal).
+  advanced: {
+    defaultCookieAttributes: {
+      maxAge: 60 * 60 * 24 * 90, // 90 hari persistent
+      sameSite: "lax",
+    },
+  },
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false,
