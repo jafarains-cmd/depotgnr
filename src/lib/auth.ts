@@ -1,8 +1,10 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin, username, phoneNumber } from "better-auth/plugins";
+import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { sendWhatsApp } from "./whatsapp";
+import { trackLoginSuccess } from "./login-tracking";
 
 export const auth = betterAuth({
   appName: "Depot Air Minum",
@@ -33,6 +35,40 @@ export const auth = betterAuth({
     defaultCookieAttributes: {
       maxAge: 60 * 60 * 24 * 90, // 90 hari persistent
       sameSite: "lax",
+    },
+  },
+  // Rate limit brute-force login: max 5 attempts per 15 menit per IP.
+  // Setelah lockout, harus tunggu window habis. Cegah dictionary attack.
+  rateLimit: {
+    enabled: true,
+    window: 60 * 15, // 15 menit
+    max: 5, // max 5 gagal login per window
+    // storage default = memory. Untuk multi-instance/serverless nanti,
+    // bisa switch ke database.
+    storage: "memory",
+  },
+  // Hook untuk log login success + kirim notif kalau device baru
+  databaseHooks: {
+    session: {
+      create: {
+        after: async (session) => {
+          try {
+            // Session baru dibuat = login sukses. Baca user detail untuk log.
+            const u = await db.query.user.findFirst({
+              where: eq(schema.user.id, session.userId),
+            });
+            if (!u) return;
+            await trackLoginSuccess({
+              userId: session.userId,
+              identifier: u.email ?? u.name ?? session.userId,
+              ipAddress: session.ipAddress ?? null,
+              userAgent: session.userAgent ?? null,
+            });
+          } catch {
+            // silent — jangan block login
+          }
+        },
+      },
     },
   },
   emailAndPassword: {

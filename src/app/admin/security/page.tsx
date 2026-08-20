@@ -21,8 +21,10 @@ import {
   getAnomalies,
   getAuditStat,
   getEnvCheck,
+  getSessionInsights,
   type HealthStat,
 } from "@/lib/security-stats";
+import { getLoginStats } from "@/lib/login-tracking";
 import { SecurityTools, RefreshButton } from "./SecurityClient";
 
 export const dynamic = "force-dynamic";
@@ -57,13 +59,16 @@ function fmtBytes(n: number | null): string {
 export default async function SecurityDashboard() {
   await requireRole(["admin"]);
 
-  const [health, users, anomalies, audit, envCheck] = await Promise.all([
-    getSecurityHealth(),
-    getUserStat(),
-    getAnomalies(),
-    getAuditStat(),
-    Promise.resolve(getEnvCheck()),
-  ]);
+  const [health, users, anomalies, audit, envCheck, sessionInsight, loginStats] =
+    await Promise.all([
+      getSecurityHealth(),
+      getUserStat(),
+      getAnomalies(),
+      getAuditStat(),
+      Promise.resolve(getEnvCheck()),
+      getSessionInsights(),
+      getLoginStats(),
+    ]);
 
   const critical = anomalies.filter((a) => a.severity === "critical").length;
   const warning = anomalies.filter((a) => a.severity === "warning").length;
@@ -442,6 +447,147 @@ export default async function SecurityDashboard() {
         </div>
       </section>
 
+      {/* SECTION EXTRA: LOGIN ACTIVITY (7 hari) */}
+      <section>
+        <SectionTitle icon={<KeyRound size={16} />} label="Aktivitas Login (7 hari)" />
+        <div className="grid grid-cols-3 gap-3">
+          <StatBox
+            label="Login Sukses"
+            value={loginStats.totalSuccess7d}
+            color="emerald"
+          />
+          <StatBox
+            label="Login Gagal"
+            value={loginStats.totalFailed7d}
+            color={loginStats.totalFailed7d > 20 ? "red" : "amber"}
+          />
+          <StatBox
+            label="Rate Limited"
+            value={loginStats.totalRateLimited7d}
+            color={loginStats.totalRateLimited7d > 0 ? "red" : "muted"}
+          />
+        </div>
+
+        {loginStats.suspiciousIPs.length > 0 && (
+          <div className="mt-3 bg-red-50 border border-red-200 rounded-xl p-3">
+            <div className="text-xs font-bold text-red-900 mb-2">
+              ⚠ IP Suspicious (≥10 gagal login dalam 7 hari)
+            </div>
+            <div className="space-y-1 text-xs">
+              {loginStats.suspiciousIPs.map((ip) => (
+                <div key={ip.ipAddress} className="flex justify-between">
+                  <span className="font-mono">{ip.ipAddress}</span>
+                  <span className="font-bold text-red-700">{ip.failCount} gagal</span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-2 text-[11px] text-red-800">
+              Pertimbangkan block IP di Cloudflare atau firewall server.
+            </div>
+          </div>
+        )}
+
+        {loginStats.topFailedIdentifiers.length > 0 && (
+          <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3">
+            <div className="text-xs font-bold text-amber-900 mb-2">
+              Username/email yang paling sering gagal login
+            </div>
+            <div className="space-y-1 text-xs">
+              {loginStats.topFailedIdentifiers.map((id) => (
+                <div key={id.identifier} className="flex justify-between">
+                  <span className="font-mono truncate">{id.identifier}</span>
+                  <span className="font-bold text-amber-700">{id.count}×</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* SECTION EXTRA: SESSION INSIGHT */}
+      <section>
+        <SectionTitle icon={<Users size={16} />} label="Session Insight" />
+        <div className="space-y-3">
+          {sessionInsight.multiDeviceUsers.length > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+              <div className="text-xs font-bold text-amber-900 mb-2">
+                👥 User login di banyak device (≥3) — kemungkinan sharing akun
+              </div>
+              <div className="space-y-1.5 text-xs">
+                {sessionInsight.multiDeviceUsers.map((u) => (
+                  <div key={u.userId} className="border-b border-amber-200 last:border-0 pb-1.5">
+                    <div className="font-bold">
+                      {u.userName}{" "}
+                      <span className="text-[10px] text-[color:var(--muted)] font-normal">
+                        ({u.role})
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-amber-800">
+                      {u.deviceCount} device aktif · {u.ips.length} IP
+                    </div>
+                    <div className="text-[10px] text-[color:var(--muted)] font-mono">
+                      {u.ips.join(", ")}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {sessionInsight.suspiciousIPs.length > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+              <div className="text-xs font-bold text-red-900 mb-2">
+                🌐 1 IP dipakai ≥3 user aktif — mungkin sharing akun / komputer publik
+              </div>
+              <div className="space-y-1.5 text-xs">
+                {sessionInsight.suspiciousIPs.map((ip) => (
+                  <div key={ip.ipAddress} className="border-b border-red-200 last:border-0 pb-1.5">
+                    <div className="font-mono text-red-900 font-bold">{ip.ipAddress}</div>
+                    <div className="text-[11px] text-red-800">
+                      {ip.userCount} user: {ip.userNames.join(", ")}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {sessionInsight.oldSessions.length > 0 && (
+            <div className="bg-[color:var(--surface2)] border border-line rounded-xl p-3">
+              <div className="text-xs font-bold mb-2">
+                💤 Session lama tidak aktif (≥30 hari)
+              </div>
+              <div className="text-[11px] text-[color:var(--muted)] mb-2">
+                Kemungkinan device dilupakan / dijual. Aman revoke untuk safety.
+              </div>
+              <div className="space-y-1 text-xs">
+                {sessionInsight.oldSessions.slice(0, 5).map((s, idx) => (
+                  <div key={idx} className="flex justify-between">
+                    <span>
+                      <b>{s.userName}</b>{" "}
+                      <span className="text-[color:var(--muted)] font-mono">
+                        {s.ipAddress ?? "—"}
+                      </span>
+                    </span>
+                    <span className="text-[color:var(--muted)]">
+                      {s.lastActiveDays} hari idle
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {sessionInsight.multiDeviceUsers.length === 0 &&
+            sessionInsight.suspiciousIPs.length === 0 &&
+            sessionInsight.oldSessions.length === 0 && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-900">
+                ✓ Semua session sehat — tidak ada anomali.
+              </div>
+            )}
+        </div>
+      </section>
+
       {/* SECTION 5: MANUAL TOOLS */}
       <section>
         <SectionTitle icon={<Shield size={16} />} label="Manual Security Tools" />
@@ -519,6 +665,33 @@ function HealthCard({
       </div>
       <div className="text-xs text-[color:var(--muted)] mt-2 space-y-0.5">
         {children}
+      </div>
+    </div>
+  );
+}
+
+function StatBox({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: number;
+  color: "emerald" | "amber" | "red" | "muted";
+}) {
+  const colorMap = {
+    emerald: "bg-emerald-50 border-emerald-200 text-emerald-700",
+    amber: "bg-amber-50 border-amber-200 text-amber-700",
+    red: "bg-red-50 border-red-200 text-red-700",
+    muted: "bg-[color:var(--surface2)] border-line",
+  };
+  return (
+    <div className={`rounded-xl border px-3 py-2 ${colorMap[color]}`}>
+      <div className="text-[10px] tracking-widest font-bold opacity-80 truncate">
+        {label}
+      </div>
+      <div className="text-lg md:text-2xl font-extrabold mt-0.5 tabular-nums">
+        {value.toLocaleString("id-ID")}
       </div>
     </div>
   );

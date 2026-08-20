@@ -90,6 +90,31 @@ export type EnvCheck = {
     TELEGRAM_BOT_TOKEN: boolean;
     GOOGLE_DRIVE_SCRIPT_URL: boolean;
   };
+  secretStrength: {
+    length: number;
+    strong: boolean; // true kalau length >= 32
+  };
+};
+
+export type SessionInsight = {
+  multiDeviceUsers: Array<{
+    userId: string;
+    userName: string;
+    role: string;
+    deviceCount: number;
+    ips: string[];
+  }>;
+  oldSessions: Array<{
+    userName: string;
+    ipAddress: string | null;
+    ageDays: number;
+    lastActiveDays: number;
+  }>;
+  suspiciousIPs: Array<{
+    ipAddress: string;
+    userCount: number;
+    userNames: string[];
+  }>;
 };
 
 function fmtUptime(seconds: number): string {
@@ -512,6 +537,8 @@ export function getEnvCheck(): EnvCheck {
       suspicious: suspiciousPattern.test(name),
     }));
 
+  const secretLen = (process.env.BETTER_AUTH_SECRET ?? "").length;
+
   return {
     publicVars,
     criticalConfigured: {
@@ -522,5 +549,102 @@ export function getEnvCheck(): EnvCheck {
       TELEGRAM_BOT_TOKEN: !!process.env.TELEGRAM_BOT_TOKEN,
       GOOGLE_DRIVE_SCRIPT_URL: !!process.env.GOOGLE_DRIVE_SCRIPT_URL,
     },
+    secretStrength: {
+      length: secretLen,
+      strong: secretLen >= 32,
+    },
+  };
+}
+
+/**
+ * Session insights: deteksi user login di banyak device sekaligus,
+ * session lama tidak refresh, IP yang dipakai banyak user (sharing account?).
+ */
+export async function getSessionInsights(): Promise<SessionInsight> {
+  const now = new Date();
+
+  // Ambil semua session aktif dengan detail user
+  const activeSessions = await db
+    .select({
+      userId: sessionTable.userId,
+      userName: userTable.name,
+      role: userTable.role,
+      ipAddress: sessionTable.ipAddress,
+      userAgent: sessionTable.userAgent,
+      createdAt: sessionTable.createdAt,
+      updatedAt: sessionTable.updatedAt,
+    })
+    .from(sessionTable)
+    .leftJoin(userTable, eq(sessionTable.userId, userTable.id))
+    .where(gte(sessionTable.expiresAt, now));
+
+  // Group by userId untuk deteksi multi-device
+  const byUser = new Map<
+    string,
+    { userName: string; role: string; ips: Set<string>; deviceCount: number }
+  >();
+  for (const s of activeSessions) {
+    if (!s.userId) continue;
+    const entry = byUser.get(s.userId) ?? {
+      userName: s.userName ?? "—",
+      role: s.role ?? "—",
+      ips: new Set<string>(),
+      deviceCount: 0,
+    };
+    entry.deviceCount += 1;
+    if (s.ipAddress) entry.ips.add(s.ipAddress);
+    byUser.set(s.userId, entry);
+  }
+
+  const multiDeviceUsers = Array.from(byUser.entries())
+    .filter(([, v]) => v.deviceCount >= 3) // ≥3 device aktif = mungkin dishare
+    .map(([userId, v]) => ({
+      userId,
+      userName: v.userName,
+      role: v.role,
+      deviceCount: v.deviceCount,
+      ips: Array.from(v.ips).slice(0, 5),
+    }))
+    .sort((a, b) => b.deviceCount - a.deviceCount)
+    .slice(0, 10);
+
+  // Session lama tidak refresh (> 30 hari sejak updatedAt) — kemungkinan device lupa dipakai lagi
+  const oldSessions = activeSessions
+    .filter((s) => {
+      const ageDays = (now.getTime() - s.updatedAt.getTime()) / DAY_MS;
+      return ageDays >= 30;
+    })
+    .map((s) => ({
+      userName: s.userName ?? "—",
+      ipAddress: s.ipAddress,
+      ageDays: Math.floor((now.getTime() - s.createdAt.getTime()) / DAY_MS),
+      lastActiveDays: Math.floor((now.getTime() - s.updatedAt.getTime()) / DAY_MS),
+    }))
+    .sort((a, b) => b.lastActiveDays - a.lastActiveDays)
+    .slice(0, 10);
+
+  // IP suspicious: 1 IP dipakai ≥3 user berbeda (sharing account atau attacker)
+  const byIp = new Map<string, Set<string>>();
+  for (const s of activeSessions) {
+    if (!s.ipAddress || !s.userName) continue;
+    const set = byIp.get(s.ipAddress) ?? new Set<string>();
+    set.add(s.userName);
+    byIp.set(s.ipAddress, set);
+  }
+
+  const suspiciousIPs = Array.from(byIp.entries())
+    .filter(([, users]) => users.size >= 3)
+    .map(([ipAddress, users]) => ({
+      ipAddress,
+      userCount: users.size,
+      userNames: Array.from(users).slice(0, 5),
+    }))
+    .sort((a, b) => b.userCount - a.userCount)
+    .slice(0, 10);
+
+  return {
+    multiDeviceUsers,
+    oldSessions,
+    suspiciousIPs,
   };
 }
