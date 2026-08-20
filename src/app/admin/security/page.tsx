@@ -535,15 +535,21 @@ export default async function SecurityDashboard() {
           )}
 
           {sessionInsight.suspiciousIPs.length > 0 && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-3">
-              <div className="text-xs font-bold text-red-900 mb-2">
-                🌐 1 IP dipakai ≥3 user aktif — mungkin sharing akun / komputer publik
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+              <div className="text-xs font-bold text-amber-900 mb-2">
+                🌐 1 IP dipakai ≥3 user aktif
+              </div>
+              <div className="text-[11px] text-amber-800 mb-2 leading-relaxed">
+                <b>Ini bisa NORMAL</b> kalau semua nama di bawah adalah staff/pelanggan
+                yang connect ke WiFi yang sama (rumah, depot, kantor). 1 WiFi = 1 IP
+                publik untuk semua device. <b>Curigai kalau ada nama asing</b> yang
+                tidak Anda kenal.
               </div>
               <div className="space-y-1.5 text-xs">
                 {sessionInsight.suspiciousIPs.map((ip) => (
-                  <div key={ip.ipAddress} className="border-b border-red-200 last:border-0 pb-1.5">
-                    <div className="font-mono text-red-900 font-bold">{ip.ipAddress}</div>
-                    <div className="text-[11px] text-red-800">
+                  <div key={ip.ipAddress} className="border-b border-amber-200 last:border-0 pb-1.5">
+                    <div className="font-mono text-amber-900 font-bold">{ip.ipAddress}</div>
+                    <div className="text-[11px] text-amber-800">
                       {ip.userCount} user: {ip.userNames.join(", ")}
                     </div>
                   </div>

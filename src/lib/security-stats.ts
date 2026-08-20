@@ -527,14 +527,25 @@ export async function getAuditStat(): Promise<AuditStat> {
 /**
  * Cek env var. NEXT_PUBLIC_* di-bundle ke client — jangan sampai isi secret.
  * Suspicious kalau namanya mengandung SECRET/KEY/TOKEN/PASSWORD.
+ *
+ * Whitelist untuk key yang memang harus public (Google Maps, VAPID push):
+ * ini bukan secret — memang designed untuk browser.
  */
+const KNOWN_SAFE_PUBLIC_VARS = new Set([
+  "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY", // Google Maps butuh dari client (restrict via domain di GCP)
+  "NEXT_PUBLIC_VAPID_PUBLIC_KEY", // Web Push VAPID public key — memang public by design
+  "NEXT_PUBLIC_APP_URL",
+  "NEXT_PUBLIC_APP_NAME",
+]);
+
 export function getEnvCheck(): EnvCheck {
   const suspiciousPattern = /(secret|key|token|password|api_key)/i;
   const publicVars = Object.keys(process.env)
     .filter((k) => k.startsWith("NEXT_PUBLIC_"))
     .map((name) => ({
       name,
-      suspicious: suspiciousPattern.test(name),
+      // Whitelist known-safe (Google Maps, VAPID) supaya tidak false positive
+      suspicious: !KNOWN_SAFE_PUBLIC_VARS.has(name) && suspiciousPattern.test(name),
     }));
 
   const secretLen = (process.env.BETTER_AUTH_SECRET ?? "").length;
