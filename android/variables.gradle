@@ -1,7 +1,9 @@
 ext {
     minSdkVersion = 24
-    compileSdkVersion = 36
-    targetSdkVersion = 36
+    // SDK 35 = Android 15 (stable, wide compat). SDK 36 preview kadang bikin build fail
+    // di CI runner. Bisa naikkan ke 36 setelah stable.
+    compileSdkVersion = 35
+    targetSdkVersion = 35
     androidxActivityVersion = '1.11.0'
     androidxAppCompatVersion = '1.7.1'
     androidxCoordinatorLayoutVersion = '1.3.0'
