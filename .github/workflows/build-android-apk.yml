@@ -77,7 +77,17 @@ jobs:
       - name: Build Debug APK
         if: ${{ github.event.inputs.build_type != 'release' }}
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon --stacktrace --info 2>&1 | tail -300
+        # JANGAN pipe ke tail — masking exit code gradle bikin failed build
+        # dianggap sukses. Log lengkap OK di-stream ke GH Actions log.
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: List build outputs (debug)
+        if: ${{ always() && github.event.inputs.build_type != 'release' }}
+        run: |
+          echo "=== APK outputs ==="
+          find android/app/build/outputs -name "*.apk" 2>/dev/null || echo "no APK found"
+          echo "=== Build reports ==="
+          ls -la android/app/build/reports/ 2>/dev/null || echo "no reports dir"
 
       - name: Rename Debug APK
         if: ${{ github.event.inputs.build_type != 'release' }}
