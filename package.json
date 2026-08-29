@@ -27,6 +27,14 @@
     "test:e2e:cleanup": "tsx tests/e2e/cleanup.ts"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/geolocation": "^8.2.2",
+    "@capacitor/network": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.3",
     "@hookform/resolvers": "^3.10.0",
     "@tanstack/react-query": "^5.66.0",
     "@vis.gl/react-google-maps": "^1.8.3",

@@ -36,3 +36,17 @@ tests/e2e/.auth/
 playwright-report/
 test-results/
 playwright/.cache/
+
+# Android build outputs (Capacitor)
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/app/*.keystore
+android/app/*.jks
+*.apk
+*.aab
+capacitor-build-*.log
+
+# Output APK dari GitHub Actions (jangan commit ke repo)
+output/

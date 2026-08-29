@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Depot Air Minum GNR</string>
+    <string name="title_activity_main">Depot Air Minum GNR</string>
+    <string name="package_name">com.genster.depotair</string>
+    <string name="custom_url_scheme">com.genster.depotair</string>
+</resources>
