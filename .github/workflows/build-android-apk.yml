@@ -57,8 +57,9 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          # Match versi yang dipakai di variables.gradle (compileSdk=35, minSdk=24)
-          packages: "platforms;android-35 build-tools;35.0.0 platform-tools"
+          # Match versi di variables.gradle (compileSdk=36, minSdk=24).
+          # SDK 36 wajib karena androidx.activity 1.11.0 (dari Capacitor 8) butuh 36+.
+          packages: "platforms;android-36 build-tools;36.0.0 platform-tools"
 
       - name: Verify Android SDK installed
         run: |
