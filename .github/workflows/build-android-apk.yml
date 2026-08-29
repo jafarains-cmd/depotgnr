@@ -48,11 +48,13 @@ jobs:
         # (mis. @emnapi/*, esbuild native binaries).
         run: npm install --no-audit --no-fund --loglevel=error
 
-      - name: Setup Java 17
+      - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
           distribution: "temurin"
-          java-version: "17"
+          # Capacitor 8 + androidx dependencies butuh Java 21 (source release 21).
+          # Java 17 → error "invalid source release: 21" saat compile capacitor-android.
+          java-version: "21"
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
