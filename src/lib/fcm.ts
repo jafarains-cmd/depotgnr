@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { eq, inArray } from "drizzle-orm";
 import { getApps, initializeApp, cert, type App } from "firebase-admin/app";
 import { getMessaging, type Message } from "firebase-admin/messaging";
@@ -5,9 +6,14 @@ import { db } from "@/db";
 import { fcmToken } from "@/db/schema/auth";
 
 /**
- * Firebase Admin init — pakai service account JSON dari env var
- * FIREBASE_SERVICE_ACCOUNT_JSON (isi JSON di-serialize sebagai satu string).
- * Lazy init supaya build tidak crash kalau env tidak ada di dev.
+ * Firebase Admin init — pakai service account dari salah satu:
+ *   FIREBASE_SERVICE_ACCOUNT_PATH → path ke file JSON (recommended untuk
+ *     self-hosted; file di-chmod 0600, tidak ke-log)
+ *   FIREBASE_SERVICE_ACCOUNT_JSON → literal JSON string (untuk platform
+ *     seperti Vercel yang tidak punya persistent FS)
+ *
+ * PATH di-priorit, kalau kosong fallback ke JSON. Lazy init supaya build
+ * tidak crash kalau env tidak ada di dev.
  */
 let app: App | null = null;
 function getApp(): App | null {
@@ -17,18 +23,33 @@ function getApp(): App | null {
     app = existing[0];
     return app;
   }
+
+  const path = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (!raw) return null;
+  let jsonText: string | null = null;
+
+  if (path) {
+    try {
+      jsonText = readFileSync(path, "utf-8");
+    } catch {
+      console.error("[fcm] cannot read FIREBASE_SERVICE_ACCOUNT_PATH:", path);
+      return null;
+    }
+  } else if (raw) {
+    jsonText = raw;
+  }
+
+  if (!jsonText) return null;
+
   try {
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(jsonText);
     app = initializeApp({
       credential: cert(parsed),
       projectId: parsed.project_id,
     });
     return app;
   } catch {
-    // JSON invalid — log-only, jangan crash server
-    console.error("[fcm] FIREBASE_SERVICE_ACCOUNT_JSON invalid JSON");
+    console.error("[fcm] service account JSON invalid");
     return null;
   }
 }
