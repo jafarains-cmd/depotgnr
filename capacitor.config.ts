@@ -55,7 +55,10 @@ const config: CapacitorConfig = {
     // buildOptions untuk sign akan di-set via env di CI/CD
     allowMixedContent: false,
     captureInput: true,
-    webContentsDebuggingEnabled: false, // matikan di production
+    // ENABLE untuk debug — matikan sebelum publish ke Play Store production
+    webContentsDebuggingEnabled: true,
+    // Loading timeout longer untuk koneksi lambat
+    loggingBehavior: "debug",
   },
 };
 
