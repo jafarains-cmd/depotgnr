@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "685771469543",
+    "project_id": "depot-air-gnr",
+    "storage_bucket": "depot-air-gnr.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:685771469543:android:660f13ad3de6a53e4f6842",
+        "android_client_info": {
+          "package_name": "com.genster.depotair"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCAlpWKzbntDlCrf9dPKqvcDPp7YJPofMw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

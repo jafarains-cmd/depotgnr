@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import webpush from "web-push";
 import { db } from "@/db";
 import { pushSubscription } from "@/db/schema/auth";
+import { sendFcmToUser } from "./fcm";
 
 let configured = false;
 function configure() {
@@ -23,10 +24,26 @@ export type PushPayload = {
 };
 
 /**
- * Kirim push notif ke semua device yang subscribe untuk userId.
- * Cleanup subscription yang invalid (410 Gone) otomatis.
+ * Kirim push notif ke user via SEMUA channel yang tersedia:
+ * - Web Push (VAPID) untuk subscription browser
+ * - FCM untuk token APK Android native
+ *
+ * Kedua channel di-kirim paralel; kalau user punya browser + APK dua-duanya,
+ * kedua device akan dapat notif. Cleanup subscription/token invalid otomatis.
  */
 export async function sendPushToUser(userId: string, payload: PushPayload): Promise<void> {
+  await Promise.all([
+    sendWebPushToUser(userId, payload),
+    sendFcmToUser(userId, {
+      title: payload.title,
+      body: payload.body,
+      url: payload.url,
+      tag: payload.tag,
+    }),
+  ]);
+}
+
+async function sendWebPushToUser(userId: string, payload: PushPayload): Promise<void> {
   configure();
   if (!configured) return;
 

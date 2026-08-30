@@ -50,3 +50,8 @@ capacitor-build-*.log
 
 # Output APK dari GitHub Actions (jangan commit ke repo)
 output/
+
+# Firebase service account (SECRET — set as FIREBASE_SERVICE_ACCOUNT_JSON env var di server)
+# google-services.json aman committed (cuma app identifier), tapi service account JSON JANGAN.
+**/firebase-adminsdk-*.json
+**/service-account*.json

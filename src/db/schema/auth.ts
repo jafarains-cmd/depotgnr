@@ -73,6 +73,24 @@ export const pushSubscription = sqliteTable("push_subscription", {
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
+/**
+ * FCM token untuk push notif native di APK Android.
+ * Complement pushSubscription (web push VAPID) — user bisa punya keduanya:
+ * pushSubscription untuk browser, fcmToken untuk APK. sendPushToUser merge
+ * dari kedua source, dedup by device kalau perlu.
+ */
+export const fcmToken = sqliteTable("fcm_token", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  token: text("token").notNull().unique(),
+  platform: text("platform", { enum: ["android", "ios"] }).notNull().default("android"),
+  userAgent: text("user_agent"),
+  lastSeenAt: integer("last_seen_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
 export const verification = sqliteTable("verification", {
   id: text("id").primaryKey(),
   identifier: text("identifier").notNull(),
