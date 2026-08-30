@@ -2,9 +2,19 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Navigation, Square, AlertTriangle } from "lucide-react";
+import { BackgroundGeolocation, type Location } from "@capgo/background-geolocation";
 
 const PUSH_INTERVAL_MS = 30_000;
 
+/**
+ * Tracking live kurir. Pakai @capgo/background-geolocation yang cross-platform:
+ * - Di APK Capacitor Android: pakai foreground service native → tetap jalan
+ *   saat screen off / user pindah app (persistent notification muncul).
+ * - Di browser web: plugin fallback ke navigator.geolocation.watchPosition
+ *   (sama seperti implementasi lama, cocok untuk admin desktop / testing).
+ *
+ * Auto-stop kalau status order sudah `selesai` / `batal`.
+ */
 export function TrackingButton({
   orderId,
   status,
@@ -15,75 +25,90 @@ export function TrackingButton({
   const [active, setActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastSent, setLastSent] = useState<Date | null>(null);
-  const watchIdRef = useRef<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const lastPosRef = useRef<GeolocationPosition | null>(null);
+  const lastLocRef = useRef<Location | null>(null);
+  const startedRef = useRef(false);
 
-  // Auto-stop kalau status sudah selesai
   useEffect(() => {
     if (status === "selesai" || status === "batal") stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
-  function start() {
+  async function start() {
     setError(null);
-    if (!("geolocation" in navigator)) {
-      setError("Geolocation tidak didukung browser ini");
-      return;
+    try {
+      await BackgroundGeolocation.start(
+        {
+          // Foreground service notification (Android). Kalau kedua field ini
+          // di-set, plugin akan pakai background mode (jalan saat screen off).
+          backgroundTitle: "Depot Air — Tracking Aktif",
+          backgroundMessage: "Berbagi lokasi ke pelanggan untuk order ini.",
+          requestPermissions: true,
+          stale: false,
+          distanceFilter: 10, // meter — update kalau bergerak >10m (hemat batre)
+        },
+        (loc, err) => {
+          if (err) {
+            setError(`Lokasi gagal: ${err.message}`);
+            return;
+          }
+          if (loc) {
+            lastLocRef.current = loc;
+            setError(null);
+          }
+        },
+      );
+      startedRef.current = true;
+      intervalRef.current = setInterval(pushLokasi, PUSH_INTERVAL_MS);
+      pushLokasi();
+      setActive(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Gagal mulai tracking");
     }
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      (pos) => {
-        lastPosRef.current = pos;
-        setError(null);
-      },
-      (e) => {
-        setError(`Gagal dapat lokasi: ${e.message}`);
-      },
-      { enableHighAccuracy: true, maximumAge: 10_000, timeout: 30_000 },
-    );
-
-    // Push lokasi tiap 30s
-    intervalRef.current = setInterval(pushLokasi, PUSH_INTERVAL_MS);
-    pushLokasi(); // langsung push pertama
-    setActive(true);
   }
 
-  function stop() {
-    if (watchIdRef.current !== null) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-      watchIdRef.current = null;
-    }
+  async function stop() {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
+    }
+    if (startedRef.current) {
+      try {
+        await BackgroundGeolocation.stop();
+      } catch {
+        // ignore — plugin sudah berhenti / belum start
+      }
+      startedRef.current = false;
     }
     setActive(false);
   }
 
   async function pushLokasi() {
-    const pos = lastPosRef.current;
-    if (!pos) return;
+    const loc = lastLocRef.current;
+    if (!loc) return;
     try {
       await fetch("/api/kurir/lokasi", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           orderId,
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          accuracy: pos.coords.accuracy,
-          speed: pos.coords.speed,
-          heading: pos.coords.heading,
+          lat: loc.latitude,
+          lng: loc.longitude,
+          accuracy: loc.accuracy,
+          speed: loc.speed,
+          heading: loc.bearing, // plugin pakai 'bearing', API pakai 'heading'
         }),
       });
       setLastSent(new Date());
-    } catch (e) {
-      // ignore
+    } catch {
+      // ignore — akan di-retry di interval berikutnya
     }
   }
 
   useEffect(() => {
-    return () => stop();
+    return () => {
+      void stop();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -95,7 +120,8 @@ export function TrackingButton({
         <Navigation size={16} /> Tracking Live
       </div>
       <p className="text-xs text-[color:var(--muted)]">
-        Aktifkan supaya pelanggan bisa lihat posisi Anda di peta. Lokasi dikirim tiap 30 detik.
+        Aktifkan supaya pelanggan bisa lihat posisi Anda di peta. Di APK tracking
+        tetap jalan saat HP di saku (notifikasi persist). Lokasi dikirim tiap 30 detik.
       </p>
 
       {error && (

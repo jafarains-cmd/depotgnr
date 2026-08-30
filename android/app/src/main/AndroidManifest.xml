@@ -70,6 +70,12 @@
     <!-- Wake lock: cegah CPU tidur saat tracking active -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <!-- Foreground service (untuk background geolocation kurir). LOCATION
+         subtype wajib di Android 14+ (API 34) supaya foreground service
+         yang pakai lokasi tidak ditolak sistem. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
     <!-- ===== Features (opsional, tidak wajib) ===== -->
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
