@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import { cookies } from "next/headers";
 import "./globals.css";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
+import { WebViewErrorOverlay } from "@/components/WebViewErrorOverlay";
 import { COOKIE_PALETTE, COOKIE_MODE, isPalette, isMode } from "@/lib/theme";
 import { TimezoneProvider } from "@/components/TimezoneContext";
 import { ToastProvider } from "@/components/Toast";
@@ -51,6 +52,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="id" data-palette={palette} data-mode={mode} className={jakarta.variable}>
       <body>
         <ServiceWorkerRegister />
+        <WebViewErrorOverlay />
         <TimezoneProvider zona={zonaWaktu}>
           <ToastProvider>{children}</ToastProvider>
         </TimezoneProvider>
