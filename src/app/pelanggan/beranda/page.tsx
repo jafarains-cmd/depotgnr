@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { eq, and, desc, ne } from "drizzle-orm";
-import { Plus, Truck, History, Bell, ArrowRight, MapPin } from "lucide-react";
+import { Plus, Truck, History, Bell, ArrowRight, MapPin, Navigation } from "lucide-react";
 import { db } from "@/db";
 import { orderHeader } from "@/db/schema/order";
 import { produk } from "@/db/schema/produk";
@@ -297,6 +297,15 @@ export default async function BerandaPage() {
                       <CancelOrderButton orderId={o.id} nomorOrder={o.nomorOrder} />
                     </div>
                   )}
+                  {["dijemput", "diisi", "diantar", "diproses"].includes(o.status) &&
+                    o.trackingToken && (
+                      <Link
+                        href={`/track/${o.id}?token=${o.trackingToken}`}
+                        className="mt-1 inline-flex items-center gap-1 px-2.5 py-1 bg-brand-soft text-brand text-[11px] font-bold rounded-full hover:bg-brand hover:text-white transition"
+                      >
+                        <Navigation size={11} /> Lacak Kurir
+                      </Link>
+                    )}
                 </div>
               </div>
             ))}
