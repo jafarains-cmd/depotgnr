@@ -10,6 +10,7 @@ import {
   UserCog,
   HelpCircle,
   Map,
+  Navigation,
   KeyRound,
   Bike,
   Wallet,
@@ -91,6 +92,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           icon: <MessageSquareWarning size={16} />,
           iconColor: "text-rose-600",
           badgeKey: "komplain",
+        },
+        {
+          href: "/admin/kurir-live",
+          label: "Kurir Live",
+          icon: <Navigation size={16} />,
+          iconColor: "text-emerald-600",
         },
         {
           href: "/kurir",
