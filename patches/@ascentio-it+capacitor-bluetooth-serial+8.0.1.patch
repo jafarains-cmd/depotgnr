@@ -1,0 +1,25 @@
+diff --git a/node_modules/@ascentio-it/capacitor-bluetooth-serial/android/src/main/java/com/bluetoothserial/plugin/BluetoothSerialPlugin.java b/node_modules/@ascentio-it/capacitor-bluetooth-serial/android/src/main/java/com/bluetoothserial/plugin/BluetoothSerialPlugin.java
+index 595f686..ebc8e61 100644
+--- a/node_modules/@ascentio-it/capacitor-bluetooth-serial/android/src/main/java/com/bluetoothserial/plugin/BluetoothSerialPlugin.java
++++ b/node_modules/@ascentio-it/capacitor-bluetooth-serial/android/src/main/java/com/bluetoothserial/plugin/BluetoothSerialPlugin.java
+@@ -485,18 +485,17 @@ public class BluetoothSerialPlugin extends Plugin {
+     }
+ 
+     @PluginMethod
+-    public boolean checkBluetoothPermissions(PluginCall call) {
++    public void checkBluetoothPermissions(PluginCall call) {
+         // If already granted, resolve immediately
+         if (getPermissionState(getPermissionAlias()) == PermissionState.GRANTED) {
+             JSObject result = new JSObject();
+             result.put("granted", true);
+             call.resolve(result);
+-            return true;
++            return;
+         }
+ 
+         // Otherwise request permission - the callback will resolve the call
+         requestPermissionForAlias(getPermissionAlias(), call, "bluetoothPermissionsCallback");
+-        return false;
+     }
+ 
+     private boolean checkPermissions(PluginCall call, String permissionAlias) {
