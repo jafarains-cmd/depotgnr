@@ -44,6 +44,21 @@ export async function uploadBuktiBayar(args: {
   });
 }
 
+export async function uploadKtpLangganan(args: {
+  pelangganId: number;
+  base64: string;
+  mimeType: string;
+}): Promise<UploadResp> {
+  return await uploadToDrive({
+    folderKey: "driveFolderKtpLangganan",
+    fallbackFolderKey: "driveFolderBuktiBayar",
+    prefix: "ktp",
+    refId: String(args.pelangganId),
+    base64: args.base64,
+    mimeType: args.mimeType,
+  });
+}
+
 export async function uploadAsset(args: {
   prefix: string;
   base64: string;

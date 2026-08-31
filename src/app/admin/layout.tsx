@@ -24,6 +24,8 @@ import {
   ShieldCheck,
   ArrowLeftRight,
   Tag,
+  IdCard,
+  AlertCircle,
 } from "lucide-react";
 import { AppShell, type NavGroup } from "@/components/AppShell";
 import { requireRole } from "@/lib/permissions";
@@ -129,6 +131,20 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           icon: <TrendingUp size={16} />,
           iconColor: "text-pink-600",
           badgeKey: "followUp",
+        },
+        {
+          href: "/admin/langganan-pending",
+          label: "Verifikasi Langganan",
+          icon: <IdCard size={16} />,
+          iconColor: "text-blue-600",
+          badgeKey: "langgananPending",
+        },
+        {
+          href: "/admin/langganan-inaktif",
+          label: "Langganan Inaktif",
+          icon: <AlertCircle size={16} />,
+          iconColor: "text-amber-600",
+          badgeKey: "langgananInaktif",
         },
       ],
     },

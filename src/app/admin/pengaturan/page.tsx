@@ -193,6 +193,21 @@ const ALL_FIELDS: Record<string, Field> = {
     label: "Drive Folder ID — Backup Database",
     help: "Folder khusus untuk backup database harian (.db.gz). Kalau kosong, fallback ke folder Bukti Pembayaran.",
   },
+  driveFolderKtpLangganan: {
+    key: "driveFolderKtpLangganan",
+    label: "Drive Folder ID — KTP Langganan",
+    help: "Folder khusus untuk foto KTP pengajuan langganan. HARUS sharing 'Restricted' (data pribadi sensitif — hanya admin depot yang boleh akses). Kalau kosong, fallback ke folder Bukti Pembayaran.",
+  },
+  default_limit_galon_langganan: {
+    key: "default_limit_galon_langganan",
+    label: "Default Limit Galon Langganan",
+    help: "Batas maksimum galon depot yang bisa dipinjam pelanggan langganan (default 5). Per-akun bisa di-override di detail pelanggan.",
+  },
+  syarat_langganan: {
+    key: "syarat_langganan",
+    label: "Syarat & Aturan Langganan",
+    help: "Teks yang muncul di form ajuan langganan pelanggan. Isi persyaratan, aturan pinjam galon, dll. Kosongkan untuk pakai default.",
+  },
 
   qrisFotoUrl: {
     key: "qrisFotoUrl",
@@ -377,7 +392,14 @@ const TABS: Tab[] = [
       "driveFolderBuktiKurir",
       "driveFolderBuktiBayar",
       "driveFolderBackup",
+      "driveFolderKtpLangganan",
     ],
+  },
+  {
+    id: "langganan",
+    label: "Langganan",
+    icon: <Plug size={14} />,
+    fieldKeys: ["default_limit_galon_langganan", "syarat_langganan"],
   },
 ];
 

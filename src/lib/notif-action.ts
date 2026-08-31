@@ -18,6 +18,7 @@ import { countShiftStale } from "./shift";
 import { notifStaleShiftsIfNeeded } from "./shift-stale-notif";
 import { bestEffort } from "./best-effort";
 import { countChurnRisk } from "./analytics";
+import { countLanggananPending, countLanggananInaktif } from "./langganan";
 
 export type NotifCounts = {
   orderMasuk?: number;
@@ -29,6 +30,8 @@ export type NotifCounts = {
   komplain?: number;
   galonPinjam?: number;
   shiftStale?: number;
+  langgananPending?: number;
+  langgananInaktif?: number;
 };
 
 /**
@@ -50,6 +53,8 @@ export async function getNotifCountsForCurrentUser(): Promise<NotifCounts> {
       komplainBaru,
       galonPinjam,
       shiftStale,
+      langgananPending,
+      langgananInaktif,
     ] = await Promise.all([
       countOrderMasuk(),
       countPembayaranMenunggu(),
@@ -59,6 +64,8 @@ export async function getNotifCountsForCurrentUser(): Promise<NotifCounts> {
       countKomplainBaru(),
       countPelangganDenganGalonPinjam(),
       countShiftStale(),
+      countLanggananPending().catch(() => 0),
+      countLanggananInaktif().catch(() => 0),
     ]);
     // Best-effort: kirim notif ke grup WA/Telegram untuk shift stale yang
     // belum dinotif dalam 6 jam terakhir. Dipicu lazy saat admin akses dashboard.
@@ -74,16 +81,19 @@ export async function getNotifCountsForCurrentUser(): Promise<NotifCounts> {
       komplain: komplainBaru,
       galonPinjam,
       shiftStale,
+      langgananPending,
+      langgananInaktif,
     };
   }
 
   if (role === "kasir") {
-    const [orderMasuk, pembayaran, kurirAktif] = await Promise.all([
+    const [orderMasuk, pembayaran, kurirAktif, langgananInaktif] = await Promise.all([
       countOrderMasuk(),
       countPembayaranMenunggu(),
       countKurirAktif(session.user.id),
+      countLanggananInaktif().catch(() => 0),
     ]);
-    return { orderMasuk, pembayaran, kurirAktif };
+    return { orderMasuk, pembayaran, kurirAktif, langgananInaktif };
   }
 
   if (role === "kurir") {

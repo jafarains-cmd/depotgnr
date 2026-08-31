@@ -11,7 +11,20 @@ export const pelanggan = sqliteTable(
     alamat: text("alamat"),
     koordinatLat: real("koordinat_lat"),
     koordinatLng: real("koordinat_lng"),
-    tipe: text("tipe", { enum: ["umum", "langganan"] }).notNull().default("umum"),
+    tipe: text("tipe", {
+      enum: ["umum", "langganan_pending", "langganan", "langganan_ditolak"],
+    })
+      .notNull()
+      .default("umum"),
+    // KTP untuk verifikasi langganan (peminjaman galon depot).
+    // ktpFotoUrl = URL Drive (via Apps Script uploader), bukan blob di DB.
+    ktpFotoUrl: text("ktp_foto_url"),
+    ktpUploadedAt: integer("ktp_uploaded_at", { mode: "timestamp" }),
+    ktpVerifiedAt: integer("ktp_verified_at", { mode: "timestamp" }),
+    ktpVerifiedBy: text("ktp_verified_by").references(() => user.id, { onDelete: "set null" }),
+    ktpDitolakAlasan: text("ktp_ditolak_alasan"),
+    // Override limit galon per pelanggan (null = pakai global setting default_limit_galon_langganan).
+    limitGalon: integer("limit_galon"),
     catatan: text("catatan"),
     // Loyalty + referral
     saldoLoyalti: integer("saldo_loyalti").notNull().default(0),

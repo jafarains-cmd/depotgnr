@@ -9,6 +9,9 @@ import { getOrCreatePelanggan } from "@/lib/pelanggan";
 import { formatRupiah } from "@/lib/utils";
 import { ProfilClient } from "./ProfilClient";
 import { HubungiAdmin } from "@/components/HubungiAdmin";
+import { LanggananSection } from "./LanggananSection";
+import { getEffectiveLimitGalon, getSyaratLangganan } from "@/lib/langganan";
+import { getSaldoGalonPinjam } from "@/lib/galon-pinjam";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +22,12 @@ export default async function ProfilPage() {
   const cfgRows = await db.query.pengaturan.findMany();
   const cfg = Object.fromEntries(cfgRows.map((r) => [r.key, r.value ?? ""]));
   void pengaturan;
+
+  const [syaratLangganan, limitGalon, saldoGalon] = await Promise.all([
+    getSyaratLangganan(),
+    getEffectiveLimitGalon(pel.id),
+    getSaldoGalonPinjam(pel.id),
+  ]);
 
   const initials = pel.nama
     .split(" ")
@@ -103,6 +112,18 @@ export default async function ProfilPage() {
           </Link>
         </div>
       )}
+
+      {/* Langganan Galon Depot */}
+      <LanggananSection
+        tipe={pel.tipe}
+        ktpDitolakAlasan={pel.ktpDitolakAlasan ?? null}
+        ktpUploadedAt={pel.ktpUploadedAt ?? null}
+        ktpVerifiedAt={pel.ktpVerifiedAt ?? null}
+        galonDipegang={saldoGalon.total}
+        limitGalon={limitGalon}
+        syarat={syaratLangganan}
+        hasAlamatDanTelp={!!pel.alamat && !!pel.telp}
+      />
 
       {/* Hubungi Admin */}
       <div className="mt-4">

@@ -7,7 +7,7 @@ export type PelangganGeo = {
   nama: string;
   telp: string | null;
   alamat: string | null;
-  tipe: "umum" | "langganan";
+  tipe: "umum" | "langganan_pending" | "langganan" | "langganan_ditolak";
   lat: number;
   lng: number;
   totalBelanja: number;

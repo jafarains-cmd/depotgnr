@@ -22,6 +22,8 @@ import { LoyaltyHistoryTable } from "./LoyaltyHistoryTable";
 import { RiwayatTransaksiTable, type RiwayatItem } from "./RiwayatTransaksiTable";
 import { formatRupiah } from "@/lib/utils";
 import { LoyaltyAdjustForm } from "./LoyaltyAdjustForm";
+import { LimitGalonEditor } from "./LimitGalonEditor";
+import { getDefaultLimitGalon, getEffectiveLimitGalon } from "@/lib/langganan";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
 import { Pagination } from "@/components/Pagination";
 import { parseLimit, parsePage, getPagination } from "@/lib/page-size";
@@ -225,6 +227,10 @@ export default async function PelangganDetailPage({
 
   // Galon depot dipinjam + history
   const saldoGalonPinjam = await getSaldoGalonPinjam(pelangganId);
+  const [defaultLimitGalon, effectiveLimitGalon] = await Promise.all([
+    getDefaultLimitGalon(),
+    getEffectiveLimitGalon(pelangganId),
+  ]);
   const historyGalonPinjam = await getHistoryGalonPinjam(pelangganId, 30);
   const historyGalonPinjamWithUser = await Promise.all(
     historyGalonPinjam.map(async (m) => {
@@ -267,6 +273,16 @@ export default async function PelangganDetailPage({
             )}
           </div>
         </div>
+
+        {pel.tipe === "langganan" && isAdmin && (
+          <LimitGalonEditor
+            pelangganId={pelangganId}
+            currentLimit={pel.limitGalon ?? null}
+            effectiveLimit={effectiveLimitGalon}
+            defaultLimit={defaultLimitGalon}
+            galonDipegang={saldoGalonPinjam.total}
+          />
+        )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
