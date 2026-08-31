@@ -76,6 +76,17 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
+    <!-- Bluetooth Classic untuk print thermal (RPP02N + generic ESC/POS SPP).
+         BLUETOOTH + BLUETOOTH_ADMIN untuk Android <=11, BLUETOOTH_CONNECT
+         untuk Android 12+ (API 31+). BLUETOOTH_SCAN cuma dibutuhkan kalau
+         mau scan device baru (kita cuma pakai getPairedDevices, tidak scan). -->
+    <uses-permission android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
+
     <!-- ===== Features (opsional, tidak wajib) ===== -->
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />

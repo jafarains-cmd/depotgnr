@@ -4,8 +4,16 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Printer, FileDown, Send, Copy, Check, ArrowLeft } from "lucide-react";
 import { getOrderNotaText } from "./actions";
+import { PrintThermalButton } from "@/components/PrintThermalButton";
+import type { NotaData } from "@/lib/nota-to-escpos";
 
-export function NotaPelangganActions({ orderId }: { orderId: number }) {
+export function NotaPelangganActions({
+  orderId,
+  nota,
+}: {
+  orderId: number;
+  nota: NotaData;
+}) {
   const [pending, startTransition] = useTransition();
   const [copied, setCopied] = useState(false);
   const [shareNomor, setShareNomor] = useState("");
@@ -52,12 +60,13 @@ export function NotaPelangganActions({ orderId }: { orderId: number }) {
       </div>
 
       <div className="bg-surface border border-line rounded-2xl p-3 space-y-2">
+        <PrintThermalButton nota={nota} className="w-full justify-center" />
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={handleCetak}
             className="py-2 bg-slate-800 text-white rounded-md text-sm inline-flex items-center justify-center gap-1.5"
           >
-            <Printer size={14} /> Cetak
+            <Printer size={14} /> Cetak (Browser)
           </button>
           <button
             onClick={handleCetak}

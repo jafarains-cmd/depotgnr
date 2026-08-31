@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { Printer, FileDown, ArrowLeft } from "lucide-react";
+import { PrintThermalButton } from "@/components/PrintThermalButton";
+import type { NotaData } from "@/lib/nota-to-escpos";
 
-export function NotaKasirActions() {
+export function NotaKasirActions({ nota }: { nota: NotaData }) {
   function handleCetak() {
     window.print();
   }
@@ -19,13 +21,16 @@ export function NotaKasirActions() {
         </Link>
       </div>
 
-      <div className="bg-surface border border-line rounded-2xl p-3">
+      <div className="bg-surface border border-line rounded-2xl p-3 space-y-2">
+        {/* Print thermal Bluetooth (cuma muncul di APK Android) */}
+        <PrintThermalButton nota={nota} className="w-full justify-center" />
+
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={handleCetak}
             className="py-2 bg-slate-800 text-white rounded-md text-sm inline-flex items-center justify-center gap-1.5"
           >
-            <Printer size={14} /> Cetak
+            <Printer size={14} /> Cetak (Browser)
           </button>
           <button
             onClick={handleCetak}

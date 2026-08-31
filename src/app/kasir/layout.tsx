@@ -1,4 +1,4 @@
-import { ShoppingCart, Truck, Receipt, KeyRound, Bike, Wallet, Users, LayoutDashboard, Coins } from "lucide-react";
+import { ShoppingCart, Truck, Receipt, KeyRound, Bike, Wallet, Users, LayoutDashboard, Coins, Printer } from "lucide-react";
 import { AppShell, type NavGroup } from "@/components/AppShell";
 import { requireRole } from "@/lib/permissions";
 import {
@@ -40,6 +40,7 @@ export default async function KasirLayout({ children }: { children: React.ReactN
       label: "Lainnya",
       items: [
         { href: "/kurir", label: "Mode Kurir", icon: <Bike size={16} />, iconColor: "text-indigo-600", badgeKey: "kurirAktif" },
+        { href: "/pengaturan-printer", label: "Pengaturan Printer", icon: <Printer size={16} />, iconColor: "text-slate-600" },
         { href: "/akun", label: "Akun Saya", icon: <KeyRound size={16} />, iconColor: "text-gray-600" },
       ],
     },

@@ -46,6 +46,36 @@ export default async function NotaPelangganPage({
 
   const subtotal = items.reduce((s, it) => s + (it.hargaEstimasi ?? 0) * it.qty, 0);
 
+  const notaData = {
+    header: {
+      namaDepot: cfg.namaDepot || "Depot Air Minum",
+      alamatDepot: cfg.alamatDepot ?? null,
+      telpDepot: cfg.telpDepot ?? null,
+    },
+    meta: {
+      nomor: o.nomorOrder,
+      tanggal: o.createdAt,
+      pelangganNama: pel.nama,
+      alamatAntar: o.alamatAntar ?? null,
+    },
+    items: items.map((it) => ({
+      namaProduk: it.namaProduk ?? "-",
+      qty: it.qty,
+      hargaSatuan: it.hargaEstimasi ?? 0,
+      subtotal: (it.hargaEstimasi ?? 0) * it.qty,
+      jenis: it.jenis,
+    })),
+    totals: {
+      subtotal,
+      loyalti: o.loyaltiDipakai,
+      total: o.totalEstimasi - o.loyaltiDipakai,
+      metodeBayar: o.metodeBayar,
+      statusBayar: o.statusBayar,
+    },
+    catatan: o.catatan,
+    footer: cfg.footerNota || undefined,
+  };
+
   return (
     <>
       <style>{`
@@ -58,7 +88,7 @@ export default async function NotaPelangganPage({
       <div className="min-h-screen py-4 print:py-0">
         <div className="max-w-md mx-auto">
           <div className="no-print mb-4">
-            <NotaPelangganActions orderId={o.id} />
+            <NotaPelangganActions orderId={o.id} nota={notaData} />
           </div>
 
           <NotaPaper

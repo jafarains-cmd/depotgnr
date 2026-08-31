@@ -26,6 +26,7 @@ import {
   Tag,
   IdCard,
   AlertCircle,
+  Printer,
 } from "lucide-react";
 import { AppShell, type NavGroup } from "@/components/AppShell";
 import { requireRole } from "@/lib/permissions";
@@ -271,6 +272,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           label: "Pengaturan",
           icon: <Settings size={16} />,
           iconColor: "text-stone-600",
+        },
+        {
+          href: "/pengaturan-printer",
+          label: "Pengaturan Printer",
+          icon: <Printer size={16} />,
+          iconColor: "text-slate-600",
         },
         {
           href: "/admin/bantuan",
