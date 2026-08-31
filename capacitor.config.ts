@@ -55,10 +55,11 @@ const config: CapacitorConfig = {
     // buildOptions untuk sign akan di-set via env di CI/CD
     allowMixedContent: false,
     captureInput: true,
-    // ENABLE untuk debug — matikan sebelum publish ke Play Store production
-    webContentsDebuggingEnabled: true,
-    // Loading timeout longer untuk koneksi lambat
-    loggingBehavior: "debug",
+    // Debug flags OFF untuk release build. WebViewErrorOverlay tetap aktif
+    // untuk surface JS error ke user (visible red banner), tapi tidak
+    // expose devtools ke USB dan tidak spam logcat.
+    webContentsDebuggingEnabled: false,
+    loggingBehavior: "production",
   },
 };
 
