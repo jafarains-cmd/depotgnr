@@ -1,4 +1,4 @@
-import { ShoppingCart, Truck, Receipt, KeyRound, Bike, Wallet, Users, LayoutDashboard, Coins, Printer } from "lucide-react";
+import { ShoppingCart, Truck, Receipt, KeyRound, Bike, Wallet, Users, LayoutDashboard, Coins, Printer, IdCard, BadgeCheck } from "lucide-react";
 import { AppShell, type NavGroup } from "@/components/AppShell";
 import { requireRole } from "@/lib/permissions";
 import {
@@ -6,14 +6,16 @@ import {
   countPembayaranMenunggu,
   countKurirAktif,
 } from "@/lib/notifications";
+import { countLanggananPending } from "@/lib/langganan";
 import { getIdleTimeoutMenit } from "@/lib/session-config";
 
 export default async function KasirLayout({ children }: { children: React.ReactNode }) {
   const session = await requireRole(["admin", "kasir"]);
-  const [orderMasuk, pembayaran, kurirAktif, idleTimeoutMenit] = await Promise.all([
+  const [orderMasuk, pembayaran, kurirAktif, langgananPending, idleTimeoutMenit] = await Promise.all([
     countOrderMasuk(),
     countPembayaranMenunggu(),
     countKurirAktif(session.user.id),
+    countLanggananPending().catch(() => 0),
     getIdleTimeoutMenit(),
   ]);
 
@@ -32,6 +34,8 @@ export default async function KasirLayout({ children }: { children: React.ReactN
       label: "Pelanggan & Pembayaran",
       items: [
         { href: "/data-pelanggan", label: "Pelanggan", icon: <Users size={16} />, iconColor: "text-fuchsia-600" },
+        { href: "/kasir/langganan", label: "List Langganan", icon: <BadgeCheck size={16} />, iconColor: "text-emerald-600" },
+        { href: "/kasir/langganan-pending", label: "Verifikasi Langganan", icon: <IdCard size={16} />, iconColor: "text-blue-600", badgeKey: "langgananPending" },
         { href: "/pembayaran", label: "Pembayaran", icon: <Wallet size={16} />, iconColor: "text-emerald-600", badgeKey: "pembayaran" },
         { href: "/kasir/galon-dipinjam", label: "Galon Dipinjam", icon: <Truck size={16} />, iconColor: "text-amber-600" },
       ],
@@ -51,7 +55,7 @@ export default async function KasirLayout({ children }: { children: React.ReactN
       title="Kasir · Depot Air"
       nav={NAV}
       userName={session.user.name}
-      initialBadges={{ orderMasuk, pembayaran, kurirAktif }}
+      initialBadges={{ orderMasuk, pembayaran, kurirAktif, langgananPending }}
       idleTimeoutMenit={idleTimeoutMenit}
     >
       {children}

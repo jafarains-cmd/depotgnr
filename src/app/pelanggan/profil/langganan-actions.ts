@@ -8,7 +8,9 @@ import { requireSession } from "@/lib/permissions";
 import { getOrCreatePelanggan } from "@/lib/pelanggan";
 import { uploadKtpLangganan } from "@/lib/drive";
 import { user as userTable } from "@/db/schema/auth";
+import { pengaturan } from "@/db/schema/pengaturan";
 import { sendPushToUser } from "@/lib/push";
+import { sendWhatsAppGroup } from "@/lib/whatsapp";
 
 export type SubmitResult = { ok: true } | { ok: false; error: string };
 
@@ -62,7 +64,7 @@ export async function submitLangganan(args: {
   revalidatePath("/pelanggan/profil");
   revalidatePath("/admin/langganan-pending");
 
-  // Notif ke semua admin: ada pengajuan baru
+  // Notif ke semua admin: ada pengajuan baru (FCM push per-user)
   const admins = await db
     .select({ id: userTable.id })
     .from(userTable)
@@ -77,6 +79,23 @@ export async function submitLangganan(args: {
       }).catch(() => {}),
     ),
   );
+
+  // Broadcast ke grup WA admin (reuse waGroupOrderMasuk kalau waGroupLangganan
+  // kosong). Best-effort, tidak block response ke pelanggan.
+  const [waGroupLangganan, waGroupOrder] = await Promise.all([
+    db.query.pengaturan.findFirst({ where: eq(pengaturan.key, "waGroupLangganan") }),
+    db.query.pengaturan.findFirst({ where: eq(pengaturan.key, "waGroupOrderMasuk") }),
+  ]);
+  const groupId = waGroupLangganan?.value?.trim() || waGroupOrder?.value?.trim();
+  if (groupId) {
+    const waText =
+      `📋 *Pengajuan Langganan Baru*\n\n` +
+      `Nama: *${pel.nama}*\n` +
+      (pel.telp ? `WA: ${pel.telp}\n` : "") +
+      (pel.alamat ? `Alamat: ${pel.alamat}\n` : "") +
+      `\nBuka /admin/langganan-pending untuk verify.`;
+    void sendWhatsAppGroup(groupId, waText);
+  }
 
   return { ok: true };
 }

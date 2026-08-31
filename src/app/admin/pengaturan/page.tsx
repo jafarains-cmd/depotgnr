@@ -208,6 +208,11 @@ const ALL_FIELDS: Record<string, Field> = {
     label: "Syarat & Aturan Langganan",
     help: "Teks yang muncul di form ajuan langganan pelanggan. Isi persyaratan, aturan pinjam galon, dll. Kosongkan untuk pakai default.",
   },
+  waGroupLangganan: {
+    key: "waGroupLangganan",
+    label: "WA Group ID — Notif Langganan",
+    help: "Group WA khusus untuk notif pengajuan langganan baru. Kosongkan untuk pakai group order (waGroupOrderMasuk).",
+  },
 
   qrisFotoUrl: {
     key: "qrisFotoUrl",
@@ -399,7 +404,7 @@ const TABS: Tab[] = [
     id: "langganan",
     label: "Langganan",
     icon: <Plug size={14} />,
-    fieldKeys: ["default_limit_galon_langganan", "syarat_langganan"],
+    fieldKeys: ["default_limit_galon_langganan", "syarat_langganan", "waGroupLangganan"],
   },
 ];
 

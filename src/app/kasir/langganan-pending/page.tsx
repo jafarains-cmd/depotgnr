@@ -3,13 +3,12 @@ import { db } from "@/db";
 import { pelanggan } from "@/db/schema/pelanggan";
 import { requireRole } from "@/lib/permissions";
 import { PageHeader } from "@/components/AppShell";
-import { PendingList } from "./PendingList";
+import { PendingList } from "@/app/admin/langganan-pending/PendingList";
 
 export const dynamic = "force-dynamic";
 
-export default async function LanggananPendingPage() {
-  const session = await requireRole(["admin", "kasir"]);
-  const canVerify = session.user.role === "admin";
+export default async function KasirLanggananPendingPage() {
+  await requireRole(["admin", "kasir"]);
   const rows = await db
     .select({
       id: pelanggan.id,
@@ -27,13 +26,9 @@ export default async function LanggananPendingPage() {
     <div className="p-4 md:p-6">
       <PageHeader
         title="Verifikasi Langganan"
-        description={
-          canVerify
-            ? `${rows.length} pelanggan menunggu verifikasi KTP untuk peminjaman galon depot.`
-            : `${rows.length} pelanggan menunggu verifikasi (view-only untuk kasir — verify harus lewat admin).`
-        }
+        description={`${rows.length} pelanggan menunggu verifikasi (view-only untuk kasir — verify harus lewat admin).`}
       />
-      <PendingList rows={rows} canVerify={canVerify} />
+      <PendingList rows={rows} canVerify={false} />
     </div>
   );
 }

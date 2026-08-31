@@ -27,6 +27,7 @@ import {
   IdCard,
   AlertCircle,
   Printer,
+  BadgeCheck,
 } from "lucide-react";
 import { AppShell, type NavGroup } from "@/components/AppShell";
 import { requireRole } from "@/lib/permissions";
@@ -139,6 +140,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           icon: <IdCard size={16} />,
           iconColor: "text-blue-600",
           badgeKey: "langgananPending",
+        },
+        {
+          href: "/admin/langganan",
+          label: "List Langganan",
+          icon: <BadgeCheck size={16} />,
+          iconColor: "text-emerald-600",
         },
         {
           href: "/admin/langganan-inaktif",

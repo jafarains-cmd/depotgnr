@@ -15,7 +15,13 @@ type Row = {
   ktpUploadedAt: Date | null;
 };
 
-export function PendingList({ rows }: { rows: Row[] }) {
+export function PendingList({
+  rows,
+  canVerify,
+}: {
+  rows: Row[];
+  canVerify: boolean;
+}) {
   if (rows.length === 0) {
     return (
       <div className="bg-surface border border-line rounded-2xl p-8 text-center">
@@ -31,13 +37,13 @@ export function PendingList({ rows }: { rows: Row[] }) {
   return (
     <div className="grid md:grid-cols-2 gap-3">
       {rows.map((r) => (
-        <PendingCard key={r.id} row={r} />
+        <PendingCard key={r.id} row={r} canVerify={canVerify} />
       ))}
     </div>
   );
 }
 
-function PendingCard({ row }: { row: Row }) {
+function PendingCard({ row, canVerify }: { row: Row; canVerify: boolean }) {
   const [rejectMode, setRejectMode] = useState(false);
   const [alasan, setAlasan] = useState("");
   const [pending, startTransition] = useTransition();
@@ -101,7 +107,11 @@ function PendingCard({ row }: { row: Row }) {
           )}
         </div>
 
-        {rejectMode ? (
+        {!canVerify ? (
+          <div className="text-[11px] text-[color:var(--muted)] bg-slate-50 border border-line rounded-lg p-2 text-center">
+            View-only. Verify/Tolak harus lewat admin.
+          </div>
+        ) : rejectMode ? (
           <div className="space-y-2">
             <textarea
               value={alasan}
