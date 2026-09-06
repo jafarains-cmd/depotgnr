@@ -28,6 +28,7 @@ import {
   AlertCircle,
   Printer,
   BadgeCheck,
+  MessageCircle,
 } from "lucide-react";
 import { AppShell, type NavGroup } from "@/components/AppShell";
 import { requireRole } from "@/lib/permissions";
@@ -279,6 +280,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           label: "Pengaturan",
           icon: <Settings size={16} />,
           iconColor: "text-stone-600",
+        },
+        {
+          href: "/admin/whatsapp-status",
+          label: "Status WhatsApp",
+          icon: <MessageCircle size={16} />,
+          iconColor: "text-emerald-600",
         },
         {
           href: "/pengaturan-printer",
