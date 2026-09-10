@@ -12,6 +12,21 @@ on:
         options:
           - debug
           - release
+      tenant_slug:
+        description: "Tenant slug (default 'gnr' = main depot). Contoh: tirtaputra"
+        required: false
+        default: "gnr"
+        type: string
+      tenant_name:
+        description: "Nama tampilan depot (dipakai untuk app name). Kalau kosong = default GNR"
+        required: false
+        default: ""
+        type: string
+      tenant_url:
+        description: "URL server tenant. Kalau kosong = auto https://depot-<slug>.genster.my.id"
+        required: false
+        default: ""
+        type: string
 
   # Auto-build kalau push ke main dan ada perubahan Capacitor/Android
   push:
@@ -43,24 +58,17 @@ jobs:
           npm --version
 
       - name: Install npm dependencies
-        # Pakai npm install (bukan ci) supaya toleran terhadap optional
-        # platform-specific deps yang beda antara Windows local dan Linux CI
-        # (mis. @emnapi/*, esbuild native binaries).
         run: npm install --no-audit --no-fund --loglevel=error
 
       - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
           distribution: "temurin"
-          # Capacitor 8 + androidx dependencies butuh Java 21 (source release 21).
-          # Java 17 → error "invalid source release: 21" saat compile capacitor-android.
           java-version: "21"
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          # Match versi di variables.gradle (compileSdk=36, minSdk=24).
-          # SDK 36 wajib karena androidx.activity 1.11.0 (dari Capacitor 8) butuh 36+.
           packages: "platforms;android-36 build-tools;36.0.0 platform-tools"
 
       - name: Verify Android SDK installed
@@ -68,6 +76,82 @@ jobs:
           echo "ANDROID_HOME=$ANDROID_HOME"
           ls -la $ANDROID_HOME/platforms/ || echo "no platforms yet"
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --list_installed | head -30
+
+      # ===== TENANT CUSTOMIZATION =====
+      # Kalau tenant_slug != 'gnr', patch capacitor.config.ts + android/app/build.gradle
+      # untuk unique appId + server.url. Ini memungkinkan multi-tenant APK dari 1
+      # codebase — setiap tenant dapat APK dengan appId sendiri (misal
+      # com.genster.depotair.tirtaputra) supaya bisa co-exist di HP yang sama.
+      - name: Configure tenant-specific build
+        id: tenant
+        env:
+          TENANT_SLUG: ${{ github.event.inputs.tenant_slug || 'gnr' }}
+          TENANT_NAME: ${{ github.event.inputs.tenant_name || '' }}
+          TENANT_URL: ${{ github.event.inputs.tenant_url || '' }}
+        run: |
+          if [[ "$TENANT_SLUG" == "gnr" || -z "$TENANT_SLUG" ]]; then
+            echo "Main depot GNR build — no customization"
+            echo "final_slug=gnr" >> "$GITHUB_OUTPUT"
+            echo "final_app_id=com.genster.depotair" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Validate slug format
+          if [[ ! "$TENANT_SLUG" =~ ^[a-z][a-z0-9-]{2,30}$ ]]; then
+            echo "ERROR: slug harus lowercase, 3-30 char, a-z 0-9 dash"
+            exit 1
+          fi
+
+          # Compute derived values
+          APP_ID="com.genster.depotair.${TENANT_SLUG//-/_}"
+          if [[ -z "$TENANT_NAME" ]]; then
+            APP_NAME="Depot ${TENANT_SLUG^}"
+          else
+            APP_NAME="$TENANT_NAME"
+          fi
+          if [[ -z "$TENANT_URL" ]]; then
+            SERVER_URL="https://depot-${TENANT_SLUG}.genster.my.id"
+          else
+            SERVER_URL="$TENANT_URL"
+          fi
+
+          echo "Tenant customization:"
+          echo "  Slug     : $TENANT_SLUG"
+          echo "  App ID   : $APP_ID"
+          echo "  App Name : $APP_NAME"
+          echo "  Server   : $SERVER_URL"
+
+          # Extract host from URL for allowNavigation
+          SERVER_HOST=$(echo "$SERVER_URL" | sed -E 's|^https?://||; s|/.*$||')
+
+          # Patch capacitor.config.ts
+          sed -i "s|appId: \"com.genster.depotair\"|appId: \"${APP_ID}\"|g" capacitor.config.ts
+          sed -i "s|appName: \"Depot Air Minum GNR\"|appName: \"${APP_NAME}\"|g" capacitor.config.ts
+          sed -i "s|url: \"https://depot.genster.my.id\"|url: \"${SERVER_URL}\"|g" capacitor.config.ts
+          sed -i "s|\"depot.genster.my.id\"|\"${SERVER_HOST}\"|g" capacitor.config.ts
+
+          # Patch android/app/build.gradle applicationId + namespace
+          sed -i "s|applicationId \"com.genster.depotair\"|applicationId \"${APP_ID}\"|g" android/app/build.gradle
+          sed -i "s|namespace = \"com.genster.depotair\"|namespace = \"${APP_ID}\"|g" android/app/build.gradle
+          sed -i "s|namespace \"com.genster.depotair\"|namespace \"${APP_ID}\"|g" android/app/build.gradle
+
+          # Patch AndroidManifest deep link host
+          sed -i "s|android:host=\"depot.genster.my.id\"|android:host=\"${SERVER_HOST}\"|g" android/app/src/main/AndroidManifest.xml
+
+          # Rename Java package directory + update MainActivity
+          OLD_PKG_PATH="android/app/src/main/java/com/genster/depotair"
+          NEW_PKG_PATH="android/app/src/main/java/${APP_ID//./\/}"
+          mkdir -p "$(dirname "$NEW_PKG_PATH")"
+          mv "$OLD_PKG_PATH" "$NEW_PKG_PATH"
+          sed -i "s|package com.genster.depotair;|package ${APP_ID};|g" "${NEW_PKG_PATH}/MainActivity.java"
+
+          # Show diff summary
+          echo "=== Patched files ==="
+          grep -E "appId|appName|server.url" capacitor.config.ts | head -5
+          grep -E "applicationId|namespace" android/app/build.gradle | head -5
+
+          echo "final_slug=${TENANT_SLUG}" >> "$GITHUB_OUTPUT"
+          echo "final_app_id=${APP_ID}" >> "$GITHUB_OUTPUT"
 
       - name: Sync Capacitor
         run: npx cap sync android
@@ -80,8 +164,6 @@ jobs:
       - name: Build Debug APK
         if: ${{ github.event.inputs.build_type != 'release' }}
         working-directory: android
-        # JANGAN pipe ke tail — masking exit code gradle bikin failed build
-        # dianggap sukses. Log lengkap OK di-stream ke GH Actions log.
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: List build outputs (debug)
@@ -94,24 +176,22 @@ jobs:
 
       - name: Rename Debug APK
         if: ${{ github.event.inputs.build_type != 'release' }}
+        env:
+          TENANT_SLUG: ${{ steps.tenant.outputs.final_slug }}
         run: |
           mkdir -p output
-          cp android/app/build/outputs/apk/debug/app-debug.apk output/depot-air-gnr-debug-v$(date +%Y%m%d-%H%M).apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk \
+            "output/depot-${TENANT_SLUG}-debug-v$(date +%Y%m%d-%H%M).apk"
 
       - name: Upload Debug APK artifact
         if: ${{ github.event.inputs.build_type != 'release' }}
         uses: actions/upload-artifact@v4
         with:
-          name: depot-air-gnr-debug-apk
+          name: depot-${{ steps.tenant.outputs.final_slug }}-debug-apk
           path: output/*.apk
           retention-days: 30
 
       # ===== RELEASE BUILD (signed) =====
-      # Butuh GitHub Secrets:
-      #   ANDROID_KEYSTORE_BASE64    — keystore .jks di-encode base64
-      #   ANDROID_KEYSTORE_PASSWORD  — password keystore
-      #   ANDROID_KEY_ALIAS          — alias key
-      #   ANDROID_KEY_PASSWORD       — password key
       - name: Decode Keystore
         if: ${{ github.event.inputs.build_type == 'release' }}
         run: |
@@ -147,16 +227,20 @@ jobs:
 
       - name: Rename Release outputs
         if: ${{ github.event.inputs.build_type == 'release' }}
+        env:
+          TENANT_SLUG: ${{ steps.tenant.outputs.final_slug }}
         run: |
           mkdir -p output
-          cp android/app/build/outputs/apk/release/app-release.apk output/depot-air-gnr-release-v$(date +%Y%m%d-%H%M).apk
-          cp android/app/build/outputs/bundle/release/app-release.aab output/depot-air-gnr-release-v$(date +%Y%m%d-%H%M).aab
+          cp android/app/build/outputs/apk/release/app-release.apk \
+            "output/depot-${TENANT_SLUG}-release-v$(date +%Y%m%d-%H%M).apk"
+          cp android/app/build/outputs/bundle/release/app-release.aab \
+            "output/depot-${TENANT_SLUG}-release-v$(date +%Y%m%d-%H%M).aab"
 
       - name: Upload Release artifacts
         if: ${{ github.event.inputs.build_type == 'release' }}
         uses: actions/upload-artifact@v4
         with:
-          name: depot-air-gnr-release
+          name: depot-${{ steps.tenant.outputs.final_slug }}-release
           path: output/*
           retention-days: 90
 
