@@ -13,6 +13,8 @@ import {
   Clock,
   Star,
   Check,
+  LogIn,
+  UserPlus,
 } from "lucide-react";
 import { sql, eq } from "drizzle-orm";
 import { db } from "@/db";
@@ -91,15 +93,15 @@ export default async function Home() {
           <div className="flex items-center gap-2">
             <Link
               href="/login"
-              className="px-3 sm:px-4 py-2 text-sm font-bold text-brand hover:bg-brand-soft rounded-lg transition"
+              className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm font-bold text-brand bg-brand-soft border-2 border-brand hover:bg-brand hover:text-white rounded-lg transition"
             >
-              Masuk
+              <LogIn size={15} /> Masuk
             </Link>
             <Link
               href="/register"
-              className="px-3 sm:px-4 py-2 bg-brand text-white text-sm font-bold rounded-lg hover:bg-brand-deep transition shadow-sm"
+              className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-brand text-white text-sm font-bold rounded-lg hover:bg-brand-deep transition shadow-sm border-2 border-brand"
             >
-              Daftar
+              <UserPlus size={15} /> Daftar
             </Link>
           </div>
         </div>
@@ -125,15 +127,15 @@ export default async function Home() {
                     href="/register"
                     className="relative w-full px-6 py-3.5 bg-brand text-white font-extrabold rounded-xl hover:bg-brand-deep transition inline-flex items-center justify-center gap-2 shadow-lg shadow-brand/30"
                   >
-                    Mulai Sekarang <ArrowRight size={18} />
+                    <UserPlus size={18} /> Daftar Baru
                   </Link>
                   <BorderBeam size={80} duration={12} colorFrom="#a5f3fc" colorTo="#0284c7" />
                 </div>
                 <Link
                   href="/login"
-                  className="px-6 py-3.5 bg-white text-slate-900 font-extrabold rounded-xl hover:bg-slate-50 transition inline-flex items-center justify-center gap-2 shadow-sm border border-slate-200"
+                  className="px-6 py-3.5 bg-brand-soft text-brand font-extrabold rounded-xl hover:bg-brand hover:text-white transition inline-flex items-center justify-center gap-2 shadow-sm border-2 border-brand"
                 >
-                  Sudah Punya Akun
+                  <LogIn size={18} /> Masuk (Sudah Punya Akun)
                 </Link>
               </div>
               <div className="mt-6 flex flex-wrap items-center gap-4 text-xs text-slate-500 justify-center lg:justify-start">
