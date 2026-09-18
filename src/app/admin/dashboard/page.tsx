@@ -13,6 +13,7 @@ import { bahanBaku } from "@/db/schema/bahan-baku";
 import { sql, gte, eq, desc, ne, lt, and, isNull } from "drizzle-orm";
 import { formatRupiah } from "@/lib/utils";
 import { NumberTicker } from "@/components/NumberTicker";
+import { MoneyDisplay } from "@/components/MoneyDisplay";
 import { countChurnRisk } from "@/lib/analytics";
 import {
   getSemuaShiftAktif,
@@ -261,7 +262,7 @@ export default async function DashboardPage() {
               OMZET HARI INI
             </div>
             <div className="text-3xl sm:text-4xl font-extrabold mt-1 tracking-tight">
-              {formatRupiah(omzet)}
+              <MoneyDisplay value={omzet} />
             </div>
             {omzetDelta !== null && (
               <div
@@ -364,7 +365,7 @@ export default async function DashboardPage() {
               OMZET
             </div>
             <div className="text-2xl font-extrabold text-emerald-900 mt-1">
-              {formatRupiah(omzet)}
+              <MoneyDisplay value={omzet} />
             </div>
           </div>
           <Link
@@ -375,7 +376,7 @@ export default async function DashboardPage() {
               PENGELUARAN
             </div>
             <div className="text-2xl font-extrabold text-rose-900 mt-1">
-              {formatRupiah(pengeluaranToday)}
+              <MoneyDisplay value={pengeluaranToday} />
             </div>
             <div className="text-[11px] text-rose-700 mt-1">Klik untuk kelola →</div>
           </Link>
@@ -398,7 +399,7 @@ export default async function DashboardPage() {
                 profitBersih >= 0 ? "text-brand" : "text-amber-900"
               }`}
             >
-              {formatRupiah(profitBersih)}
+              <MoneyDisplay value={profitBersih} />
             </div>
             <div
               className={`text-[11px] mt-1 ${
@@ -423,7 +424,7 @@ export default async function DashboardPage() {
               OMZET
             </div>
             <div className="text-2xl font-extrabold text-emerald-900 mt-1">
-              {formatRupiah(omzetThisMonth)}
+              <MoneyDisplay value={omzetThisMonth} />
             </div>
             {omzetMonthDelta !== null && (
               <div
@@ -446,7 +447,7 @@ export default async function DashboardPage() {
               PENGELUARAN
             </div>
             <div className="text-2xl font-extrabold text-rose-900 mt-1">
-              {formatRupiah(pengeluaranThisMonth)}
+              <MoneyDisplay value={pengeluaranThisMonth} />
             </div>
             <div className="text-[11px] text-rose-700 mt-1">
               Listrik, gaji, sparepart, dll
@@ -471,7 +472,7 @@ export default async function DashboardPage() {
                 profitThisMonth >= 0 ? "text-brand" : "text-amber-900"
               }`}
             >
-              {formatRupiah(profitThisMonth)}
+              <MoneyDisplay value={profitThisMonth} />
             </div>
             <div
               className={`text-[11px] mt-1 ${
