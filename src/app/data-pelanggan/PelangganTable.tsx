@@ -31,35 +31,37 @@ export function PelangganTable({
 
   return (
     <div className="space-y-4">
-      <form method="GET" className="flex gap-3 items-center">
-        <input
-          name="q"
-          defaultValue={q}
-          placeholder="Cari nama, telp, alamat..."
-          className="flex-1 px-3 py-2 border border-line rounded-md text-sm"
-        />
-        <button
-          type="submit"
-          className="px-4 py-2 bg-brand-600 text-white rounded-md text-sm font-bold"
-        >
-          Cari
-        </button>
-        {q && (
-          <a
-            href="/data-pelanggan"
-            className="px-2 py-2 text-xs text-[color:var(--muted)] hover:text-ink"
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-center">
+        <form method="GET" className="flex gap-2 flex-1 min-w-0">
+          <input
+            name="q"
+            defaultValue={q}
+            placeholder="Cari nama, telp, alamat..."
+            className="flex-1 min-w-0 px-3 py-2 border border-line rounded-md text-sm"
+          />
+          <button
+            type="submit"
+            className="px-4 py-2 bg-brand-600 text-white rounded-md text-sm font-bold shrink-0"
           >
-            Reset
-          </a>
-        )}
+            Cari
+          </button>
+          {q && (
+            <a
+              href="/data-pelanggan"
+              className="px-2 py-2 text-xs text-[color:var(--muted)] hover:text-ink shrink-0"
+            >
+              Reset
+            </a>
+          )}
+        </form>
         <button
           type="button"
           onClick={() => setCreating(true)}
-          className="px-3 py-2 bg-brand-600 text-white rounded-md text-sm flex items-center gap-1"
+          className="px-4 py-2 bg-brand-600 text-white rounded-md text-sm font-bold inline-flex items-center justify-center gap-1 sm:shrink-0 border-2 border-brand-700 shadow-sm"
         >
-          <Plus size={16} /> Tambah
+          <Plus size={16} /> Tambah Pelanggan
         </button>
-      </form>
+      </div>
 
       {(creating || editing) && (
         <div className="bg-surface rounded-xl border border-line p-4">

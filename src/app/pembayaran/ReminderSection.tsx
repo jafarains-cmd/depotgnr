@@ -115,36 +115,44 @@ function ReminderCard({ row }: { row: ReminderRow }) {
 
   return (
     <div className="bg-surface border border-amber-200 rounded-lg p-3">
-      <div className="flex items-start justify-between gap-2 flex-wrap">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <div className="inline-flex items-center gap-1.5 flex-wrap">
-            <span className="font-bold text-sm">{row.pelangganNama}</span>
+          <div className="flex items-start gap-1.5 flex-wrap">
+            <span className="font-bold text-sm break-words">{row.pelangganNama}</span>
             <span
-              className={`text-[10px] px-1.5 py-0.5 rounded font-extrabold border ${stage.color}`}
+              className={`text-[10px] px-1.5 py-0.5 rounded font-extrabold border ${stage.color} shrink-0`}
             >
               {stage.text}
             </span>
             {row.lastReminderStage && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 inline-flex items-center gap-0.5">
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 inline-flex items-center gap-0.5 shrink-0">
                 <History size={9} /> Pernah stage {row.lastReminderStage}
               </span>
             )}
           </div>
-          <div className="text-xs text-[color:var(--muted)] mt-0.5">
-            {row.nomorOrder} · {formatRupiah(row.totalPiutang)} ·{" "}
+          <div className="text-xs text-[color:var(--muted)] mt-1 flex flex-wrap gap-x-1.5 gap-y-0.5">
+            <span className="font-mono">{row.nomorOrder}</span>
+            <span>·</span>
+            <span className="font-bold text-slate-700">{formatRupiah(row.totalPiutang)}</span>
+            <span>·</span>
             <b>{row.daysAge} hari</b>
-            {row.pelangganTelp && ` · ${row.pelangganTelp}`}
+            {row.pelangganTelp && (
+              <>
+                <span>·</span>
+                <span>{row.pelangganTelp}</span>
+              </>
+            )}
           </div>
         </div>
 
         {!showSkip && (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1.5 shrink-0">
             {notelpValid ? (
               <>
                 <button
                   onClick={handleOpenWa}
                   disabled={pending}
-                  className={`px-3 py-1.5 rounded text-xs font-bold inline-flex items-center gap-1 ${
+                  className={`flex-1 sm:flex-initial px-3 py-2 rounded text-xs font-bold inline-flex items-center justify-center gap-1 ${
                     waOpened
                       ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
                       : "bg-emerald-600 text-white hover:bg-emerald-700"
@@ -156,7 +164,7 @@ function ReminderCard({ row }: { row: ReminderRow }) {
                 <button
                   onClick={handleMarkSent}
                   disabled={pending}
-                  className="px-3 py-1.5 bg-brand-600 text-white rounded text-xs font-bold inline-flex items-center gap-1 disabled:opacity-50"
+                  className="flex-1 sm:flex-initial px-3 py-2 bg-brand-600 text-white rounded text-xs font-bold inline-flex items-center justify-center gap-1 disabled:opacity-50"
                   title="Mark reminder ini sudah dikirim"
                 >
                   {pending ? (
@@ -176,7 +184,7 @@ function ReminderCard({ row }: { row: ReminderRow }) {
             <button
               onClick={() => setShowSkip(true)}
               disabled={pending}
-              className="px-2 py-1.5 text-xs text-[color:var(--muted)] hover:text-red-600 border border-line rounded"
+              className="px-2 py-2 text-xs text-[color:var(--muted)] hover:text-red-600 border border-line rounded shrink-0"
               title="Skip reminder ini"
             >
               <X size={11} />
