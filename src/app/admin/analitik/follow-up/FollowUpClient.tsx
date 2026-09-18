@@ -154,7 +154,100 @@ export function FollowUpClient({ rows }: { rows: Row[] }) {
         </div>
       )}
 
-      <div className="bg-surface border border-line rounded-2xl overflow-hidden">
+      {/* Mobile card list */}
+      <div className="sm:hidden space-y-2">
+        {filtered.length === 0 && (
+          <div className="p-8 text-center text-sm text-[color:var(--muted)] bg-surface border border-line rounded-2xl">
+            Tidak ada data.
+          </div>
+        )}
+        {filtered.map((r) => {
+          const s = STATUS[r.status];
+          const isSelected = selected.has(r.pelangganId);
+          return (
+            <div
+              key={r.pelangganId}
+              className={`bg-surface border rounded-2xl p-3 space-y-2 transition ${
+                isSelected ? "border-brand ring-1 ring-brand" : "border-line"
+              }`}
+            >
+              {/* Row 1: checkbox + Nama + status pill */}
+              <div className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => toggle(r.pelangganId)}
+                  className="mt-1 shrink-0"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="font-bold text-sm truncate">{r.nama}</div>
+                  {r.telp && (
+                    <div className="text-[10px] text-[color:var(--muted)] truncate">
+                      {r.telp}
+                    </div>
+                  )}
+                </div>
+                <span
+                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ${s.cls}`}
+                >
+                  {s.icon} {s.label}
+                </span>
+              </div>
+              {/* Row 2: Order + Pola */}
+              <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-[color:var(--muted)] pl-6">
+                <span>
+                  <b className="text-ink">{r.totalOrder}</b> order
+                </span>
+                <span>·</span>
+                <span>
+                  Tiap ~{r.avgIntervalDays}h ± {r.stdDevDays}h
+                </span>
+              </div>
+              {/* Row 3: Terakhir + Prediksi + Action */}
+              <div className="flex items-end justify-between gap-2 pt-2 border-t border-line pl-6">
+                <div className="text-[11px] min-w-0 flex-1">
+                  <div>
+                    Terakhir:{" "}
+                    <b>
+                      {new Date(r.lastOrderAt).toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "short",
+                      })}
+                    </b>
+                    <span className="text-[color:var(--muted)]">
+                      {" "}
+                      · {r.daysSinceLastOrder}h lalu
+                    </span>
+                  </div>
+                  <div className="text-[color:var(--muted)]">
+                    Prediksi:{" "}
+                    {new Date(r.predictedNext).toLocaleDateString("id-ID", {
+                      day: "numeric",
+                      month: "short",
+                    })}
+                    {r.daysOverdue > 0 && (
+                      <span className="text-red-600 font-bold">
+                        {" "}
+                        ({r.daysOverdue}h lewat)
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => sendOne(r.pelangganId)}
+                  disabled={pending}
+                  className="px-3 py-1.5 bg-brand-600 text-white rounded text-xs inline-flex items-center gap-1 disabled:opacity-50 shrink-0 font-bold"
+                >
+                  <Send size={11} /> WA
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden sm:block bg-surface border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">

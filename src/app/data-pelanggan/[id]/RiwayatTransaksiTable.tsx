@@ -31,7 +31,81 @@ export function RiwayatTransaksiTable({ items }: { items: RiwayatItem[] }) {
 
   return (
     <>
-      <div className="overflow-x-auto">
+      {/* Mobile card list */}
+      <div className="sm:hidden space-y-2">
+        {items.length === 0 && (
+          <div className="p-6 text-center text-xs text-[color:var(--muted)] bg-surface border border-line rounded-2xl">
+            Belum ada transaksi pelanggan ini.
+          </div>
+        )}
+        {items.map((it) => {
+          const isOrder = it.kind === "order";
+          return (
+            <button
+              key={`${it.kind}-${it.id}`}
+              onClick={() => setDetail({ kind: it.kind, id: it.id })}
+              className="w-full text-left bg-surface border border-line rounded-2xl p-3 space-y-2 hover:border-brand transition"
+            >
+              {/* Row 1: Nomor + Total */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="font-mono text-brand font-bold text-sm truncate">
+                    {it.nomor}
+                  </div>
+                  <div className="text-[10px] text-[color:var(--muted)] mt-0.5">
+                    {new Date(it.createdAt).toLocaleString("id-ID", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="font-extrabold text-base">
+                    {formatRupiah(it.total)}
+                  </div>
+                  <div className="text-[10px] text-[color:var(--muted)]">
+                    {it.qtyGalon} galon
+                  </div>
+                </div>
+              </div>
+              {/* Row 2: sumber + status + metode */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-line">
+                <span
+                  className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                    isOrder
+                      ? "bg-blue-50 text-blue-700"
+                      : "bg-violet-50 text-violet-700"
+                  }`}
+                >
+                  {isOrder ? <Truck size={10} /> : <Receipt size={10} />}
+                  {it.sumber}
+                </span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                    STATUS_BADGE[it.statusBayar] ?? "bg-gray-100 text-gray-700"
+                  }`}
+                >
+                  {it.statusBayar.toUpperCase()}
+                </span>
+                {it.statusOrder && it.statusOrder !== "selesai" && (
+                  <span className="text-[10px] text-[color:var(--muted)] uppercase">
+                    · {it.statusOrder}
+                  </span>
+                )}
+                <span className="text-[10px] text-[color:var(--muted)] uppercase ml-auto">
+                  {it.metodeBayar ?? "-"}
+                </span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden sm:block overflow-x-auto">
         <table className="w-full text-xs">
           <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
             <tr>

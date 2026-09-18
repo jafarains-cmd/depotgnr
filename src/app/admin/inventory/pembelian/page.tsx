@@ -165,7 +165,79 @@ export default async function PembelianGalonPage({
         <PageSizeSelect value={limit} />
       </div>
 
-      <div className="bg-surface border border-line rounded-2xl overflow-hidden">
+      {/* Mobile card list */}
+      <div className="sm:hidden space-y-2">
+        {rows.length === 0 && (
+          <div className="bg-surface border border-line rounded-2xl p-8 text-center text-sm text-[color:var(--muted)]">
+            Belum ada pembelian pada periode ini. Klik &quot;Beli Galon&quot; untuk mulai.
+          </div>
+        )}
+        {rows.map((r) => (
+          <div key={r.id} className="bg-surface border border-line rounded-2xl p-3 space-y-2">
+            {/* Row 1: Produk + Total */}
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="font-bold text-sm truncate">{r.produkNama ?? "—"}</div>
+                {r.produkBrand && (
+                  <div className="text-[10px] text-[color:var(--muted)] truncate">
+                    {r.produkBrand}
+                  </div>
+                )}
+              </div>
+              <div className="text-right shrink-0">
+                <div className="font-extrabold text-base text-brand">
+                  {formatRupiah(r.totalHarga)}
+                </div>
+                <div className="text-[10px] text-[color:var(--muted)] font-mono">
+                  {r.jumlah}× @ {formatRupiah(r.hargaSatuan)}
+                </div>
+              </div>
+            </div>
+            {/* Row 2: Jenis + Tanggal + Supplier */}
+            <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+              <span
+                className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                  r.jenis === "kosong"
+                    ? "bg-sky-100 text-sky-700"
+                    : "bg-emerald-100 text-emerald-700"
+                }`}
+              >
+                {r.jenis === "kosong" ? "KOSONG" : "TERISI"}
+              </span>
+              <span className="text-[color:var(--muted)]">
+                {r.tanggal.toLocaleDateString("id-ID", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "2-digit",
+                })}
+              </span>
+              <span className="text-[color:var(--muted)]">·</span>
+              <span className="truncate">{r.supplierNama ?? "—"}</span>
+            </div>
+            {/* Row 3: Invoice + Foto */}
+            {(r.noInvoice || r.fotoNotaUrl) && (
+              <div className="flex items-center justify-between gap-2 pt-1 border-t border-line">
+                <span className="text-[10px] text-[color:var(--muted)] font-mono truncate">
+                  {r.noInvoice ? `Inv: ${r.noInvoice}` : ""}
+                </span>
+                {r.fotoNotaUrl && (
+                  <a
+                    href={r.fotoNotaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-brand hover:underline text-[11px] font-bold shrink-0"
+                  >
+                    Foto Nota →
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden sm:block bg-surface border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
