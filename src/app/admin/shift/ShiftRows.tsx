@@ -31,7 +31,133 @@ export function ShiftRows({ rows }: { rows: Row[] }) {
   const [editFor, setEditFor] = useState<Row | null>(null);
 
   return (
-    <div className="bg-surface border border-line rounded-2xl overflow-hidden">
+    <div>
+    {/* Mobile: card list layout (no horizontal scroll) */}
+    <div className="sm:hidden space-y-2">
+      {rows.length === 0 && (
+        <div className="bg-surface border border-line rounded-2xl p-8 text-center text-[color:var(--muted)]">
+          Belum ada shift.
+        </div>
+      )}
+      {rows.map((r) => (
+        <button
+          key={r.id}
+          onClick={() => setDetailId(r.id)}
+          className={`w-full text-left bg-surface border border-line rounded-2xl p-3 space-y-2 ${
+            r.stale ? "border-red-300 bg-red-50" : ""
+          }`}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="font-bold text-sm truncate">{r.kasirNama ?? "—"}</div>
+              <div className="text-[10px] text-[color:var(--muted)] uppercase">
+                {r.kasirRole ?? "—"}
+              </div>
+            </div>
+            <span
+              className={`text-[10px] px-2 py-0.5 rounded-full font-bold shrink-0 ${
+                r.stale
+                  ? "bg-red-600 text-white animate-pulse"
+                  : r.status === "open"
+                    ? "bg-emerald-100 text-emerald-800"
+                    : "bg-slate-100 text-slate-600"
+              }`}
+            >
+              {r.stale ? "STALE" : r.status.toUpperCase()}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs pt-2 border-t border-line">
+            <div>
+              <div className="text-[10px] text-[color:var(--muted)] uppercase">Buka</div>
+              <div className="font-mono">
+                {r.openedAt.toLocaleString("id-ID", {
+                  day: "2-digit",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] text-[color:var(--muted)] uppercase">Tutup</div>
+              <div className="font-mono">
+                {r.closedAt
+                  ? r.closedAt.toLocaleString("id-ID", {
+                      day: "2-digit",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "—"}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] text-[color:var(--muted)] uppercase">Uang awal</div>
+              <div className="font-mono">
+                {r.openingCash !== null ? formatRupiah(r.openingCash) : "—"}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] text-[color:var(--muted)] uppercase">Ekspektasi</div>
+              <div className="font-mono">
+                {r.closingCashExpected !== null
+                  ? formatRupiah(r.closingCashExpected)
+                  : r.status === "open"
+                    ? `${formatRupiah(r.expectedForOpen)} (est)`
+                    : "—"}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] text-[color:var(--muted)] uppercase">Fisik</div>
+              <div className="font-mono">
+                {r.closingCashCounted !== null
+                  ? formatRupiah(r.closingCashCounted)
+                  : "—"}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] text-[color:var(--muted)] uppercase">Selisih</div>
+              <div
+                className={`font-mono font-bold ${
+                  (r.selisih ?? 0) === 0
+                    ? "text-[color:var(--muted)]"
+                    : (r.selisih ?? 0) > 0
+                      ? "text-emerald-700"
+                      : "text-red-600"
+                }`}
+              >
+                {r.selisih !== null
+                  ? `${r.selisih > 0 ? "+" : ""}${formatRupiah(r.selisih)}`
+                  : "—"}
+              </div>
+            </div>
+          </div>
+
+          <div
+            className="flex gap-2 pt-2 border-t border-line"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setEditFor(r)}
+              className="flex-1 px-2 py-1.5 text-xs border border-amber-300 text-amber-700 rounded-md font-bold inline-flex items-center justify-center gap-1"
+            >
+              <Pencil size={11} /> Edit
+            </button>
+            {r.status === "open" && (
+              <ForceCloseButton
+                shiftId={r.id}
+                kasirNama={r.kasirNama ?? "—"}
+                expectedCash={r.expectedForOpen}
+              />
+            )}
+          </div>
+        </button>
+      ))}
+    </div>
+
+    {/* Desktop: table layout */}
+    <div className="hidden sm:block bg-surface border border-line rounded-2xl overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left text-xs">
@@ -182,6 +308,7 @@ export function ShiftRows({ rows }: { rows: Row[] }) {
       )}
 
       {editFor && <EditOpeningModal row={editFor} onClose={() => setEditFor(null)} />}
+    </div>
     </div>
   );
 }

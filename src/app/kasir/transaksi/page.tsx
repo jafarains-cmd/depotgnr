@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { eq, desc, and, gte, lte, like, or, sql, isNull, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { TransaksiRow } from "./TransaksiRow";
+import { TransaksiCardMobile } from "./TransaksiCardMobile";
 import { transaksi } from "@/db/schema/transaksi";
 import { user as userTable } from "@/db/schema/auth";
 import { pelanggan } from "@/db/schema/pelanggan";
@@ -344,7 +345,36 @@ export default async function RiwayatKasirPage({
           Omzet: {formatRupiah(totalOmzet)}
         </span>
       </div>
-      <div className="bg-surface rounded-xl border border-line overflow-hidden">
+      {/* Mobile card list — no horizontal scroll */}
+      <div className="sm:hidden space-y-2">
+        {rows.length === 0 ? (
+          <div className="bg-surface border border-line rounded-2xl p-6 text-center text-[color:var(--muted)]">
+            Belum ada transaksi.
+          </div>
+        ) : (
+          rows.map((r) => (
+            <TransaksiCardMobile
+              key={r.id}
+              row={{
+                id: r.id,
+                nomorNota: r.nomorNota,
+                createdAt: r.createdAt,
+                pelangganNama: r.pelangganNama,
+                kasir: r.kasir,
+                kurirNama: r.kurirNama,
+                metodeBayar: r.metodeBayar,
+                total: r.total,
+                voidedAt: r.voidedAt,
+                refOrderId: r.refOrderId,
+                alamatAntar: r.alamatAntar,
+              }}
+            />
+          ))
+        )}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden sm:block bg-surface rounded-xl border border-line overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
