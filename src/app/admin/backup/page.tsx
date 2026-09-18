@@ -94,79 +94,136 @@ export default async function BackupPage() {
             Belum ada backup. Klik "Backup Sekarang" atau tunggu cron jalan.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left text-xs">
-                <tr>
-                  <th className="p-3">Waktu</th>
-                  <th className="p-3">Status</th>
-                  <th className="p-3 hidden sm:table-cell">Trigger</th>
-                  <th className="p-3 hidden md:table-cell">Ukuran</th>
-                  <th className="p-3 hidden md:table-cell">Durasi</th>
-                  <th className="p-3"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {rows.map((r) => (
-                  <tr key={r.id}>
-                    <td className="p-3 text-xs whitespace-nowrap">
-                      {r.ranAt.toLocaleString("id-ID", {
-                        dateStyle: "short",
-                        timeStyle: "short",
-                      })}
-                    </td>
-                    <td className="p-3">
-                      {r.status === "success" ? (
-                        <span className="text-emerald-700 inline-flex items-center gap-1 text-xs font-bold">
-                          <CheckCircle size={12} /> SUKSES
-                        </span>
-                      ) : (
-                        <span
-                          className="text-rose-700 inline-flex items-center gap-1 text-xs font-bold"
-                          title={r.error ?? ""}
-                        >
-                          <XCircle size={12} /> GAGAL
-                        </span>
-                      )}
-                      {r.error && (
-                        <div className="text-[10px] text-rose-600 mt-0.5 max-w-xs truncate">
-                          {r.error}
-                        </div>
-                      )}
-                    </td>
-                    <td className="p-3 hidden sm:table-cell text-xs">
-                      <span className="px-2 py-0.5 rounded-full bg-[color:var(--surface2)] text-[color:var(--muted)] uppercase font-bold">
+          <>
+            {/* Mobile card list */}
+            <div className="sm:hidden divide-y divide-line">
+              {rows.map((r) => (
+                <div key={r.id} className="p-3 space-y-1.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold text-ink">
+                        {r.ranAt.toLocaleString("id-ID", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                      </div>
+                      <div className="mt-1">
+                        {r.status === "success" ? (
+                          <span className="text-emerald-700 inline-flex items-center gap-1 text-xs font-bold">
+                            <CheckCircle size={12} /> SUKSES
+                          </span>
+                        ) : (
+                          <span className="text-rose-700 inline-flex items-center gap-1 text-xs font-bold">
+                            <XCircle size={12} /> GAGAL
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {r.fileUrl && (
+                      <a
+                        href={r.fileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-brand text-xs inline-flex items-center gap-1 hover:underline shrink-0"
+                      >
+                        <ExternalLink size={11} /> Drive
+                      </a>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-[color:var(--muted)]">
+                    <span className="inline-flex items-center gap-1">
+                      <span className="uppercase font-bold text-[10px] px-1.5 py-0.5 rounded bg-[color:var(--surface2)]">
                         {r.triggeredBy}
                       </span>
-                      {r.userName && (
-                        <div className="text-[10px] text-[color:var(--muted)] mt-0.5">
-                          {r.userName}
-                        </div>
-                      )}
-                    </td>
-                    <td className="p-3 hidden md:table-cell text-xs font-mono">
-                      {formatBytes(r.sizeBytes)}
-                    </td>
-                    <td className="p-3 hidden md:table-cell text-xs font-mono">
-                      {formatDuration(r.durationMs)}
-                    </td>
-                    <td className="p-3 text-right">
-                      {r.fileUrl && (
-                        <a
-                          href={r.fileUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-brand text-xs inline-flex items-center gap-1 hover:underline"
-                        >
-                          <ExternalLink size={11} /> Drive
-                        </a>
-                      )}
-                    </td>
+                      {r.userName && <span>· {r.userName}</span>}
+                    </span>
+                    <span className="font-mono">📦 {formatBytes(r.sizeBytes)}</span>
+                    <span className="font-mono">⏱ {formatDuration(r.durationMs)}</span>
+                  </div>
+                  {r.error && (
+                    <div className="text-[10px] text-rose-600 break-words bg-rose-50 border border-rose-200 rounded px-2 py-1">
+                      {r.error}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left text-xs">
+                  <tr>
+                    <th className="p-3">Waktu</th>
+                    <th className="p-3">Status</th>
+                    <th className="p-3 hidden sm:table-cell">Trigger</th>
+                    <th className="p-3 hidden md:table-cell">Ukuran</th>
+                    <th className="p-3 hidden md:table-cell">Durasi</th>
+                    <th className="p-3"></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {rows.map((r) => (
+                    <tr key={r.id}>
+                      <td className="p-3 text-xs whitespace-nowrap">
+                        {r.ranAt.toLocaleString("id-ID", {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        })}
+                      </td>
+                      <td className="p-3">
+                        {r.status === "success" ? (
+                          <span className="text-emerald-700 inline-flex items-center gap-1 text-xs font-bold">
+                            <CheckCircle size={12} /> SUKSES
+                          </span>
+                        ) : (
+                          <span
+                            className="text-rose-700 inline-flex items-center gap-1 text-xs font-bold"
+                            title={r.error ?? ""}
+                          >
+                            <XCircle size={12} /> GAGAL
+                          </span>
+                        )}
+                        {r.error && (
+                          <div className="text-[10px] text-rose-600 mt-0.5 max-w-xs truncate">
+                            {r.error}
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-3 hidden sm:table-cell text-xs">
+                        <span className="px-2 py-0.5 rounded-full bg-[color:var(--surface2)] text-[color:var(--muted)] uppercase font-bold">
+                          {r.triggeredBy}
+                        </span>
+                        {r.userName && (
+                          <div className="text-[10px] text-[color:var(--muted)] mt-0.5">
+                            {r.userName}
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-3 hidden md:table-cell text-xs font-mono">
+                        {formatBytes(r.sizeBytes)}
+                      </td>
+                      <td className="p-3 hidden md:table-cell text-xs font-mono">
+                        {formatDuration(r.durationMs)}
+                      </td>
+                      <td className="p-3 text-right">
+                        {r.fileUrl && (
+                          <a
+                            href={r.fileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-brand text-xs inline-flex items-center gap-1 hover:underline"
+                          >
+                            <ExternalLink size={11} /> Drive
+                          </a>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </section>
 

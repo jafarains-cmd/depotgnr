@@ -96,7 +96,51 @@ export function UsersClient({ users }: { users: Row[] }) {
         <EditUserModal user={editing} onClose={() => setEditing(null)} />
       )}
 
-      <div className="bg-surface rounded-xl border border-line overflow-hidden">
+      {/* Mobile card list — no swipe */}
+      <div className="sm:hidden space-y-2">
+        {users.map((u) => (
+          <UserCardMobile
+            key={u.id}
+            user={u}
+            onEdit={() => setEditing(u)}
+            onRoleChange={(role) => startTransition(() => updateUserRole(u.id, role))}
+            onBan={() => {
+              const reason = prompt("Alasan ban?") ?? "";
+              if (reason) startTransition(() => banUser(u.id, reason));
+            }}
+            onUnban={() => startTransition(() => unbanUser(u.id))}
+            onSoftDelete={() => {
+              if (
+                confirm(
+                  `Nonaktifkan user ${u.name} (${u.email})?\n\nUser tidak bisa login lagi, semua sesi aktif dihapus. Data order/transaksi tetap utuh dengan nama asli. Bisa diaktifkan kembali kapan saja.`,
+                )
+              ) {
+                startTransition(async () => {
+                  const r = await deleteUser(u.id, "soft");
+                  if ("error" in r) toast.error(r.error);
+                  else toast.success(`User ${u.name} dinonaktifkan`);
+                });
+              }
+            }}
+            onHardDelete={() => {
+              if (
+                confirm(
+                  `⚠ HAPUS PERMANEN user ${u.name} (${u.email})?\n\nData order/transaksi terkait akan jadi anonim (nama '—'). Tidak bisa di-undo.\n\nDirekomendasikan pakai "Nonaktifkan" sebagai gantinya.`,
+                )
+              ) {
+                startTransition(async () => {
+                  const r = await deleteUser(u.id, "hard");
+                  if ("error" in r) toast.error(r.error);
+                  else toast.success(`User ${u.name} dihapus permanen`);
+                });
+              }
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden sm:block bg-surface rounded-xl border border-line overflow-hidden">
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left">
@@ -240,6 +284,141 @@ export function UsersClient({ users }: { users: Row[] }) {
           </tbody>
         </table>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function UserCardMobile({
+  user,
+  onEdit,
+  onRoleChange,
+  onBan,
+  onUnban,
+  onSoftDelete,
+  onHardDelete,
+}: {
+  user: Row;
+  onEdit: () => void;
+  onRoleChange: (role: Row["role"]) => void;
+  onBan: () => void;
+  onUnban: () => void;
+  onSoftDelete: () => void;
+  onHardDelete: () => void;
+}) {
+  const { label, color } = formatLastLogin(user.lastLogin);
+
+  return (
+    <div
+      className={`bg-surface border rounded-2xl p-3 space-y-2 ${
+        user.banned ? "border-red-300 opacity-70" : "border-line"
+      }`}
+    >
+      {/* Row 1: Nama + status badge */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="font-bold text-sm truncate">{user.name}</div>
+          <div className="text-[11px] text-[color:var(--muted)] truncate">
+            {user.email}
+          </div>
+          {user.username && (
+            <div className="text-[10px] text-[color:var(--muted)] font-mono">
+              @{user.username}
+            </div>
+          )}
+          {user.phoneNumber && (
+            <div className="text-[10px] text-[color:var(--muted)]">
+              {user.phoneNumber}
+            </div>
+          )}
+        </div>
+        <div className="shrink-0 text-right">
+          {user.banned ? (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-extrabold">
+              DITANGGUHKAN
+            </span>
+          ) : (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-extrabold">
+              AKTIF
+            </span>
+          )}
+          <div className={`text-[10px] mt-1 font-bold ${color}`}>{label}</div>
+          <div className="text-[10px] text-[color:var(--muted)]">
+            {user.sessionCount} sesi
+          </div>
+        </div>
+      </div>
+
+      {/* Row 2: Role selector + pelanggan info */}
+      <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-line">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] font-bold text-[color:var(--muted)] uppercase">
+            Role
+          </span>
+          <select
+            value={user.role}
+            onChange={(e) => onRoleChange(e.target.value as Row["role"])}
+            className="px-2 py-1 border border-line rounded-md text-xs bg-surface font-bold"
+          >
+            <option value="pelanggan">pelanggan</option>
+            <option value="kurir">kurir</option>
+            <option value="kasir">kasir</option>
+            <option value="admin">admin</option>
+          </select>
+        </div>
+        {user.pelanggan ? (
+          <Link
+            href={`/data-pelanggan/${user.pelanggan.id}`}
+            className="text-[11px] inline-flex items-center gap-1 text-emerald-700 font-bold hover:underline min-w-0"
+          >
+            <UserCheck size={11} className="shrink-0" />
+            <span className="truncate">{user.pelanggan.nama}</span>
+          </Link>
+        ) : (
+          <span className="text-[11px] inline-flex items-center gap-1 text-[color:var(--muted)]">
+            <UserX size={11} /> Belum tertaut
+          </span>
+        )}
+      </div>
+
+      {/* Row 3: Action buttons */}
+      <div className="flex flex-wrap gap-1.5 pt-2 border-t border-line">
+        <button
+          onClick={onEdit}
+          className="flex-1 min-w-[80px] px-2 py-1.5 bg-brand-soft text-brand rounded text-xs font-bold inline-flex items-center justify-center gap-1 hover:bg-brand-soft/70"
+        >
+          <Pencil size={11} /> Edit
+        </button>
+        <ResetLinkButton userId={user.id} userName={user.name} />
+        {user.banned ? (
+          <button
+            onClick={onUnban}
+            className="flex-1 min-w-[80px] px-2 py-1.5 bg-emerald-100 text-emerald-700 rounded text-xs font-bold inline-flex items-center justify-center gap-1 hover:bg-emerald-200"
+          >
+            <ShieldCheck size={11} /> Aktifkan
+          </button>
+        ) : (
+          <button
+            onClick={onBan}
+            className="flex-1 min-w-[80px] px-2 py-1.5 bg-amber-100 text-amber-800 rounded text-xs font-bold inline-flex items-center justify-center gap-1 hover:bg-amber-200"
+          >
+            <ShieldAlert size={11} /> Ban
+          </button>
+        )}
+        <button
+          onClick={onSoftDelete}
+          className="flex-1 min-w-[80px] px-2 py-1.5 border border-amber-300 text-amber-700 rounded text-xs font-bold inline-flex items-center justify-center gap-1 hover:bg-amber-50"
+          title="Nonaktifkan (soft delete) — direkomendasikan"
+        >
+          <Trash2 size={11} /> Nonaktif
+        </button>
+        <button
+          onClick={onHardDelete}
+          className="px-2 py-1.5 border border-red-300 text-red-600 rounded text-[10px] font-bold inline-flex items-center justify-center gap-1 hover:bg-red-50"
+          title="Hapus permanen"
+        >
+          <Trash2 size={10} />×
+        </button>
       </div>
     </div>
   );

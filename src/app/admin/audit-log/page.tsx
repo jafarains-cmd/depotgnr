@@ -152,7 +152,78 @@ export default async function AuditLogPage({
         )}
       </form>
 
-      <div className="bg-surface border border-line rounded-2xl overflow-hidden">
+      {/* Mobile card list */}
+      <div className="sm:hidden space-y-2">
+        {rows.length === 0 && (
+          <div className="bg-surface border border-line rounded-2xl p-6 text-center text-[color:var(--muted)]">
+            Belum ada audit log untuk filter ini.
+          </div>
+        )}
+        {rows.map((r) => (
+          <div key={r.id} className="bg-surface border border-line rounded-2xl p-3 space-y-2">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="font-bold text-sm truncate">{r.actorName ?? "—"}</div>
+                <div className="text-[10px] text-[color:var(--muted)] uppercase">
+                  {r.actorRole ?? "—"}
+                </div>
+              </div>
+              <div className="text-[10px] text-[color:var(--muted)] shrink-0 text-right whitespace-nowrap">
+                {r.createdAt.toLocaleString("id-ID", {
+                  day: "2-digit",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+              <span className="px-1.5 py-0.5 rounded bg-[color:var(--surface2)] font-mono font-bold text-slate-700">
+                {r.action}
+              </span>
+              <span className="text-[color:var(--muted)]">·</span>
+              <span className="font-mono">{r.entity}</span>
+              {r.entityId && (
+                <>
+                  <span className="text-[color:var(--muted)]">#</span>
+                  <span className="font-mono text-[color:var(--muted)]">{r.entityId}</span>
+                </>
+              )}
+            </div>
+            {(r.meta || r.before || r.after) && (
+              <div className="flex flex-wrap gap-1.5 pt-1 border-t border-line">
+                {r.meta && (
+                  <details className="text-[10px] flex-1 min-w-full">
+                    <summary className="cursor-pointer text-brand font-bold">meta</summary>
+                    <pre className="whitespace-pre-wrap break-all bg-[color:var(--surface2)] p-2 rounded mt-1 text-[9px]">
+                      {formatJson(r.meta)}
+                    </pre>
+                  </details>
+                )}
+                {r.before && (
+                  <details className="text-[10px] flex-1 min-w-full">
+                    <summary className="cursor-pointer text-amber-700 font-bold">before</summary>
+                    <pre className="whitespace-pre-wrap break-all bg-amber-50 p-2 rounded mt-1 text-[9px]">
+                      {formatJson(r.before)}
+                    </pre>
+                  </details>
+                )}
+                {r.after && (
+                  <details className="text-[10px] flex-1 min-w-full">
+                    <summary className="cursor-pointer text-emerald-700 font-bold">after</summary>
+                    <pre className="whitespace-pre-wrap break-all bg-emerald-50 p-2 rounded mt-1 text-[9px]">
+                      {formatJson(r.after)}
+                    </pre>
+                  </details>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden sm:block bg-surface border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-[color:var(--surface2)] text-[color:var(--muted)] text-left text-xs">

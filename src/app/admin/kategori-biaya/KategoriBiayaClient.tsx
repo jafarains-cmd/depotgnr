@@ -45,22 +45,23 @@ export function KategoriBiayaClient({ rows }: { rows: Kategori[] }) {
 
   return (
     <>
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-line overflow-x-auto">
+      {/* Tabs — grid full-width di mobile agar tidak terpotong swipe */}
+      <div className="grid grid-cols-3 gap-1 border-b border-line sm:flex">
         {TIPE_TABS.map((t) => {
           const isActive = tab === t.key;
           return (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`px-4 py-2 text-sm font-bold inline-flex items-center gap-1.5 border-b-2 transition ${
+              className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-1 sm:gap-1.5 border-b-2 transition min-w-0 ${
                 isActive
                   ? "border-brand text-brand"
                   : "border-transparent text-[color:var(--muted)] hover:text-ink"
               }`}
             >
-              {t.icon} {t.label}
-              <span className="text-[10px] bg-[color:var(--surface2)] px-1.5 py-0.5 rounded-full">
+              <span className="shrink-0">{t.icon}</span>
+              <span className="truncate">{t.label}</span>
+              <span className="text-[10px] bg-[color:var(--surface2)] px-1.5 py-0.5 rounded-full shrink-0">
                 {counts[t.key]}
               </span>
             </button>

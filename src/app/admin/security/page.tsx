@@ -247,7 +247,38 @@ export default async function SecurityDashboard() {
             <div className="text-xs font-bold text-[color:var(--muted)] uppercase mb-2 inline-flex items-center gap-1.5">
               <Activity size={12} /> Session Aktif Sekarang ({users.activeSessions.length})
             </div>
-            <div className="overflow-x-auto">
+
+            {/* Mobile card list */}
+            <div className="sm:hidden divide-y divide-line">
+              {users.activeSessions.length === 0 && (
+                <div className="py-4 text-center text-xs text-[color:var(--muted)] italic">
+                  Tidak ada session aktif.
+                </div>
+              )}
+              {users.activeSessions.slice(0, 8).map((s) => (
+                <div key={s.userId + s.createdAt.toISOString()} className="py-2 space-y-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="font-bold text-xs truncate">{s.userName}</div>
+                    <div className="text-[10px] text-[color:var(--muted)] shrink-0 whitespace-nowrap">
+                      {s.createdAt.toLocaleString("id-ID", {
+                        day: "2-digit",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-[color:var(--muted)]">
+                    <span className="font-mono">{s.ipAddress ?? "—"}</span>
+                    <span>·</span>
+                    <span className="truncate">{parseUA(s.userAgent)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-xs">
                 <thead className="text-[color:var(--muted)]">
                   <tr>
