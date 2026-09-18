@@ -29,6 +29,7 @@ import {
   Printer,
   BadgeCheck,
   MessageCircle,
+  Palette,
 } from "lucide-react";
 import { AppShell, type NavGroup } from "@/components/AppShell";
 import { requireRole } from "@/lib/permissions";
@@ -292,6 +293,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           label: "Pengaturan Printer",
           icon: <Printer size={16} />,
           iconColor: "text-slate-600",
+        },
+        {
+          href: "/admin/preview/landing",
+          label: "Preview Landing",
+          icon: <Palette size={16} />,
+          iconColor: "text-pink-600",
         },
         {
           href: "/admin/bantuan",
