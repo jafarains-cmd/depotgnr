@@ -223,7 +223,19 @@ export function POSClient({
   const labelJenis = (j: Jenis) =>
     j === "isi_ulang" ? "Isi Ulang" : j === "tukar" ? "Tukar" : "Beli Baru";
 
+  const cartItemCount = cart.reduce((s, it) => s + it.qty, 0);
+  const canSubmit = !pending && (cart.length > 0 || isGalonOnlyMode);
+
+  function scrollToCart() {
+    if (typeof document === "undefined") return;
+    document.getElementById("pos-cart-section")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
+
   return (
+    <div className="pb-24 lg:pb-0">
     <div className="grid lg:grid-cols-5 gap-6">
       {/* Produk picker */}
       <div className="lg:col-span-3 space-y-3">
@@ -263,7 +275,7 @@ export function POSClient({
       </div>
 
       {/* Cart */}
-      <div className="lg:col-span-2 space-y-3">
+      <div id="pos-cart-section" className="lg:col-span-2 space-y-3 scroll-mt-4">
         <div className="bg-surface rounded-xl border border-line p-4 space-y-3">
           <div>
             <label className="block text-xs font-medium text-[color:var(--muted)] mb-0.5">Pelanggan</label>
@@ -786,6 +798,55 @@ export function POSClient({
           );
         })()}
       </div>
+    </div>
+
+    {/* Sticky mobile action bar — always visible di HP supaya kasir tidak
+        scroll turun tiap tambah item. Hidden di desktop (cart sudah visible
+        di sidebar kanan). */}
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t-2 border-line shadow-[0_-4px_20px_-8px_rgba(0,0,0,0.15)] px-3 py-2.5 safe-area-bottom">
+      <div className="flex items-center gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] font-bold text-[color:var(--muted)] uppercase tracking-wider">
+            {cartItemCount > 0 ? `${cartItemCount} item` : "Belum ada item"}
+          </div>
+          <div className="text-lg font-extrabold text-brand truncate">
+            {formatRupiah(total)}
+          </div>
+        </div>
+        {cart.length > 0 ? (
+          <>
+            <button
+              onClick={scrollToCart}
+              className="px-3 py-2.5 border-2 border-brand text-brand text-xs font-bold rounded-lg"
+            >
+              Lihat Cart
+            </button>
+            <button
+              onClick={handleSimpan}
+              disabled={!canSubmit}
+              className="px-4 py-2.5 bg-brand text-white text-sm font-bold rounded-lg shadow-md disabled:opacity-50 min-w-[100px]"
+            >
+              {pending ? "..." : "Bayar →"}
+            </button>
+          </>
+        ) : isGalonOnlyMode ? (
+          <button
+            onClick={handleSimpan}
+            disabled={!canSubmit}
+            className="px-4 py-2.5 bg-sky-600 text-white text-sm font-bold rounded-lg disabled:opacity-50"
+          >
+            Catat Galon
+          </button>
+        ) : (
+          <button
+            onClick={scrollToCart}
+            className="px-4 py-2.5 bg-brand-soft text-brand text-sm font-bold rounded-lg"
+          >
+            Setup ↓
+          </button>
+        )}
+      </div>
+    </div>
     </div>
   );
 }

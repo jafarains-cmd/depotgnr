@@ -243,7 +243,7 @@ export default async function DashboardPage() {
 
       {/* Hero card */}
       <div
-        className="relative overflow-hidden rounded-3xl p-6 text-white"
+        className="relative overflow-hidden rounded-3xl p-4 sm:p-6 text-white"
         style={{ background: "var(--brand-deep)" }}
       >
         <div
@@ -254,10 +254,10 @@ export default async function DashboardPage() {
           }}
         />
         <div className="relative">
-          <div className="text-[11px] opacity-85 font-semibold tracking-wide">
-            DASHBOARD · {new Date().toLocaleDateString("id-ID", { dateStyle: "full" })}
+          <div className="text-[10px] sm:text-[11px] opacity-85 font-semibold tracking-wide">
+            DASHBOARD · {new Date().toLocaleDateString("id-ID", { dateStyle: "long" })}
           </div>
-          <div className="mt-3 p-5 rounded-2xl backdrop-blur-md bg-white/15">
+          <div className="mt-3 p-4 sm:p-5 rounded-2xl backdrop-blur-md bg-white/15">
             <div className="text-[11px] font-bold tracking-widest opacity-85">
               OMZET HARI INI
             </div>
@@ -668,11 +668,11 @@ function MiniStat({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="px-3 py-2.5 bg-white/10 rounded-xl">
+    <div className="px-2.5 sm:px-3 py-2 sm:py-2.5 bg-white/10 rounded-xl">
       <div className="text-[10px] opacity-85 inline-flex items-center gap-1">
-        {icon} {label}
+        {icon} <span className="truncate">{label}</span>
       </div>
-      <div className="text-xl font-extrabold mt-1 leading-none">
+      <div className="text-lg sm:text-xl font-extrabold mt-1 leading-none">
         {typeof value === "number" ? <NumberTicker value={value} /> : value}
       </div>
     </div>
