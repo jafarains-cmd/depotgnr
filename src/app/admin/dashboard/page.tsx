@@ -12,6 +12,7 @@ import { computeFilterStatus } from "@/lib/filter-status";
 import { bahanBaku } from "@/db/schema/bahan-baku";
 import { sql, gte, eq, desc, ne, lt, and, isNull } from "drizzle-orm";
 import { formatRupiah } from "@/lib/utils";
+import { NumberTicker } from "@/components/NumberTicker";
 import { countChurnRisk } from "@/lib/analytics";
 import {
   getSemuaShiftAktif,
@@ -670,7 +671,9 @@ function MiniStat({
       <div className="text-[10px] opacity-85 inline-flex items-center gap-1">
         {icon} {label}
       </div>
-      <div className="text-xl font-extrabold mt-1 leading-none">{value}</div>
+      <div className="text-xl font-extrabold mt-1 leading-none">
+        {typeof value === "number" ? <NumberTicker value={value} /> : value}
+      </div>
     </div>
   );
 }
