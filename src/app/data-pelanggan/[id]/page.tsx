@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { eq, desc, and, sql, inArray, isNull } from "drizzle-orm";
-import { ArrowLeft, Coins, Star, TrendingUp, TrendingDown } from "lucide-react";
+import { eq, desc, and, sql, inArray, isNull, gt, lt } from "drizzle-orm";
+import { ArrowLeft } from "lucide-react";
 import { db } from "@/db";
 import {
   pelanggan as pelangganTable,
@@ -11,6 +11,7 @@ import {
 } from "@/db/schema/pelanggan";
 import { produk as produkTable } from "@/db/schema/produk";
 import { user as userTableSchema } from "@/db/schema/auth";
+import { pengaturan } from "@/db/schema/pengaturan";
 import { requireRole } from "@/lib/permissions";
 import { transaksi, transaksiItem } from "@/db/schema/transaksi";
 import { orderHeader, orderItem } from "@/db/schema/order";
@@ -19,6 +20,7 @@ import { GalonPinjamSection } from "./GalonPinjamSection";
 import { LinkUserSection } from "./LinkUserSection";
 import { getSaldoGalonPinjam, getHistoryGalonPinjam } from "@/lib/galon-pinjam";
 import { LoyaltyHistoryTable } from "./LoyaltyHistoryTable";
+import { LoyaltyStatCards } from "./LoyaltyStatCards";
 import { RiwayatTransaksiTable, type RiwayatItem } from "./RiwayatTransaksiTable";
 import { formatRupiah } from "@/lib/utils";
 import { LoyaltyAdjustForm } from "./LoyaltyAdjustForm";
@@ -225,6 +227,49 @@ export default async function PelangganDetailPage({
   const totalEarn = earnRow.total;
   const totalRedeem = Math.abs(redeemRow.total);
 
+  // Detail per-card untuk modal (30 terbaru per kategori)
+  const [earnList, redeemList, stampList, recentList, cfgRows] = await Promise.all([
+    db
+      .select()
+      .from(mutasiLoyalti)
+      .where(and(eq(mutasiLoyalti.pelangganId, pelangganId), gt(mutasiLoyalti.jumlah, 0)))
+      .orderBy(desc(mutasiLoyalti.createdAt))
+      .limit(30),
+    db
+      .select()
+      .from(mutasiLoyalti)
+      .where(and(eq(mutasiLoyalti.pelangganId, pelangganId), lt(mutasiLoyalti.jumlah, 0)))
+      .orderBy(desc(mutasiLoyalti.createdAt))
+      .limit(30),
+    db
+      .select()
+      .from(mutasiLoyalti)
+      .where(and(eq(mutasiLoyalti.pelangganId, pelangganId), eq(mutasiLoyalti.tipe, "stamp_reward")))
+      .orderBy(desc(mutasiLoyalti.createdAt))
+      .limit(30),
+    db
+      .select()
+      .from(mutasiLoyalti)
+      .where(eq(mutasiLoyalti.pelangganId, pelangganId))
+      .orderBy(desc(mutasiLoyalti.createdAt))
+      .limit(10),
+    db.select({ key: pengaturan.key, value: pengaturan.value }).from(pengaturan),
+  ]);
+
+  const cfgMap = Object.fromEntries(cfgRows.map((r) => [r.key, r.value ?? ""]));
+  const stampThreshold = Math.max(1, Number(cfgMap.stampThresholdGalon) || 10);
+  const nilaiGalonGratis = Math.max(0, Number(cfgMap.nilaiGalonGratis) || 5000);
+
+  const toMutasiRow = (m: (typeof earnList)[number]) => ({
+    id: m.id,
+    tipe: m.tipe,
+    jumlah: m.jumlah,
+    deskripsi: m.deskripsi,
+    refOrderId: m.refOrderId,
+    refTransaksiId: m.refTransaksiId,
+    createdAt: m.createdAt.toISOString(),
+  });
+
   // Galon depot dipinjam + history
   const saldoGalonPinjam = await getSaldoGalonPinjam(pelangganId);
   const [defaultLimitGalon, effectiveLimitGalon] = await Promise.all([
@@ -285,29 +330,19 @@ export default async function PelangganDetailPage({
         )}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Stat
-          icon={<Coins size={16} className="text-brand" />}
-          label="Saldo Loyalty"
-          value={formatRupiah(pel.saldoLoyalti)}
-          highlight
-        />
-        <Stat
-          icon={<Star size={16} className="text-amber-500" />}
-          label="Stamp Galon"
-          value={`${pel.stampGalon}/10`}
-        />
-        <Stat
-          icon={<TrendingUp size={16} className="text-emerald-600" />}
-          label="Total Earn"
-          value={formatRupiah(totalEarn)}
-        />
-        <Stat
-          icon={<TrendingDown size={16} className="text-red-500" />}
-          label="Total Redeem"
-          value={formatRupiah(totalRedeem)}
-        />
-      </div>
+      <LoyaltyStatCards
+        saldoLoyalti={pel.saldoLoyalti}
+        stampGalon={pel.stampGalon}
+        stampClaimedCount={pel.stampClaimedCount}
+        stampThreshold={stampThreshold}
+        nilaiGalonGratis={nilaiGalonGratis}
+        totalEarn={totalEarn}
+        totalRedeem={totalRedeem}
+        earnList={earnList.map(toMutasiRow)}
+        redeemList={redeemList.map(toMutasiRow)}
+        stampList={stampList.map(toMutasiRow)}
+        recentList={recentList.map(toMutasiRow)}
+      />
 
       {piutangTotal > 0 && (
         <Link
@@ -429,27 +464,3 @@ export default async function PelangganDetailPage({
   );
 }
 
-function Stat({
-  icon,
-  label,
-  value,
-  highlight,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  highlight?: boolean;
-}) {
-  return (
-    <div
-      className={`bg-surface border border-line rounded-2xl p-3 ${
-        highlight ? "ring-2 ring-brand/40" : ""
-      }`}
-    >
-      <div className="text-[10px] text-[color:var(--muted)] uppercase tracking-wide font-semibold inline-flex items-center gap-1">
-        {icon} {label}
-      </div>
-      <div className="text-lg font-extrabold mt-1">{value}</div>
-    </div>
-  );
-}
